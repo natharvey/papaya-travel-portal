@@ -1,0 +1,18 @@
+{
+  "destination": "Mexico Yucatán",
+  "region": "Central America",
+  "tags": ["history", "cenotes", "beaches", "Mayan-ruins", "food", "culture", "diving", "colonial"],
+  "best_season": "November-April (dry season)",
+  "summary": "The Yucatán Peninsula is Mexico's crown jewel for history and nature: ancient Mayan cities, crystal-clear cenote swimming holes, vibrant colonial cities, world-class Caribbean beaches, and some of Mexico's most distinctive regional cuisine. Chichén Itzá, Tulum, and the Riviera Maya draw millions while lesser-known gems reward the explorer.",
+  "neighbourhoods": "Mérida (elegant colonial capital, haciendas, hammocks, Yucatecan food), Chichén Itzá (New Seven Wonder, cenote Ik Kil nearby), Tulum (Mayan clifftop ruins, cenotes, bohemian beach town, wellness), Valladolid (colonial town, cenote Zací, gateway to Chichén Itzá), Playa del Carmen (beach, shopping, Quinta Avenida), Isla Holbox (no cars, pink flamingos, whale shark snorkelling), Bacalar (lagoon of seven colours)",
+  "must_do": "Chichén Itzá guided tour (arrive at opening to beat crowds and heat), cenote swimming (Dos Ojos, Gran Cenote, Ik Kil), Tulum Mayan ruins at dawn, Isla Holbox whale shark snorkelling (June-September), Mérida Sunday market and hacienda visit, Bacalar lagoon kayaking, Cozumel diving (one of world's best coral walls), Cobá Mayan pyramid climb (before restrictions tighten)",
+  "transport_tips": "ADO buses are safe, comfortable, and affordable between cities. Collectivos (shared vans) cheap for shorter routes. Rental car recommended for flexibility exploring cenotes. Ferries from Playa del Carmen to Cozumel and Isla Mujeres. Cancún international airport serves the region. Uber works in Cancún and Mérida.",
+  "safety_notes": "Tap water unsafe - drink purified water only. Sun protection critical - midday heat extreme. Cenote swimming: follow safety guidelines, some have currents. Crime: stick to tourist areas, avoid isolated roads at night. Petty theft common at crowded sites. Drug-related violence mostly between cartels in specific states - Yucatán relatively safe.",
+  "budget_notes": "Budget: $70-100 AUD/day. Mid-range: $150-220 AUD/day. Luxury: $300+ AUD/day. Street tacos $2-4 AUD each. Cochinita pibil plate $8 AUD. Restaurant $25-50 AUD. Cenote entry $10-30 AUD. Chichén Itzá $25 AUD. Accommodation from $25 (guesthouse) to $400+ (beach resort).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Chichén Itzá archaeological site (arrive at opening, 8am)", "duration": "3 hours", "cost_aud": 30},
+    {"time": "afternoon", "activity": "Cenote Ik Kil swim + lunch at Hacienda Chichén", "duration": "3 hours", "cost_aud": 35},
+    {"time": "evening", "activity": "Valladolid colonial town wander + Yucatecan dinner", "duration": "3 hours", "cost_aud": 30}
+  ],
+  "raw_text": "Mexico Yucatan Central America history cenotes beaches Mayan ruins food culture diving colonial Chichen Itza Tulum Merida Playa del Carmen Isla Holbox Bacalar Cozumel Valladolid cenote swimming snorkelling whale shark flamingo hacienda cochinita pibil tacos mole tequila mezcal colonial city UNESCO Caribbean sea Riviera Maya diving reef"
+}

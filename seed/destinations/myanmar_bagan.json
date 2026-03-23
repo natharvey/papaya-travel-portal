@@ -1,0 +1,18 @@
+{
+  "destination": "Bagan, Myanmar",
+  "region": "Southeast Asia",
+  "tags": ["ancient-ruins", "temples", "culture", "photography", "history", "hot-air-balloon", "spiritual", "UNESCO"],
+  "best_season": "November-February (cool dry season)",
+  "summary": "Bagan is one of Asia's most awe-inspiring archaeological sites: over 2,000 ancient Buddhist temples and pagodas spread across a vast plain in central Myanmar. Hot-air balloon rides at sunrise over the temples are a bucket-list experience. NOTE: Check current Australian government travel advisories before booking - ongoing political and security situation requires careful consideration.",
+  "neighbourhoods": "Old Bagan (most ancient temples, Shwezigon Pagoda, Bupaya Pagoda on Ayeyarwady River), New Bagan (most tourist accommodation and restaurants), Nyaung-U (local market town, budget guesthouses, Shwezigon Pagoda), Minnanthu (quieter eastern village, atmospheric sunrise temples), Dhammayan Gyi (largest temple), Htilominlo (northernmost main temple)",
+  "must_do": "Hot-air balloon flight at sunrise over temples (October-March, Balloons Over Bagan or Oriental Ballooning), e-bike or horse cart tour of temples, Ananda Temple (stunning, well-preserved, active monastery), Dhammayangyi Temple, Shwesandaw Pagoda sunset (best view, can be crowded), boat trip on Ayeyarwady River, Bagan Archaeological Museum, Nyaung-U local market",
+  "transport_tips": "E-bikes strongly recommended for temple exploration ($6-8 AUD/day). Horse carts available for smaller coverage area ($15-25 AUD/half day). Taxis for longer distances. Nyaung-U airport has domestic connections to Yangon and Mandalay. Note: due to political situation, infrastructure and services may be disrupted. Check conditions before travel.",
+  "safety_notes": "IMPORTANT: Myanmar has experienced significant political instability since the 2021 military coup. The Australian government has a 'Do Not Travel' advisory for Myanmar. Civil conflict ongoing in some regions. Tourist areas like Bagan have been generally safer but the situation can change. Seek current government travel advice before booking. Some international airlines have suspended Myanmar services.",
+  "budget_notes": "Budget: $50-70 AUD/day (when accessible). Mid-range: $100-150 AUD/day. Balloon flight: $400-500 AUD per person (book well in advance). Local food very cheap $3-8 AUD. Accommodation from $20 (guesthouse) to $200+ (resort). Archaeological Zone entry pass required: $25 USD.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Hot-air balloon flight over temples at sunrise", "duration": "2 hours", "cost_aud": 450},
+    {"time": "afternoon", "activity": "E-bike temple tour: Ananda, Thatbyinnyu, Dhammayan Gyi", "duration": "5 hours", "cost_aud": 10},
+    {"time": "evening", "activity": "Shwesandaw Pagoda sunset + Ayeyarwady River dinner cruise", "duration": "3 hours", "cost_aud": 30}
+  ],
+  "raw_text": "Bagan Myanmar Burma Southeast Asia ancient ruins temples culture photography history hot air balloon spiritual UNESCO Old Bagan Nyaung-U Ananda Temple Shwesandaw Shwezigon Dhammayan Gyi e-bike horse cart Ayeyarwady River pagoda stupa Buddhist lacquerware sunset sunrise temple plains check travel advisory political situation"
+}

@@ -1,0 +1,18 @@
+{
+  "destination": "Prague",
+  "region": "Central Europe",
+  "tags": ["history", "architecture", "beer", "culture", "budget-friendly", "romance", "art", "medieval"],
+  "best_season": "April-May or September-October",
+  "summary": "Prague is one of Europe's best-preserved medieval cities, having largely escaped World War II bombing. Gothic churches, Baroque palaces, Art Nouveau buildings, and the iconic Charles Bridge create a fairy-tale cityscape. The Czech Republic also produces some of the world's finest pilsner beer, and Prague's restaurant scene has improved dramatically.",
+  "neighbourhoods": "Staré Město/Old Town (Astronomical Clock, Old Town Square, Jewish Quarter), Malá Strana/Lesser Town (below Prague Castle, charming townhouses, gardens), Hradčany (Prague Castle district, St Vitus Cathedral), Nové Město/New Town (Wenceslas Square, museums, arts), Vinohrady (hipster cafes, restaurants, beautiful Art Nouveau apartments), Žižkov (student bars, TV Tower, alternative culture)",
+  "must_do": "Prague Castle complex (St Vitus Cathedral, Old Royal Palace, Golden Lane), Charles Bridge at dawn, Old Town Square Astronomical Clock on the hour, Jewish Quarter (6 synagogues, Old Jewish Cemetery), Vyšehrad fortress sunset, boat trip on Vltava River, classical concert in ornate hall (book via venue websites), day trip to Kutná Hora (Bone Church and Gothic cathedral)",
+  "transport_tips": "Prague Metro (3 lines, clean and efficient) + trams cover the city well. Day pass ~$8 AUD. Walking ideal in compact historic centre. Prague Card includes public transport + museum entries. Uber and Bolt affordable. Be careful of overcharging taxis - use apps. Airport: bus 119 + metro (~$2 AUD) or Uber (~$20 AUD). Airport Express bus also available.",
+  "safety_notes": "Relatively safe but tourist scams widespread: unfair exchange rates at bureaux de change (use ATMs instead), taxi overcharging, shell games on tourist streets. Avoid money exchange kiosks. Pick pockets on tram 22 and Old Town Square. Prostitution issues around some venues. Drinking water from taps is safe.",
+  "budget_notes": "Budget: $80-110 AUD/day. Mid-range: $150-220 AUD/day. Luxury: $300+ AUD/day. Half litre Pilsner Urquell $3-5 AUD (cheapest in Europe). Svíčková (beef sirloin with cream sauce) $12 AUD. Restaurant dinner $30-55 AUD. Castle entry $20-30 AUD. Accommodation from $20 (hostel) to $300+ (boutique hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Prague Castle complex + St Vitus Cathedral + Golden Lane", "duration": "4 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "Charles Bridge + Old Town Square + Jewish Quarter", "duration": "3 hours", "cost_aud": 15},
+    {"time": "evening", "activity": "Vinohrady restaurant dinner + Czech craft beer bar", "duration": "3 hours", "cost_aud": 45}
+  ],
+  "raw_text": "Prague Czech Republic Central Europe history architecture beer culture budget romance art medieval Prague Castle Charles Bridge Old Town Square Astronomical Clock Jewish Quarter Kafka Bohemian crystal Pilsner Urquell Budvar Staropramen craft beer svičková trdelnik classical music Mozart Dvořák Mucha Art Nouveau Gothic Baroque medieval fairy tale cobblestones"
+}

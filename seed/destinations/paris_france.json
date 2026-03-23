@@ -1,0 +1,18 @@
+{
+  "destination": "Paris",
+  "region": "Western Europe",
+  "tags": ["culture", "art", "food", "romance", "history", "fashion", "architecture", "luxury"],
+  "best_season": "April-June or September-October",
+  "summary": "The City of Light needs little introduction. Paris enchants with its world-class museums, iconic landmarks, unparalleled cuisine, and effortlessly chic neighbourhoods. Beyond the Eiffel Tower lies a city of hidden courtyards, vibrant markets, and neighbourhood bistros that reward the curious traveller.",
+  "neighbourhoods": "Le Marais (Jewish quarter, gay-friendly, trendy boutiques), Saint-Germain-des-Prés (literary cafes, galleries), Montmartre (Sacré-Cœur, artists, bohemian), 7th arrondissement (Eiffel Tower, Musée d'Orsay), Latin Quarter (students, Shakespeare and Co), Canal Saint-Martin (hipster bars, bobo), Belleville (multicultural, street art)",
+  "must_do": "Louvre Museum (book skip-the-line), Eiffel Tower at dusk, Musée d'Orsay, Sainte-Chapelle stained glass, Versailles day trip, Père Lachaise cemetery, Marché d'Aligre, Seine river cruise, café au lait and croissant at a zinc bar",
+  "transport_tips": "Paris Métro is extensive and efficient. Get a Navigo Semaine pass (~$30 AUD) for unlimited travel Mon-Sun. Vélib' bike-share great for short trips. Taxis and Uber available but expensive. Eurostar from London St Pancras (2h15m). Charles de Gaulle airport: RER B to central Paris (~$20 AUD, 35 min).",
+  "safety_notes": "Pickpockets active around Eiffel Tower, Sacré-Cœur, Métro line 1. Keep bags close. Avoid unofficial taxi touts at airports. Some areas near Gare du Nord can be rough at night. Scam artists common at tourist hotspots.",
+  "budget_notes": "Budget: $150-180 AUD/day. Mid-range: $250-350 AUD/day. Luxury: $500+ AUD/day. Set lunch menu (formule) $15-25 AUD. Brasserie dinner $40-60 AUD. Accommodation from $80 (budget hotel) to $500+ (boutique hotel). Museum Pass 4-day ~$80 AUD saves money.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Louvre Museum (pre-booked timed entry)", "duration": "3 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "Walk Tuileries Garden, cross Seine to Musée d'Orsay", "duration": "3 hours", "cost_aud": 18},
+    {"time": "evening", "activity": "Dinner in Le Marais, wine at a cave à vins", "duration": "3 hours", "cost_aud": 60}
+  ],
+  "raw_text": "Paris France Western Europe culture art food romance history fashion architecture luxury Eiffel Tower Louvre Versailles Montmartre Le Marais Saint-Germain Musée d'Orsay Seine Sainte-Chapelle croissant wine bistro café Navigo Metro boulangerie patisserie champagne fashion luxury boutique romantic honeymoon anniversary"
+}

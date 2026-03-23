@@ -1,0 +1,18 @@
+{
+  "destination": "Costa Rica",
+  "region": "Central America",
+  "tags": ["nature", "wildlife", "adventure", "rainforest", "surfing", "eco-tourism", "volcanoes", "beaches"],
+  "best_season": "December-April (dry season)",
+  "summary": "Costa Rica packs extraordinary biodiversity into a small country: volcanoes, cloud forests, Pacific and Caribbean beaches, zip-lines through rainforest canopy, thermal pools beside active volcanoes, and more wildlife per square kilometre than almost anywhere on earth. The Tico 'Pura Vida' lifestyle is infectious.",
+  "neighbourhoods": "San José (capital, historic centre, museums), Arenal Volcano (national park, hot springs, adventure), Monteverde (cloud forest, zip-lining, resplendent quetzal), Manuel Antonio (beach + jungle, sloths and monkeys), Tamarindo (surf town, Pacific coast, nightlife), Tortuguero (Caribbean coast, sea turtle nesting, canals), Puerto Viejo (Caribbean vibes, reggae, chocolate farms)",
+  "must_do": "Arenal Volcano hike + La Fortuna waterfall + thermal hot springs, Monteverde cloud forest canopy walk + zip-line, Corcovado National Park wildlife tour (advanced booking), Tortuguero canal tour (jungle boat), Manuel Antonio National Park wildlife walk, surf lessons in Tamarindo, sea turtle watching (July-October), white water rafting Pacuare River",
+  "transport_tips": "Renting a 4WD is highly recommended for flexibility (roads often rough). Domestic flights (Sansa or Sky) connect regions quickly. Shuttle services popular for tourists. Public buses very cheap but slow. Taxis: use official red taxis with TAXI on top and meter (María). Uber operates in San José. Driving: right side, roads can be poor.",
+  "safety_notes": "Generally safe for tourists but petty theft common in San José and beach towns - keep valuables secure. Swimming: many beaches have dangerous rip currents - check conditions. Crocodiles in some estuaries - follow warning signs. Sun protection essential. Insects: bring DEET repellent for jungle areas. Travel insurance essential.",
+  "budget_notes": "Budget: $80-120 AUD/day. Mid-range: $160-250 AUD/day. Luxury: $300+ AUD/day. Casado (local plate) $8-12 AUD. Restaurant $25-45 AUD. Zip-line tour $60-90 AUD. Guided national park tour $40-80 AUD. Accommodation from $20 (hostel) to $300+ (eco-lodge).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Arenal Volcano National Park hike (guided)", "duration": "4 hours", "cost_aud": 50},
+    {"time": "afternoon", "activity": "La Fortuna Waterfall swim + free time", "duration": "3 hours", "cost_aud": 20},
+    {"time": "evening", "activity": "Tabacon or Baldi hot springs with volcano views", "duration": "3 hours", "cost_aud": 60}
+  ],
+  "raw_text": "Costa Rica Central America nature wildlife adventure rainforest surfing eco-tourism volcanoes beaches Arenal Monteverde Manuel Antonio Tamarindo Tortuguero Corcovado Puerto Viejo sloth monkey jaguar quetzal toucan sea turtle zip-line canopy tour hot springs white water rafting Pura Vida biodiversity national park cloud forest Pacific Caribbean"
+}

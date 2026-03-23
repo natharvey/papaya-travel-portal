@@ -1,0 +1,18 @@
+{
+  "destination": "Bangkok",
+  "region": "Southeast Asia",
+  "tags": ["food", "culture", "temples", "nightlife", "shopping", "budget-friendly", "street-food", "urban"],
+  "best_season": "November-February (cool dry season)",
+  "summary": "Bangkok is a sensory overload in the best possible way. Ancient golden temples sit alongside glittering skyscrapers and rooftop bars; tuk-tuks weave past Michelin-starred restaurants; and the world's best street food is served from carts on every corner. A gateway to the rest of Thailand.",
+  "neighbourhoods": "Rattanakosin/Old City (Grand Palace, Wat Pho, temples), Banglamphu/Khao San Road (backpackers, budget stays), Sukhumvit (expats, sky train, shopping malls, rooftop bars), Silom (financial district, Patpong night market), Chatuchak (weekend market), Chinatown/Yaowarat (street food, gold shops, temples)",
+  "must_do": "Grand Palace and Wat Phra Kaew, Wat Pho reclining Buddha + traditional massage, Wat Arun at sunrise by boat, Floating Markets day trip (Damnoen Saduak or Amphawa), Chatuchak Weekend Market, Jim Thompson House, rooftop bar at Vertigo or Sky Bar, street food tour in Chinatown at night",
+  "transport_tips": "BTS Skytrain and MRT Metro for modern areas. Chao Phraya Express Boat for riverside. Tuk-tuks and motorbike taxis for short distances (negotiate price first). Grab app for metered rides. Avoid tuk-tuk tours offered by 'helpful strangers' (gem scam). Suvarnabhumi Airport: Airport Rail Link ~$8 AUD to City Air Terminal.",
+  "safety_notes": "Tuk-tuk gem scam and tailor shop scam widespread - ignore 'helpful locals' directing you to shops. Tap water unsafe to drink. Respect temple dress codes (cover shoulders and knees). Political instability possible. Yellow-shirt/red-shirt tensions historically. Smoggy air quality November-April.",
+  "budget_notes": "Budget: $50-80 AUD/day. Mid-range: $100-160 AUD/day. Luxury: $200+ AUD/day. Street food pad thai $3-5 AUD. Local restaurant $8-15 AUD. Rooftop bar cocktails $20-30 AUD. Accommodation from $15 (guesthouse) to $250+ (luxury hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Grand Palace + Wat Phra Kaew + Wat Pho", "duration": "4 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "Chao Phraya river taxi to Wat Arun + Chinatown walk", "duration": "3 hours", "cost_aud": 10},
+    {"time": "evening", "activity": "Chinatown street food dinner + rooftop bar", "duration": "3 hours", "cost_aud": 45}
+  ],
+  "raw_text": "Bangkok Thailand Southeast Asia food culture temples nightlife shopping budget street food urban Grand Palace Wat Pho Wat Arun Wat Phra Kaew Chatuchak floating market Chinatown Sukhumvit BTS skytrain tuk-tuk Chao Phraya river pad thai mango sticky rice som tam massage cheap food luxury hotel rooftop bar gateway northern Thailand islands"
+}

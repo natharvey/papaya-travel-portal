@@ -1,0 +1,18 @@
+{
+  "destination": "Bali",
+  "region": "Southeast Asia",
+  "tags": ["beach", "spiritual", "culture", "rice-terraces", "surfing", "budget-friendly", "romantic", "family"],
+  "best_season": "April-October (dry season)",
+  "summary": "Indonesia's Island of the Gods offers a magical blend of lush rice terraces, ornate temples, world-class surf breaks, and vibrant arts scene. Ubud is the cultural heart; Seminyak and Canggu for beach clubs and cafes; Uluwatu for clifftop temples and serious surf.",
+  "neighbourhoods": "Ubud (cultural hub, rice terraces), Seminyak (upscale beach, dining), Canggu (hipster cafes, surf, digital nomads), Uluwatu (clifftop temples, surf), Sanur (calm beaches, families), Nusa Dua (resort strip, watersports)",
+  "must_do": "Sunrise at Mount Batur, Tegallalang Rice Terraces, Tanah Lot Temple at sunset, Uluwatu Kecak fire dance, cooking class in Ubud, Monkey Forest, snorkelling Nusa Penida, white water rafting Ayung River",
+  "transport_tips": "Grab (ride-share) for short distances. Rent a scooter for flexibility (international licence required). Private driver for day trips (~$50 AUD/day). No reliable public transport. Airport taxis fixed-rate ~$20 AUD to Seminyak.",
+  "safety_notes": "Petty theft in tourist areas. Tap water not safe to drink. Strong rips at surf beaches - swim between flags. Respect temple dress codes (sarong required). Rabies present - avoid strays.",
+  "budget_notes": "Budget: $60-80 AUD/day. Mid-range: $120-180 AUD/day. Luxury: $250+ AUD/day. Cheap warungs $3-8 AUD. Nice restaurants $20-40 AUD. Accommodation from $15 (hostel) to $500+ (private villa).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Sunrise trek Mount Batur (guided)", "duration": "4 hours", "cost_aud": 45},
+    {"time": "afternoon", "activity": "Tegallalang Rice Terrace walk + Ubud market", "duration": "3 hours", "cost_aud": 10},
+    {"time": "evening", "activity": "Kecak Fire Dance at Uluwatu", "duration": "2 hours", "cost_aud": 15}
+  ],
+  "raw_text": "Bali Indonesia Southeast Asia beach spiritual culture rice terraces surfing budget romantic family best season April to October dry season Ubud Seminyak Canggu Uluwatu Sanur Nusa Dua temples mount batur tegallalang tanah lot kecak fire dance cooking class monkey forest nusa penida white water rafting scooter grab driver budget mid-range luxury warung villa"
+}

@@ -1,0 +1,18 @@
+{
+  "destination": "Patagonia",
+  "region": "South America",
+  "tags": ["nature", "hiking", "glaciers", "adventure", "wildlife", "scenic", "remote", "mountains"],
+  "best_season": "November-March (Southern Hemisphere summer)",
+  "summary": "Patagonia is nature at its most elemental and overwhelming: jagged granite towers soaring from teal lakes, calving glaciers thundering into fjords, vast Pampas grasslands roamed by guanacos and rheas, and wind so fierce it blows you sideways. Shared between Argentina and Chile, it's the ultimate destination for serious trekkers and those seeking wilderness solitude.",
+  "neighbourhoods": "El Calafate (Argentina, glacier base, Perito Moreno access), El Chaltén (trekking capital, Los Glaciares National Park, Fitz Roy), Torres del Paine National Park (Chile, W-Trek, full circuit), Puerto Natales (Chile, gateway to Torres del Paine), Bariloche (lakes district, chocolate capital, skiing, Andean scenery), Ushuaia (end of the world, gateway to Antarctica)",
+  "must_do": "Perito Moreno Glacier (walk on ice, watch calving - extraordinary), Fitz Roy trek from El Chaltén (Laguna de Los Tres - 23km round trip, breathtaking), Torres del Paine W-Trek (4-5 days, book huts years in advance), Glacier cruise from Puerto Natales or El Calafate, penguin colony visit at Punta Tombo (October-March), Tierra del Fuego National Park, Lake crossing Chile-Argentina",
+  "transport_tips": "Fly Buenos Aires to El Calafate (3 hours) or Santiago to Punta Arenas. Car hire ideal for flexibility. LAN/LATAM and Aerolíneas Argentinas domestic. Interlagos lake crossing (Puerto Montt to Bariloche, 3 days, spectacular). Buses between main towns affordable. BookaBed hotels fill up months ahead especially for trekking season - book huts in Torres del Paine up to a year ahead.",
+  "safety_notes": "Weather notoriously unpredictable and extreme - proper gear essential (layers, waterproof jacket, trekking poles). Wind can be dangerously strong - check forecasts. Trekking routes can be closed due to conditions - have contingency plans. Altitude not usually an issue. Remote areas: carry emergency supplies, tell someone your plans. Insurance covering helicopter evacuation strongly recommended.",
+  "budget_notes": "Budget: $120-160 AUD/day. Mid-range: $200-300 AUD/day. Luxury: $400+ AUD/day. Patagonian lamb (asado) $30-50 AUD. Local restaurant $25-40 AUD. Torres del Paine entry ~$30 AUD. Glacier boat tour $80-150 AUD. Hut accommodation W-Trek $60-120 AUD/night. Camping $20-40 AUD/night.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Perito Moreno Glacier boardwalks + ice calving viewing", "duration": "4 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "Optional minitrekking on Perito Moreno ice (guided)", "duration": "3 hours", "cost_aud": 80},
+    {"time": "evening", "activity": "El Calafate town + Patagonian lamb asado dinner", "duration": "3 hours", "cost_aud": 55}
+  ],
+  "raw_text": "Patagonia Argentina Chile South America nature hiking glaciers adventure wildlife scenic remote mountains Torres del Paine Fitz Roy Perito Moreno El Calafate El Chaltén Bariloche Ushuaia end of world trekking W-Trek circuit guanaco condor penguin puma wind extreme weather Los Glaciares National Park fjords lakes granite towers ice field"
+}

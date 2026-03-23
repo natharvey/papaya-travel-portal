@@ -1,0 +1,18 @@
+{
+  "destination": "Queensland",
+  "region": "Australia & Pacific",
+  "tags": ["beach", "reef", "family", "outdoor", "tropical", "rainforest", "diving", "snorkelling"],
+  "best_season": "June-October (dry season for Cairns/Reef; year-round for Gold Coast)",
+  "summary": "Queensland is Australia's sunshine state, offering the world's largest coral reef system, tropical rainforests meeting the sea, theme parks on the Gold Coast, and the cultural capital of Brisbane. From the cosmopolitan south-east to the remote wilderness of Cape York, Queensland has enormous variety.",
+  "neighbourhoods": "Brisbane (Southbank, CBD, Fortitude Valley, West End), Gold Coast (Surfers Paradise, Burleigh Heads, Currumbin), Sunshine Coast (Noosa Heads, Coolum, Maleny hinterland), Whitsundays (Airlie Beach, Hayman Island, Hamilton Island), Cairns (gateway to reef, Daintree rainforest, Atherton Tablelands), Port Douglas (boutique alternative to Cairns)",
+  "must_do": "Great Barrier Reef snorkelling or dive (Cairns or Whitsundays), Daintree Rainforest tour + Cape Tribulation, Whitehaven Beach (one of world's whitest sands), Fraser Island (K'gari) 4WD adventure, Australia Zoo (Steve Irwin), Noosa National Park walk, Brisbane's GOMA and South Bank Parklands",
+  "transport_tips": "Fly into Brisbane, Cairns, or Hamilton Island depending on itinerary. Domestic flights frequent and reasonably priced. Rental car essential for Cairns region and Fraser Island. TransLink for Brisbane public transport. Ferries and liveaboards for reef access. Greyhound buses for budget travel between towns.",
+  "safety_notes": "Box jellyfish (stingers) in Cairns waters November-May - stinger nets or stinger suit required. Crocodiles in far north waterways - heed warning signs. Sun protection absolute necessity. Cyclone season November-April in far north. Marine stingers, sharks - follow beach flags.",
+  "budget_notes": "Budget: $100-140 AUD/day. Mid-range: $180-250 AUD/day. Luxury: $300+ AUD/day. Cafe breakfast $20 AUD. Pub lunch $25-35 AUD. Reef day tour $150-220 AUD. Theme park ticket $100-130 AUD. Accommodation from $35 (hostel) to $400+ (luxury island resort).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Great Barrier Reef day trip from Cairns (snorkel + dive)", "duration": "8 hours", "cost_aud": 180},
+    {"time": "afternoon", "activity": "Cairns Esplanade lagoon swim + muddy's playground", "duration": "2 hours", "cost_aud": 0},
+    {"time": "evening", "activity": "Night markets at Cairns waterfront + fish and chips", "duration": "2 hours", "cost_aud": 30}
+  ],
+  "raw_text": "Queensland Australia Pacific beach reef family outdoor tropical rainforest diving snorkelling Great Barrier Reef Cairns Whitsundays Brisbane Gold Coast Sunshine Coast Noosa Daintree Cape Tribulation Whitehaven Beach Fraser Island K'gari Australia Zoo Steve Irwin theme parks Sea World Movie World Dreamworld coral fish turtles crocodiles cassowary koala kangaroo sunshine warm"
+}

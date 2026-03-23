@@ -1,0 +1,18 @@
+{
+  "destination": "New York City",
+  "region": "North America",
+  "tags": ["urban", "culture", "food", "shopping", "nightlife", "art", "architecture", "theatre"],
+  "best_season": "April-June or September-November",
+  "summary": "The city that never sleeps delivers an unmatched urban experience. Five boroughs packed with world-class museums, Broadway shows, iconic skyline views, diverse food scenes from every corner of the globe, and a relentless energy that is impossible to replicate.",
+  "neighbourhoods": "Manhattan Midtown (Times Square, Empire State, Broadway), Upper West Side (Central Park, natural history museum), Chelsea (art galleries, High Line), Greenwich Village (NYU, jazz clubs, Washington Square), Brooklyn (Williamsburg hipster bars, DUMBO waterfront, Brooklyn Bridge), Harlem (soul food, jazz legacy), Flushing (authentic Chinese, Korean food)",
+  "must_do": "Walk Brooklyn Bridge at sunrise, High Line park, Central Park, Met Museum, 9/11 Memorial, Broadway show (book ahead), food tour in Flushing or Jackson Heights, Staten Island Ferry for skyline views (free), MoMA, Top of the Rock or Empire State Building",
+  "transport_tips": "NYC Subway is 24/7 and essential. Get MetroCard or tap-to-pay. Citi Bike great for short rides. Avoid yellow cabs during rush hour. JFK AirTrain + subway ~$12 AUD. Newark airport: NJ Transit train + subway ~$20 AUD. Uber/Lyft surge pricing at peak times.",
+  "safety_notes": "Generally safe in tourist areas. Stay alert on late-night subway platforms. Avoid deserted areas in outer boroughs at night. Keep bags zipped in crowds. Times Square: many tourist scams (costumed characters demand tips). Jaywalking is technically illegal.",
+  "budget_notes": "Budget: $180-220 AUD/day. Mid-range: $300-400 AUD/day. Luxury: $600+ AUD/day. Bagel $5 AUD. Diner breakfast $20 AUD. Restaurant dinner $50-80 AUD. Broadway tickets $120-300 AUD. Accommodation from $150 (budget hotel) to $600+ (luxury).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Brooklyn Bridge walk + DUMBO waterfront brunch", "duration": "3 hours", "cost_aud": 30},
+    {"time": "afternoon", "activity": "Metropolitan Museum of Art or MoMA", "duration": "3 hours", "cost_aud": 35},
+    {"time": "evening", "activity": "Broadway show in Midtown", "duration": "3 hours", "cost_aud": 180}
+  ],
+  "raw_text": "New York City USA North America urban culture food shopping nightlife art architecture theatre Manhattan Brooklyn Queens Bronx Staten Island Central Park Times Square Broadway Empire State Building High Line 9/11 Memorial Met Museum MoMA subway MetroCard bagel pizza deli jazz nightlife skyscraper skyline"
+}

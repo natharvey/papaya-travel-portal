@@ -1,0 +1,18 @@
+{
+  "destination": "New Zealand South Island",
+  "region": "Australia & Pacific",
+  "tags": ["adventure", "scenic", "hiking", "nature", "outdoor", "road-trip", "wildlife", "scenic-drive"],
+  "best_season": "December-February (summer) for hiking; June-September for ski season",
+  "summary": "New Zealand's South Island is a landscape of jaw-dropping extremes: glaciers tumbling down to fiords, snow-capped peaks above turquoise lakes, temperate rainforests, golden wine country, and world-class adventure activities. The Great Walks offer some of the planet's best tramping. Christchurch is the gateway, Queenstown the adventure capital.",
+  "neighbourhoods": "Christchurch (gateway, arts precinct, Cardboard Cathedral, craft beer), Kaikōura (whale watching, crayfish), Marlborough (wine region, Sounds), Nelson (arts, golden bay, Abel Tasman), Westland (Franz Josef and Fox glaciers, pancake rocks), Queenstown (adventure capital, ski fields, Remarkables), Wanaka (quieter, Roys Peak hike), Fiordland/Te Anau (Milford Sound, Routeburn, Kepler tracks)",
+  "must_do": "Milford Sound cruise (book ahead), Routeburn or Kepler Track (Great Walk), Roys Peak hike above Wanaka (sunrise/sunset), Franz Josef Glacier hike or helicopter, Marlborough wine trail (Cloudy Bay, Brancott), Abel Tasman National Park kayaking, bungee jumping in Queenstown, Hobbiton Movie Set near Matamata",
+  "transport_tips": "Self-drive campervan or rental car is the classic way to explore. Drive on the left. Scenic roads: SH6 West Coast, SH73 Arthur's Pass. Domestic flights Christchurch-Queenstown save time. InterCity buses connect main towns. Queenstown airport well-serviced from Australia. Allow plenty of time - distances deceiving.",
+  "safety_notes": "Weather changes rapidly especially in Fiordland and mountains. Always tell someone your hiking plans. UV is extremely high in NZ - best sunscreen essential. Some roads unsealed - check rental agreements. Sandflies are brutal in Fiordland - bring insect repellent. Water is safe to drink from taps.",
+  "budget_notes": "Budget: $120-160 AUD/day (campervan). Mid-range: $200-280 AUD/day. Luxury: $350+ AUD/day. Supermarket self-catering saves money. Café lunch $20-30 AUD. Restaurant dinner $50-80 AUD. Great Walk bookings $40-80 AUD/night hut. Milford Sound cruise $80-120 AUD.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Roys Peak hike above Lake Wanaka (early start for sunrise)", "duration": "5 hours", "cost_aud": 0},
+    {"time": "afternoon", "activity": "Drive Wanaka to Queenstown via Crown Range Road", "duration": "2 hours", "cost_aud": 20},
+    {"time": "evening", "activity": "Queenstown dinner + Skyline Gondola for sunset views", "duration": "3 hours", "cost_aud": 65}
+  ],
+  "raw_text": "New Zealand South Island Pacific adventure scenic hiking nature outdoor road trip wildlife Queenstown Milford Sound Fiordland Franz Josef glacier Wanaka Christchurch Marlborough wine Abel Tasman Routeburn track Great Walk bungee jumping skiing snowboarding Lord of the Rings Hobbiton campervan self-drive mountains fiords lakes scenery whale watching dolphins"
+}

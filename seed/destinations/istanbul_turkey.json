@@ -1,0 +1,18 @@
+{
+  "destination": "Istanbul",
+  "region": "Middle East",
+  "tags": ["history", "culture", "food", "architecture", "bazaar", "religion", "unique", "crossroads"],
+  "best_season": "April-May or September-October",
+  "summary": "Istanbul is the only city in the world that straddles two continents. Once capital of three empires (Roman, Byzantine, Ottoman), it layers 2,500 years of history into a living, breathing megacity of 15 million. The Hagia Sophia, Grand Bazaar, Bosphorus straits, and extraordinary Turkish cuisine make it unmissable.",
+  "neighbourhoods": "Sultanahmet (Blue Mosque, Hagia Sophia, Topkapı Palace, Grand Bazaar), Beyoğlu/Taksim (Istiklal Avenue, nightlife, galleries, restaurants), Karaköy (hip waterfront, galleries, fish market), Üsküdar (Asian side, quieter, traditional), Beşiktaş (football culture, cafes, Ciragan Palace), Eminönü (spice bazaar, ferry terminal, Galata Bridge fish sellers)",
+  "must_do": "Hagia Sophia (arrive early), Blue Mosque (interior), Topkapı Palace (book skip-the-line), Grand Bazaar haggling, Spice Bazaar and Eminönü waterfront, Bosphorus cruise (public ferry to Asian side is cheapest), Dolmabahçe Palace, İstiklal Avenue evening walk + side streets, Turkish bath (hammam) experience, İstanbul Modern art museum",
+  "transport_tips": "Istanbulkart (blue transit card) for metro, tram, buses, Bosphorus ferries - load money at machines. Tram T1 connects Sultanahmet to Karaköy and Beyoğlu. Funicular from Karaköy to Taksim. Metro expanding rapidly. Ferries essential for crossing to Asian side ($1 AUD - best value in travel). Taxis: use metered or negotiated prices. Avoid airport taxis at inflated rates.",
+  "safety_notes": "Generally safe for tourists. Keep bags close in Grand Bazaar and Sultanahmet. Occasional political demonstrations near Taksim - avoid. Some touts offering shoe shines and 'help' in tourist areas may lead to overpriced experiences. Earthquake risk (fault line under city). Dress modestly when visiting mosques (women: headscarf, covered arms and legs).",
+  "budget_notes": "Budget: $80-120 AUD/day. Mid-range: $160-230 AUD/day. Luxury: $300+ AUD/day. Simit (sesame bread ring) $1 AUD. Kebab $8-15 AUD. Meze dinner $25-40 AUD. Restaurant in Beyoğlu $40-70 AUD. Hammam experience $25-60 AUD. Accommodation from $30 (hostel) to $350+ (boutique hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Hagia Sophia (pre-booked) + Blue Mosque + Byzantine cistern", "duration": "4 hours", "cost_aud": 20},
+    {"time": "afternoon", "activity": "Grand Bazaar + Spice Market + Eminönü ferry to Asian side", "duration": "3 hours", "cost_aud": 25},
+    {"time": "evening", "activity": "Beyoğlu Istiklal Avenue walk + meze dinner + rooftop bar Bosphorus view", "duration": "3 hours", "cost_aud": 60}
+  ],
+  "raw_text": "Istanbul Turkey Middle East history culture food architecture bazaar religion unique crossroads Hagia Sophia Blue Mosque Topkapi Palace Grand Bazaar Bosphorus Galata Tower Byzantine Ottoman Roman empire tea çay kebab baklava Turkish delight hammam carpet Taksim Beyoglu Sultanahmet Asian European two continents ferry Bosphorus strait calligraphy tiles iznik"
+}

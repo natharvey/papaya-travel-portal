@@ -1,0 +1,18 @@
+{
+  "destination": "Hoi An",
+  "region": "Southeast Asia",
+  "tags": ["culture", "food", "history", "tailors", "lanterns", "budget-friendly", "beach", "cycling"],
+  "best_season": "February-July (dry season for central Vietnam)",
+  "summary": "Hoi An is arguably Vietnam's most enchanting town: a UNESCO-listed Ancient Town of well-preserved trading port architecture, lit up nightly by thousands of silk lanterns. Renowned for world-class Vietnamese cuisine, custom tailoring, beautiful An Bang beach nearby, and a deeply atmospheric old quarter best explored by bicycle.",
+  "neighbourhoods": "Ancient Town (UNESCO heritage, silk lanterns, museums, tailors), An Bang Beach (5km from town, laid-back beach bars, seafood), Cam Nam Island (local village life, basket boat rides), Cam Thanh (coconut palm jungle, eco-tours), Marble Mountains (day trip, Buddhist sanctuaries, caves), My Son Sanctuary (Cham ruins, half-day trip)",
+  "must_do": "Ancient Town lantern evening walk, White Rose dumpling and Cao Lau noodles at local restaurants, cooking class with market visit, bicycle ride through rice paddies to An Bang Beach, basket boat ride in coconut palm forest, custom tailor fitting (2-3 day turnaround), My Son Cham ruins half-day, boat trip on Thu Bon River",
+  "transport_tips": "Hire bicycle for $2 AUD/day to explore town and beach. Motorbike taxi for longer distances. Grab app works well. Da Nang airport 30km away - taxi ~$20 AUD or Grab. Shuttle buses from Da Nang and Hue. Walking ideal in Ancient Town. Thu Bon River boat tours available from town.",
+  "safety_notes": "Heavy flooding possible October-November (typhoon season). Traffic chaotic - look carefully crossing roads. Tap water unsafe to drink. Bargain respectfully at markets. Quality of tailoring varies enormously - allow time for fittings and go by recommendation. Sunstroke risk in summer heat.",
+  "budget_notes": "Budget: $50-75 AUD/day. Mid-range: $100-160 AUD/day. Luxury: $200+ AUD/day. Banh mi $2 AUD. Cao Lau noodles $5 AUD. Restaurant dinner $20-40 AUD. Cooking class $40-60 AUD. Custom clothes $30-200 AUD depending on item. Accommodation from $20 (guesthouse) to $200+ (boutique resort).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Market visit + cooking class with chef", "duration": "4 hours", "cost_aud": 50},
+    {"time": "afternoon", "activity": "Bicycle ride to An Bang Beach + swim + beach bar lunch", "duration": "4 hours", "cost_aud": 20},
+    {"time": "evening", "activity": "Ancient Town lantern walk + cao lau dinner + Thu Bon River boat", "duration": "3 hours", "cost_aud": 30}
+  ],
+  "raw_text": "Hoi An Vietnam Southeast Asia culture food history tailors lanterns budget beach cycling Ancient Town UNESCO silk lanterns White Rose dumpling Cao Lau cooking class basket boat An Bang Beach rice paddies My Son Cham ruins Da Nang marble mountains Thu Bon River typhoon rainy season banh mi pho spring rolls Vietnamese food tailor made clothes custom suit"
+}

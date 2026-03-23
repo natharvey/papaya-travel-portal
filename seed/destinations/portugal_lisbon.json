@@ -1,0 +1,18 @@
+{
+  "destination": "Lisbon",
+  "region": "Western Europe",
+  "tags": ["culture", "food", "history", "fado", "art", "budget-friendly", "hills", "trams"],
+  "best_season": "April-June or September-October",
+  "summary": "Lisbon is Europe's sunniest capital and one of its most loveable. Built on seven hills above the Tagus estuary, the city enchants with its mosaic pavements, melancholic fado music, pastel-coloured azulejo tiles, world-class pastéis de nata, and a thriving creative scene. Excellent value for Western Europe.",
+  "neighbourhoods": "Alfama (oldest district, Moorish roots, fado clubs, Miradouros viewpoints), Baixa/Chiado (downtown, shopping, cafes, LX Factory), Bairro Alto (nightlife, wine bars, restaurants), Belém (monuments, pastéis de nata, discoveries), Mouraria (multicultural, fado birthplace, immigrant food), Parque das Nações (modern, Oceanarium, Expo area)",
+  "must_do": "Pastéis de Belém (the original pastel de nata since 1837), Jerónimos Monastery, Torre de Belém, Alfama neighbourhood wander + Miradouro da Graça sunset, tram 28 ride through Alfama (beware pickpockets), Fado show at A Tasca do Chico or similar, LX Factory Sunday market, day trip to Sintra fairy-tale palaces",
+  "transport_tips": "Lisbon Card covers public transport + museum entry (24/48/72h options ~$25-50 AUD). Tram 28 iconic but crowded and pickpocket hotspot. Metro efficient for main areas. Tuk-tuks for Alfama hills. Carris buses comprehensive. Sintra by direct train from Rossio station (~$6 AUD, 40 min). Airport: Metro red line to city (~$3 AUD, 25 min).",
+  "safety_notes": "Generally safe but pickpockets active on tram 28, Alfama, and busy touristy spots. Night taxis are safe - use official cabs or Uber/Bolt. Some areas of Mouraria and Intendente were historically rough but now gentrifying. Hills mean lots of stairs - comfortable shoes essential.",
+  "budget_notes": "Budget: $90-120 AUD/day. Mid-range: $160-230 AUD/day. Luxury: $300+ AUD/day. Pastel de nata $2 AUD. Lunch menu $12-18 AUD. Dinner $30-55 AUD. Glass of wine $4-8 AUD. Ginja (cherry liqueur) $2 AUD per shot. Accommodation from $25 (hostel) to $300+ (boutique hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Belém: Pastéis de Belém + Jerónimos Monastery + Torre de Belém", "duration": "4 hours", "cost_aud": 20},
+    {"time": "afternoon", "activity": "Alfama neighbourhood walk + Miradouro da Graça + Castelo de São Jorge", "duration": "3 hours", "cost_aud": 12},
+    {"time": "evening", "activity": "Fado show in Mouraria or Alfama + dinner with Portuguese wine", "duration": "3 hours", "cost_aud": 60}
+  ],
+  "raw_text": "Lisbon Portugal Western Europe culture food history fado art budget hills trams Alfama Belém Bairro Alto Chiado Sintra Cascais Jerónimos Monastery Belém Tower pastel de nata custard tart tram 28 azulejo tiles Tagus river viewpoint miradouro fado music saudade wine port ginjinha sunset Atlantic coast surfing"
+}

@@ -1,0 +1,18 @@
+{
+  "destination": "Petra & Jordan",
+  "region": "Middle East",
+  "tags": ["history", "ancient-ruins", "desert", "adventure", "UNESCO", "hiking", "culture", "unique"],
+  "best_season": "March-May or September-November",
+  "summary": "Jordan is the Middle East's most accessible and welcoming destination for travellers. Petra, the Rose-Red City carved by the Nabataeans into crimson sandstone cliffs 2,000 years ago, is one of the world's true wonders. Combined with the otherworldly Wadi Rum desert, the healing Dead Sea, and extraordinarily hospitable Jordanian culture, it's an unforgettable journey.",
+  "neighbourhoods": "Amman (capital, modern, liberal, excellent food scene, Rainbow Street, Roman citadel), Petra/Wadi Musa (base for Petra exploration), Wadi Rum (protected desert area, Bedouin camps, Mars-like landscape), Aqaba (Red Sea, diving, snorkelling, beach), Dead Sea (salt lake, floating, mud treatments), Jerash (Roman ruins, one of best preserved outside Italy), Dana Biosphere Reserve (hiking, eco-lodge)",
+  "must_do": "Petra: full day walking tour (Siq entrance, Treasury facade, Monastery - 800+ steps worth it), Petra by Night candlelit experience (Monday/Wednesday/Thursday), Wadi Rum desert jeep tour + overnight Bedouin camp under stars, Dead Sea float (must-do experience), Roman ruins of Jerash, Mount Nebo (Moses' view of Promised Land), Amman food tour (hummus, mansaf, knafeh)",
+  "transport_tips": "Renting a car easiest for flexibility between sites. JETT tourist bus connects Amman-Petra-Wadi Rum. Petra is entirely on foot (10-15km/day!). Horses from entrance to Treasury (optional). Wadi Rum: 4WD tours essential (no independent access). Jordan Pass ($75-100 USD) covers most entry fees + visa - excellent value. Amman Queen Alia airport is the main hub.",
+  "safety_notes": "Jordan is one of the safest countries in the Middle East. Extremely hospitable people. Dress modestly especially outside tourist areas. Jordan borders unstable regions but internal security is strong. Petra in summer is very hot (40°C+) - start early and carry water. Some trails at Petra have significant drops - wear good shoes. Dead Sea: keep water out of eyes and cuts.",
+  "budget_notes": "Budget: $100-130 AUD/day. Mid-range: $200-300 AUD/day. Luxury: $350+ AUD/day. Falafel wrap $3 AUD. Local restaurant $15-25 AUD. Hotel breakfast $20 AUD. Petra entry included in Jordan Pass. Wadi Rum jeep tour $60-100 AUD. Dead Sea resort day pass $50-80 AUD. Accommodation from $30 (hostel) to $400+ (luxury hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Petra: walk the Siq + Treasury + Street of Facades (arrive at 7am)", "duration": "4 hours", "cost_aud": 0},
+    {"time": "afternoon", "activity": "Petra High Place of Sacrifice trail + Royal Tombs + Monastery hike", "duration": "4 hours", "cost_aud": 5},
+    {"time": "evening", "activity": "Petra by Night candlelit experience (pre-booked)", "duration": "2 hours", "cost_aud": 20}
+  ],
+  "raw_text": "Jordan Petra Middle East history ancient ruins desert adventure UNESCO hiking culture Nabataean Treasury Siq Monastery Wadi Rum Dead Sea Jerash Amman Aqaba Red Sea Bedouin camp stargazing float salt lake camel rose red city sandstone carved Jordan Pass mansaf hummus meze knafeh hospitality safe welcoming Islamic culture Arabic"
+}

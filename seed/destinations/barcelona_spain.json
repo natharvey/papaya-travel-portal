@@ -1,0 +1,18 @@
+{
+  "destination": "Barcelona",
+  "region": "Southern Europe",
+  "tags": ["architecture", "beach", "food", "nightlife", "culture", "art", "sport", "romantic"],
+  "best_season": "May-June or September-October",
+  "summary": "Barcelona is one of Europe's most captivating cities, combining Gaudí's surreal architecture, Mediterranean beaches, world-famous cuisine (tapas, pintxos, paella), and a legendary nightlife scene that doesn't get started until midnight. Catalan culture adds a distinct identity to this vibrant metropolis.",
+  "neighbourhoods": "Gothic Quarter (medieval streets, cathedral, tapas bars), El Born/La Ribera (boutiques, Picasso Museum, El Bar del Pla), Eixample (Gaudí buildings, gay village, upscale), Barceloneta (beach, seafood, chiringuito bars), Gràcia (bohemian, locals, Plaça del Sol), Poblenou (digital innovation, beach, trendy restaurants)",
+  "must_do": "Sagrada Família (book well in advance), Park Güell (timed tickets), La Boqueria market morning visit, Gothic Quarter evening walk, Palau de la Música Catalana concert, Camp Nou stadium tour, day trip to Sitges or Montserrat, vermouth at Bar Marsella, sunset at Bunkers del Carmel",
+  "transport_tips": "T-Casual 10-trip card for Metro/bus (~$15 AUD). Metro fast and efficient. Walking ideal in Gothic Quarter. Bikes on BoardForce or Donkey Republic. Airport Aerobus to Plaça Catalunya (~$8 AUD, 35 min) or RENFE train (~$5 AUD). Taxis: Taxi Ecologic app.",
+  "safety_notes": "High pickpocket risk on La Rambla, Barceloneta, Metro Line 3. Use crossbody bags. Be alert at ATMs. La Rambla: avoid late night alone. Tourist traps on La Rambla restaurants. Siesta culture: many shops close 2-5pm. Noise ordinances - nightclubs until 6am.",
+  "budget_notes": "Budget: $120-160 AUD/day. Mid-range: $200-270 AUD/day. Luxury: $350+ AUD/day. Tapas bar snacks $5-12 AUD each. Set lunch menú del día $15-20 AUD (3 courses with wine!). Dinner restaurant $40-80 AUD. Accommodation from $30 (hostel) to $350+ (design hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Sagrada Família (pre-booked tower entry)", "duration": "2.5 hours", "cost_aud": 40},
+    {"time": "afternoon", "activity": "La Boqueria market + Gothic Quarter wander + El Born tapas", "duration": "3 hours", "cost_aud": 40},
+    {"time": "evening", "activity": "Sunset at Bunkers del Carmel + dinner in Gràcia", "duration": "3 hours", "cost_aud": 60}
+  ],
+  "raw_text": "Barcelona Spain Southern Europe architecture beach food nightlife culture art romantic Gaudí Sagrada Familia Park Güell Gothic Quarter Eixample Barceloneta Boqueria tapas paella vermouth sangria Picasso Miro Montjuic Camp Nou FC Barcelona flamenco Mediterranean sea sunbathing chiringuito nightclub discotheque catalan"
+}

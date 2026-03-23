@@ -1,0 +1,18 @@
+{
+  "destination": "Dubai",
+  "region": "Middle East",
+  "tags": ["luxury", "shopping", "desert", "architecture", "beach", "family", "nightlife", "modern"],
+  "best_season": "November-March (cooler weather)",
+  "summary": "Dubai is a city of superlatives: the world's tallest building, largest mall, and most spectacular artificial islands. This ultramodern desert metropolis seamlessly blends Emirati heritage with futuristic ambition. Luxury shopping, desert safaris, world-class dining, and year-round sunshine attract millions of visitors annually.",
+  "neighbourhoods": "Downtown Dubai (Burj Khalifa, Dubai Mall, Dubai Fountain), Dubai Marina (yacht clubs, beach, restaurants), Old Dubai/Bur Dubai (souks, heritage, creek), Jumeirah (beach hotels, Jumeirah Mosque), DIFC (financial centre, fine dining, art), Palm Jumeirah (Atlantis, ultra-luxury hotels), Deira (spice souk, gold souk, traditional market)",
+  "must_do": "Burj Khalifa observation deck (book ahead, sunset slot), Dubai Desert Safari (dune bashing, camel ride, BBQ dinner), Dubai Creek Abra boat ride + Gold and Spice Souks, Dubai Frame, Palm Jumeirah monorail, JBR beach, Museum of the Future, helicopter tour for palm island views",
+  "transport_tips": "Dubai Metro (Red + Green lines) for major attractions. Nol card for metro, buses, trams. Uber and Careem widely used. RTA Taxis official and metered. Mall of the Emirates has metro stop. Airport: Dubai Metro Red Line directly from T1/T3 (~$4 AUD). Driving: right side, excellent roads.",
+  "safety_notes": "Very safe city with zero tolerance for crime. Strict laws: no public intoxication, modest dress in traditional areas, no PDA. Ramadan: no eating/drinking in public daytime. LGBTQ+ relationships illegal. Photography of government buildings, military, and ports prohibited. Alcohol only in licensed venues.",
+  "budget_notes": "Budget: $150-200 AUD/day. Mid-range: $280-400 AUD/day. Luxury: $600+ AUD/day. Mall food court $15-20 AUD. Restaurant $50-80 AUD. Fine dining $150+ AUD. Beer at a bar $20-30 AUD. Accommodation from $80 (budget hotel) to $800+ (Burj Al Arab).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Dubai Creek Abra + Gold Souk + Spice Souk + Old Dubai", "duration": "3 hours", "cost_aud": 10},
+    {"time": "afternoon", "activity": "Dubai Mall + Dubai Aquarium + Burj Khalifa base viewing", "duration": "3 hours", "cost_aud": 60},
+    {"time": "evening", "activity": "Burj Khalifa At The Top sunset slot + Dubai Fountain show", "duration": "2.5 hours", "cost_aud": 80}
+  ],
+  "raw_text": "Dubai UAE Middle East luxury shopping desert architecture beach family nightlife modern Burj Khalifa Dubai Mall Palm Jumeirah Downtown Dubai Marina desert safari souk gold spice creek abra Museum of the Future Dubai Frame JBR beach camel dune bashing falconry Emirati heritage Rolls Royce Ferrari supercars tax free shopping luxury brands"
+}

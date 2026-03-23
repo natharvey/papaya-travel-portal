@@ -1,0 +1,18 @@
+{
+  "destination": "Tokyo",
+  "region": "East Asia",
+  "tags": ["urban", "food", "culture", "technology", "anime", "shopping", "family", "nightlife"],
+  "best_season": "March-May (cherry blossom) or October-November (autumn foliage)",
+  "summary": "Tokyo is a dazzling megacity that seamlessly blends ancient tradition with futuristic innovation. World-class cuisine at every price point, impeccable public transport, dazzling neighbourhoods each with a distinct personality, and some of the safest streets in the world.",
+  "neighbourhoods": "Shinjuku (entertainment, Kabukicho, department stores), Shibuya (crossing, youth fashion), Harajuku (Takeshita Street, Meiji Shrine), Asakusa (Senso-ji, old Tokyo), Akihabara (electronics, anime), Ginza (luxury shopping), Roppongi (nightlife, museums), Yanaka (old townscape)",
+  "must_do": "Shibuya Crossing at rush hour, Senso-ji Temple in Asakusa, teamLab digital art museum, Tsukiji outer market breakfast, day trip to Nikko or Kamakura, sumo wrestling match (January/May/September), Shinjuku Golden Gai bar hopping, Hamarikyu Gardens",
+  "transport_tips": "Get a Suica or Pasmo IC card for all trains, subways and buses. JR Pass for long-distance travel. Tokyo Metro day pass (~$10 AUD) for unlimited metro rides. Taxis expensive - avoid for long distances. Airport: Narita Express or Limousine Bus (~$25-35 AUD to central Tokyo).",
+  "safety_notes": "Tokyo is extremely safe. Typhoon season July-October. Earthquake preparedness: follow hotel evacuation signs. Keep valuables in hotel safe. Japan has strict drug laws.",
+  "budget_notes": "Budget: $120-150 AUD/day. Mid-range: $200-300 AUD/day. Luxury: $400+ AUD/day. Convenience store meals $5-10 AUD. Ramen $10-15 AUD. Restaurant set lunch $15-25 AUD. Accommodation from $50 (capsule hotel) to $300+ (luxury hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Tsukiji outer market sushi breakfast + Hamarikyu Gardens", "duration": "3 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "teamLab Borderless or Planets digital art", "duration": "3 hours", "cost_aud": 40},
+    {"time": "evening", "activity": "Shinjuku Omoide Yokocho (Memory Lane) yakitori + Golden Gai", "duration": "3 hours", "cost_aud": 35}
+  ],
+  "raw_text": "Tokyo Japan East Asia urban food culture technology anime shopping family nightlife cherry blossom autumn foliage Shinjuku Shibuya Harajuku Asakusa Akihabara Ginza Roppongi Yanaka Senso-ji teamLab Tsukiji sumo wrestling Nikko Kamakura ramen sushi izakaya Golden Gai capsule hotel Suica JR Pass metro safe earthquake typhoon"
+}

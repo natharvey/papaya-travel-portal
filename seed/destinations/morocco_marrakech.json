@@ -1,0 +1,18 @@
+{
+  "destination": "Marrakech",
+  "region": "Africa",
+  "tags": ["culture", "souks", "desert", "food", "history", "architecture", "spa", "adventure"],
+  "best_season": "March-May or October-November (mild temperatures)",
+  "summary": "Marrakech is an intoxicating blend of ancient Islamic architecture, labyrinthine souks, exotic spices, and unexpected luxury. The Medina (old city) is a UNESCO World Heritage Site where getting lost is the point. Beyond the city, the Sahara Desert, Atlas Mountains, and dramatic Draa Valley await.",
+  "neighbourhoods": "Medina/Old City (Djemaa el-Fna square, souks, Mouassine), Gueliz (modern French district, boutiques, bars, restaurants), Kasbah (historic fortified area, Saadian Tombs, Royal Palace), Mellah (former Jewish Quarter, silver jewellery, spice souks), Palmeraie (luxury riads and resorts outside city), Hivernage (upscale hotels, nightlife)",
+  "must_do": "Djemaa el-Fna at sunset (snake charmers, acrobats, street food), souks navigation (spice souk, leather tanneries visible from terrace), Bahia Palace, Saadian Tombs, Yves Saint Laurent Jardin Majorelle, Atlas Mountains day trip, desert overnight in Merzouga (2-day trip), hammam experience, cooking class",
+  "transport_tips": "Petit taxis (red, metered within Medina) for short distances. Grand taxis for intercity. Walking essential in Medina (no cars in souks). Horse-drawn caleche for evening rides. Shared CTM buses for intercity. Marrakech-Menara airport: taxi fixed rate ~$15 AUD to Medina. Negotiate all prices before getting in cab.",
+  "safety_notes": "Persistent touts and 'guides' in Medina - be firm but polite. Do not follow anyone offering to show you around. Bargaining expected at souks - start at 30% of asking price. Dress modestly in the Medina (cover shoulders and knees). Ramadan significantly changes schedules. Photographing people: always ask permission.",
+  "budget_notes": "Budget: $80-110 AUD/day. Mid-range: $150-220 AUD/day. Luxury: $300+ AUD/day. Street food in Djemaa el-Fna $10-20 AUD for a meal. Restaurant dinner $30-60 AUD. Luxury riad dinner $60-100 AUD. Hammam $15-30 AUD (local) to $80+ (luxury spa). Accommodation from $30 (guesthouse) to $500+ (luxury riad).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Medina souks + Bahia Palace + leather tanneries viewing terrace", "duration": "4 hours", "cost_aud": 15},
+    {"time": "afternoon", "activity": "Jardin Majorelle (YSL Museum) + Gueliz lunch", "duration": "3 hours", "cost_aud": 30},
+    {"time": "evening", "activity": "Djemaa el-Fna sunset + street food dinner + rooftop mint tea", "duration": "3 hours", "cost_aud": 25}
+  ],
+  "raw_text": "Marrakech Morocco Africa culture souks desert food history architecture spa adventure Medina Djemaa el-Fna Bahia Palace Saadian Tombs Jardin Majorelle YSL Atlas Mountains Sahara desert camel ride Berber villages hammam spice market leather tannery Mouassine fountain riad tagine couscous mint tea argan oil babouche slippers tile zellige Islamic architecture UNESCO"
+}

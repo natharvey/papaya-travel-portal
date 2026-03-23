@@ -1,0 +1,18 @@
+{
+  "destination": "Machu Picchu & Peru",
+  "region": "South America",
+  "tags": ["history", "ancient-ruins", "hiking", "culture", "adventure", "UNESCO", "Inca", "mountains"],
+  "best_season": "May-September (dry season)",
+  "summary": "Peru offers one of the world's most profound travel experiences: the Inca citadel of Machu Picchu rising through morning mist above the Sacred Valley. Combined with the colonial grandeur of Cusco, the floating reed islands of Lake Titicaca, and the culinary revolution of Lima (ranked among world's best food cities), Peru is a complete journey.",
+  "neighbourhoods": "Lima (Miraflores fine dining, Barranco bohemian, colonial centre), Cusco (Plaza de Armas, San Blas artisans, Inca walls beneath Spanish buildings), Sacred Valley (Pisac market, Ollantaytambo fortress, Urubamba), Aguas Calientes/Machu Picchu town (base for Machu Picchu), Lake Titicaca/Puno (Uros floating islands, Taquile island), Amazon/Iquitos (jungle lodges)",
+  "must_do": "Machu Picchu sunrise (book timed entry ticket months in advance, limited daily visitors), Inca Trail 4-day classic trek or Salkantay alternative, Sacred Valley tour (Pisac ruins, Ollantaytambo), Cusco city walking tour with local guide, Lake Titicaca Uros islands and homestay, Lima's Mercado Surquillo + Miraflores restaurants, Rainbow Mountain (Vinicunca) day hike",
+  "transport_tips": "Fly Lima-Cusco (1.5 hours - saves altitude sickness vs direct). Train Cusco-Aguas Calientes via PeruRail or Inca Rail ($55-140 AUD one way). Bus up to Machu Picchu from Aguas Calientes (25 min, $15 AUD). Acclimatise 2 days in Cusco (3,400m) before strenuous activities. Book Inca Trail months ahead (only 500 people/day).",
+  "safety_notes": "Altitude sickness (soroche) is real - acclimatise properly in Cusco before Machu Picchu. Coca tea helps. Don't fly direct from sea level to Machu Picchu. Petty theft in Lima and Cusco markets - keep bags secure. Book official guides through licensed operators. Beware of 'helpful strangers' in Cusco tourist areas.",
+  "budget_notes": "Budget: $80-120 AUD/day. Mid-range: $180-280 AUD/day. Luxury: $350+ AUD/day. Menu del día (set lunch) $8-12 AUD. Ceviche at Mercado Surquillo $10 AUD. Restaurant in Miraflores $40-80 AUD. Machu Picchu entry $30-50 AUD (book online). Inca Trail permit $700-900 AUD (all-inclusive guided).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Machu Picchu sunrise entry (first bus up at 5:30am)", "duration": "4 hours", "cost_aud": 45},
+    {"time": "afternoon", "activity": "Sun Gate (Inti Punku) hike for panoramic view + guided tour", "duration": "3 hours", "cost_aud": 0},
+    {"time": "evening", "activity": "Return to Aguas Calientes + dinner + hot springs soak", "duration": "3 hours", "cost_aud": 35}
+  ],
+  "raw_text": "Peru Machu Picchu South America history ancient ruins hiking culture adventure UNESCO Inca mountains Lima Cusco Sacred Valley Aguas Calientes Lake Titicaca Inca Trail Salkantay Ollantaytambo Pisac Rainbow Mountain altitude sickness coca leaf ceviche pisco sour lomo saltado chicha morada llama alpaca colonial Spanish Baroque cathedral Amazon jungle"
+}

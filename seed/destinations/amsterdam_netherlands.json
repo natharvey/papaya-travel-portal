@@ -1,0 +1,18 @@
+{
+  "destination": "Amsterdam",
+  "region": "Western Europe",
+  "tags": ["culture", "art", "cycling", "history", "canal", "food", "nightlife", "LGBTQ-friendly"],
+  "best_season": "April-May (tulip season) or June-August",
+  "summary": "Amsterdam charms with its Golden Age canal ring, world-class museums, liberal culture, and vibrant cycling culture. The city is compact and best explored by bike or on foot. Beyond the Rijksmuseum and Anne Frank House lies a city of cosy brown cafes (bruine kroegen), excellent Indonesian food (rijsttafel), and progressive arts scene.",
+  "neighbourhoods": "Centrum (Dam Square, Red Light District, canal ring), Jordaan (charming canals, boutiques, brown cafes), De Pijp (Albert Cuyp market, multicultural, young locals), Museum Quarter (Rijksmuseum, Van Gogh, Vondelpark), Noord (NDSM wharf, street art, alternative culture), Oud-West (trendy bars, Foodhallen)",
+  "must_do": "Rijksmuseum (Rembrandt, Vermeer), Van Gogh Museum (book well ahead), Anne Frank House (book months ahead), canal bike tour, Albert Cuyp Market on Saturday, day trip to Keukenhof tulip gardens (March-May only), Vondelpark picnic, Heineken Experience, Indonesian rijsttafel dinner",
+  "transport_tips": "Cycling is THE way to get around - rent a bike from MacBike (~$15 AUD/day). GVB tram network for longer distances. 24-72h travel pass available. Walking also excellent in Centrum and Jordaan. Schiphol airport: Intercity Direct train ~$12 AUD to Centraal (17 min). P+R parking at outer stations recommended.",
+  "safety_notes": "Watch out for cyclists when walking - they have priority. Trams are silent - look both ways. Cannabis and mushrooms are legally tolerated in designated spaces - be responsible. Red Light District: no photographing workers. Pick pockets at Centraal station.",
+  "budget_notes": "Budget: $140-170 AUD/day. Mid-range: $220-300 AUD/day. Luxury: $400+ AUD/day. Stroopwafel $2 AUD. Broodje kroket $5 AUD. Brown cafe lunch $20-30 AUD. Restaurant dinner $45-70 AUD. Museum entry $20-25 AUD each. Accommodation from $50 (hostel) to $350+ (canal house hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Van Gogh Museum (pre-booked) + Museum Quarter walk", "duration": "2.5 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "Canal bike tour through Jordaan + Albert Cuyp Market", "duration": "3 hours", "cost_aud": 30},
+    {"time": "evening", "activity": "Indonesian rijsttafel dinner in De Pijp", "duration": "2.5 hours", "cost_aud": 65}
+  ],
+  "raw_text": "Amsterdam Netherlands Western Europe culture art cycling history canal food nightlife LGBTQ Rijksmuseum Van Gogh Anne Frank house Jordaan De Pijp Museum Quarter Keukenhof tulips Vondelpark Heineken brown cafe stroopwafel rijsttafel Dutch bicycle rental dam square Red Light District canals Golden Age"
+}

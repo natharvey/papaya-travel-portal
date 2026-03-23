@@ -1,0 +1,18 @@
+{
+  "destination": "Maldives",
+  "region": "South Asia",
+  "tags": ["luxury", "beach", "overwater-bungalow", "diving", "snorkelling", "honeymoon", "romantic", "marine-life"],
+  "best_season": "November-April (dry season, northeast monsoon)",
+  "summary": "The Maldives is the ultimate escape: 1,200 coral islands scattered across the Indian Ocean, with the world's clearest turquoise waters, vibrant coral reefs, abundant marine life, and iconic overwater bungalows. A bucket-list destination for divers, honeymooners, and those seeking absolute paradise.",
+  "neighbourhoods": "Male (capital, transit hub, local market), North Male Atoll (closest to airport, accessible), South Male Atoll (slightly further, good value), Ari Atoll (manta rays, whale sharks, great diving), Baa Atoll (UNESCO Biosphere Reserve, Hanifaru Bay manta aggregation), Lhaviyani Atoll (pristine reefs, Kanuhuraa, Komandoo), Addu Atoll (southernmost, budget options)",
+  "must_do": "Snorkelling or diving on house reef, sunrise over ocean from overwater bungalow, sandbank picnic, whale shark snorkelling in Ari or Baa Atoll (seasonal), night dive with bioluminescence, dolphin cruise at sunset, local island visit for authentic Maldivian culture, seaplane transfer for views",
+  "transport_tips": "Seaplanes for outer atolls (stunning, expensive - $200-400 AUD one way). Speedboats for closer resorts (1-3 hours from Male airport). Local ferry system connects budget island options but slow. Only way to get between Male airport and most resorts is boat or seaplane - factor into budget. Velana International Airport in Male.",
+  "safety_notes": "Swimming and diving safe with resort guidance. Sun protection critical - equatorial UV. Some atolls remote - medical evacuation expensive, ensure comprehensive travel insurance. Strict Islamic nation: alcohol only permitted in resort islands. Drug offences very serious. Topless sunbathing not permitted on local islands.",
+  "budget_notes": "Budget: $300-400 AUD/day (local guesthouses on inhabited islands). Mid-range: $600-900 AUD/day (3-4 star resort). Luxury: $1,000-3,000+ AUD/day (5-star overwater bungalow). Meals included in most resort packages. Local island meals $15-30 AUD. Diving $80-150 AUD per dive.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Sunrise yoga on overwater deck + house reef snorkelling", "duration": "3 hours", "cost_aud": 0},
+    {"time": "afternoon", "activity": "Guided diving on outer reef or whale shark excursion", "duration": "4 hours", "cost_aud": 120},
+    {"time": "evening", "activity": "Sunset dolphin cruise + beach BBQ dinner", "duration": "3 hours", "cost_aud": 80}
+  ],
+  "raw_text": "Maldives South Asia luxury beach overwater bungalow diving snorkelling honeymoon romantic marine life coral reef turquoise water Male atoll seaplane speedboat whale shark manta ray turtle reef fish bioluminescence sandbank picnic Indian Ocean sunset paradise clear water tropical fish UNESCO biosphere resort all-inclusive"
+}

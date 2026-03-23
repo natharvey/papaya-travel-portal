@@ -1,0 +1,18 @@
+{
+  "destination": "Sydney",
+  "region": "Australia & Pacific",
+  "tags": ["beach", "outdoor", "food", "culture", "family", "harbour", "architecture", "sport"],
+  "best_season": "September-November (spring) or March-May (autumn)",
+  "summary": "Australia's harbour city stuns with its iconic Opera House, golden beaches, and laid-back lifestyle. World-class dining in the CBD and inner suburbs, beautiful national parks within an hour, and a multicultural food scene that rivals any global city.",
+  "neighbourhoods": "CBD (Opera House, Harbour Bridge, Circular Quay), Surry Hills (cafes, bars, restaurants), Newtown (alternative, student, cheap eats), Bondi (beach, coastal walk, cafes), Manly (beach, ferry ride, relaxed), Darlinghurst (LGBTQ+, Oxford Street), Glebe (markets, University of Sydney)",
+  "must_do": "Sydney Opera House tour or performance, Sydney Harbour Bridge climb, Bondi to Coogee coastal walk, Taronga Zoo, Blue Mountains day trip, Manly Ferry, Vivid Sydney Festival (May-June), Paddy's Markets, Royal Botanic Garden sunrise",
+  "transport_tips": "Opal card for all buses, trains, ferries, light rail (tap on/off). Manly Ferry from Circular Quay is a must ($8 AUD, great harbour views). Trains to Blue Mountains from Central Station (~$10 AUD). Taxis and Uber widely available. Airport train to CBD ~$20 AUD.",
+  "safety_notes": "Very safe city. Swim between the flags at patrolled beaches (strong rips at Bondi). Sun protection essential year-round. Tap water is excellent to drink. Some wildlife caution in national parks (snakes, spiders). Heatwaves possible in summer.",
+  "budget_notes": "Budget: $120-160 AUD/day. Mid-range: $200-280 AUD/day. Luxury: $350+ AUD/day. Cafe breakfast $20-30 AUD. Pub meal $25-40 AUD. Restaurant dinner $60-100 AUD. Accommodation from $50 (hostel) to $400+ (harbour view hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Bondi to Coogee coastal walk + cafe breakfast", "duration": "3 hours", "cost_aud": 25},
+    {"time": "afternoon", "activity": "Sydney Opera House tour + Circular Quay waterfront", "duration": "2 hours", "cost_aud": 40},
+    {"time": "evening", "activity": "Dinner in Surry Hills + rooftop bar drinks", "duration": "3 hours", "cost_aud": 80}
+  ],
+  "raw_text": "Sydney Australia Pacific beach outdoor food culture family harbour architecture Opera House Harbour Bridge Bondi Coogee coastal walk Manly Blue Mountains Taronga Zoo Newtown Surry Hills Opal card ferry cafe brunch multicultural seafood coffee culture sunshine beach volleyball surf lifesaving"
+}

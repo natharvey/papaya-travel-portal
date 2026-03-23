@@ -1,0 +1,18 @@
+{
+  "destination": "Angkor Wat & Cambodia",
+  "region": "Southeast Asia",
+  "tags": ["history", "ancient-ruins", "temples", "culture", "budget-friendly", "spiritual", "UNESCO", "photography"],
+  "best_season": "November-March (cool dry season)",
+  "summary": "Angkor Wat is the world's largest religious monument and one of humanity's greatest architectural achievements. The Khmer Empire built hundreds of temples across the Angkor Archaeological Park between the 9th and 15th centuries. Combined with the vibrant town of Siem Reap and Cambodia's complex history explored in Phnom Penh, this is a deeply moving destination.",
+  "neighbourhoods": "Siem Reap (base for Angkor temples, Pub Street, Old Market, artisan villages), Angkor Archaeological Park (Angkor Wat, Angkor Thom, Bayon, Ta Prohm/Tomb Raider temple), Phnom Penh (capital, Killing Fields, Royal Palace, riverside), Koh Rong islands (unspoilt beaches, bioluminescent plankton), Kampot (riverside colonial town, pepper farms, caves)",
+  "must_do": "Angkor Wat sunrise (iconic, book tuk-tuk or bike tour), Bayon temple 200 smiling faces, Ta Prohm 'Tomb Raider' jungle temple, Preah Khan and Neak Pean (less crowded), Angkor Thom circuit, sunset from Phnom Bakheng (crowds - try Pre Rup instead), Phnom Penh: Tuol Sleng Genocide Museum and Killing Fields (sobering but essential), Royal Palace, street food tour Siem Reap night market",
+  "transport_tips": "Tuk-tuks for Angkor temples (~$15-25 AUD/day all-in). Bicycle hire for independent temple exploration ($5 AUD/day). Local buses between Phnom Penh and Siem Reap (~6 hours, $15 AUD or giant ibis bus). Fly Phnom Penh-Siem Reap ($50-80 AUD saves time). Siem Reap International Airport 7km from town. Grab available in Phnom Penh.",
+  "safety_notes": "Landmines still present in rural areas outside tourist paths - stick to marked paths. Pickpockets at busy temples - keep bags in front. Don't touch unexploded ordnance. Hydration critical in hot season. Cultural sensitivity at temples - modest dress (covered shoulders and knees). Beware scams offering 'orphanage visits' which may exploit children.",
+  "budget_notes": "Budget: $50-70 AUD/day. Mid-range: $100-160 AUD/day. Luxury: $200+ AUD/day. Street food $3-6 AUD. Local restaurant $10-20 AUD. Angkor Pass: 1-day $37 USD, 3-day $62 USD, 7-day $72 USD (USD widely accepted). Accommodation from $15 (guesthouse) to $250+ (luxury resort).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Angkor Wat sunrise + inner temple exploration", "duration": "4 hours", "cost_aud": 50},
+    {"time": "afternoon", "activity": "Angkor Thom + Bayon temple + Ta Prohm Tomb Raider temple", "duration": "4 hours", "cost_aud": 5},
+    {"time": "evening", "activity": "Siem Reap night market + Khmer BBQ dinner + apsara dance show", "duration": "3 hours", "cost_aud": 35}
+  ],
+  "raw_text": "Cambodia Angkor Wat Southeast Asia history ancient ruins temples culture budget spiritual UNESCO photography Siem Reap Bayon Ta Prohm Angkor Thom Phnom Penh Khmer Empire Killing Fields Tuol Sleng genocide tuk-tuk bicycle Pub Street apsara dance Tonle Sap lake floating village monks Buddhism sunrise lotus amok curry lok lak fish"
+}

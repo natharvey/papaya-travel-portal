@@ -1,0 +1,18 @@
+{
+  "destination": "Santorini",
+  "region": "Southern Europe",
+  "tags": ["romantic", "volcanic", "scenery", "luxury", "wine", "sunset", "beach", "honeymoon"],
+  "best_season": "May-June or September-October",
+  "summary": "Santorini's iconic whitewashed villages perched on dramatic volcanic caldera cliffs are among the most photographed images on earth. Famous for breathtaking sunsets over the caldera, unique volcanic beaches (red, black, white), exceptional Assyrtiko white wines, fresh seafood, and unabashedly romantic atmosphere.",
+  "neighbourhoods": "Oia (best sunsets, Instagram iconic, expensive), Fira (capital, cable car, nightlife, shopping), Imerovigli (quietest cliffside village, best caldera views), Firostefani (between Fira and Imerovigli, more affordable), Akrotiri (ancient excavations, red and white beaches nearby), Perissa/Perivolos (black sand beach, budget-friendly)",
+  "must_do": "Sunset in Oia (arrive 2 hours early for good viewing spot), caldera hike Fira to Oia (2-3 hours, stunning views), Akrotiri archaeological site (Bronze Age Pompeii), Amoudi Bay seafood lunch below Oia, wine tasting at Santo Wines or Domaine Sigalas, boat trip to volcano + hot springs + Thirassia island",
+  "transport_tips": "ATVs/scooters popular but risky on narrow cliff roads. Local buses (KTEL) run main routes cheaply. Taxis from Fira. Ferry from Piraeus Athens (8 hours slow ferry or 4.5h fast) or 45-min flight. Port is at Athinios - not walkable to Fira (bus or taxi). Cable car from Old Port to Fira ($8 AUD) or donkeys (not recommended - animal welfare concerns).",
+  "safety_notes": "ATV and scooter accidents are a serious problem - consider taxis instead. Very crowded June-September, especially Oia at sunset. Book restaurants well in advance. Volcanic hot springs can be very crowded from cruise ship passengers. Sunburn risk is extreme with caldera-reflected light.",
+  "budget_notes": "Budget: $150-180 AUD/day. Mid-range: $280-400 AUD/day. Luxury: $600+ AUD/day. Simple gyros $8 AUD. Taverna lunch $35-50 AUD. Caldera-view restaurant $100+ per person. Wine tasting $20-40 AUD. Accommodation ranges from $60 (Perissa) to $1000+ (caldera cliff cave suite in Oia).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Akrotiri excavations + Red Beach + White Beach swim", "duration": "4 hours", "cost_aud": 20},
+    {"time": "afternoon", "activity": "Caldera hike Fira to Oia + lunch with caldera views", "duration": "4 hours", "cost_aud": 60},
+    {"time": "evening", "activity": "Sunset at Oia Castle + dinner in Oia village", "duration": "3 hours", "cost_aud": 100}
+  ],
+  "raw_text": "Santorini Greece Southern Europe romantic volcanic scenery luxury wine sunset beach honeymoon Oia Fira Imerovigli caldera whitewashed blue dome churches Assyrtiko wine black sand beach red beach boat volcano hot springs Akrotiri Bronze Age ruins Greek islands Cyclades ferry Athens romantic couple sunset wine tasting seafood octopus fresh fish"
+}

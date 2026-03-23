@@ -1,0 +1,18 @@
+{
+  "destination": "Cape Town",
+  "region": "Africa",
+  "tags": ["scenic", "nature", "culture", "food", "wine", "adventure", "history", "beaches"],
+  "best_season": "November-March (Southern Hemisphere summer)",
+  "summary": "Cape Town is one of the world's most spectacularly situated cities, with Table Mountain as its dramatic backdrop, two oceans meeting at the Cape, world-class wine regions within an hour, extraordinary wildlife, vibrant food scene, and a complex post-apartheid culture navigating extraordinary inequality.",
+  "neighbourhoods": "City Bowl (CBD, heritage, museums, Company's Garden), Waterfront (V&A Waterfront shopping, restaurants, Robben Island ferry), De Waterkant (Cape Malay heritage, Bo-Kaap colourful houses), Gardens/Kloof Street (restaurants, bars, coffee shops), Sea Point (promenade, pool, diverse), Camps Bay (beach, wealthy, restaurants), Stellenbosch + Franschhoek (wine routes, 45-60 min from city)",
+  "must_do": "Table Mountain cable car or Platteklip Gorge hike, Robben Island tour (Nelson Mandela's prison cell), Cape Point and Cape of Good Hope (full day), Bo-Kaap walking tour, V&A Waterfront seal feeding, penguin colony at Boulders Beach, wine tasting in Stellenbosch or Franschhoek, Kalk Bay fishing village + Groot Constantia wine estate",
+  "transport_tips": "Rental car recommended for Cape Peninsula, winelands, and wildlife. Uber very affordable and safe within city. MyCiTi bus for City Bowl and Waterfront. Baz Bus for backpackers connecting cities. Internaltional airport 20 min from city by Uber (~$20 AUD). Do not hitchhike. Avoid townships without a reputable guide.",
+  "safety_notes": "Significant violent crime and theft - be security conscious. Do not leave valuables in cars (window smashing). Avoid flashing phones or jewellery in public. Smash and grab thefts at traffic lights. Townships require experienced local guides. Cape Town safer than Joburg but still vigilant required. Great white shark activity at some beaches.",
+  "budget_notes": "Budget: $80-120 AUD/day. Mid-range: $160-250 AUD/day. Luxury: $300+ AUD/day. Bunny chow $8 AUD. Cape Malay curry $15 AUD. Restaurant lunch $25-40 AUD. Wine tasting $15-30 AUD. Table Mountain cable car $30 AUD. Accommodation from $30 (hostel) to $350+ (boutique hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Table Mountain hike via Platteklip Gorge (cable car down)", "duration": "4 hours", "cost_aud": 30},
+    {"time": "afternoon", "activity": "V&A Waterfront + Robben Island ferry (book ahead)", "duration": "4 hours", "cost_aud": 40},
+    {"time": "evening", "activity": "Kloof Street dinner + Cape Town jazz venue", "duration": "3 hours", "cost_aud": 70}
+  ],
+  "raw_text": "Cape Town South Africa Africa scenic nature culture food wine adventure history beaches Table Mountain Robben Island Nelson Mandela Cape Point Cape of Good Hope Bo-Kaap Boulders Beach penguins Stellenbosch Franschhoek wine tasting shark diving whale watching Cape Malay cuisine braai seafood sunset V&A Waterfront two oceans Atlantic Indian"
+}

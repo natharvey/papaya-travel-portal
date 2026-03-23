@@ -1,0 +1,18 @@
+{
+  "destination": "London",
+  "region": "Western Europe",
+  "tags": ["culture", "history", "art", "food", "theatre", "shopping", "family", "architecture"],
+  "best_season": "May-September (warmest, longest days)",
+  "summary": "London is a global metropolis of extraordinary cultural depth. Free world-class museums, a thriving theatre scene, diverse food markets, royal palaces, and vibrant multicultural neighbourhoods make it one of the world's great cities. The pub remains the beating heart of London social life.",
+  "neighbourhoods": "West End (theatre, Oxford Street, Soho restaurants), South Bank (Tate Modern, Borough Market, Southwark Cathedral), Notting Hill (Portobello Market, colourful houses), Shoreditch/Brick Lane (street art, vintage, curry), Covent Garden (opera, street performers, restaurants), Greenwich (maritime heritage, park, markets), Brixton (Afro-Caribbean culture, market, live music)",
+  "must_do": "British Museum (free, full day), Tate Modern (free), Tower of London + Crown Jewels, Borough Market on a Thursday-Saturday morning, West End show, Changing of the Guard, Hyde Park + Kensington Gardens, Sky Garden (free, book ahead), day trip to Stonehenge or Oxford",
+  "transport_tips": "Contactless payment card (Oyster or bank card) for all Tube, bus, Overground, DLR. Daily price cap limits spending. Black cabs iconic but expensive. Santander Cycles (Boris Bikes) for short trips ~$3 AUD. Heathrow: Piccadilly Line ~$8 AUD (60 min) or Heathrow Express ~$35 AUD (15 min).",
+  "safety_notes": "Generally safe. Pickpockets on Tube and at tourist attractions. Night buses mostly safe but stay alert. Some areas (parts of East/South London) less salubrious late at night. Knife crime has risen but tourists rarely affected. Traffic drives on the left - look right first.",
+  "budget_notes": "Budget: $160-200 AUD/day. Mid-range: $280-380 AUD/day. Luxury: $500+ AUD/day. Pint of beer $10-15 AUD. Meal deal (supermarket) $10 AUD. Restaurant lunch $25-40 AUD. Dinner $60-100 AUD. West End theatre $60-200 AUD. Accommodation from $70 (hostel) to $500+ (luxury hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Borough Market breakfast + walk across Tower Bridge + Tower of London", "duration": "4 hours", "cost_aud": 45},
+    {"time": "afternoon", "activity": "Tate Modern (free) + South Bank riverside walk + Shakespeare's Globe", "duration": "3 hours", "cost_aud": 20},
+    {"time": "evening", "activity": "West End theatre show", "duration": "3 hours", "cost_aud": 120}
+  ],
+  "raw_text": "London United Kingdom Western Europe culture history art food theatre shopping family architecture British Museum Tate Modern Tower of London Borough Market West End show Buckingham Palace Hyde Park Notting Hill Shoreditch Brick Lane Greenwich pub beer fish and chips afternoon tea black cab Tube Oyster card Thames Big Ben Parliament"
+}

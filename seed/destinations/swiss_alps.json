@@ -1,0 +1,18 @@
+{
+  "destination": "Swiss Alps",
+  "region": "Western Europe",
+  "tags": ["mountains", "skiing", "hiking", "scenery", "luxury", "trains", "chocolate", "wellness"],
+  "best_season": "December-March (skiing) or June-September (hiking, wildflowers)",
+  "summary": "The Swiss Alps offer year-round alpine magnificence: world-class ski resorts in winter, flower-strewn meadows and glacier hiking in summer. Iconic mountain railways, pristine lakes, charming village architecture, Swiss culinary traditions (fondue, raclette, rösti), and the magnificent Matterhorn make this one of Europe's most spectacular destinations.",
+  "neighbourhoods": "Zermatt (car-free, Matterhorn views, premium ski, hiking), Interlaken (adventure hub, paragliding, gateway to Jungfrau region), Grindelwald (traditional village, Eiger North Face, Jungfraujoch access), Verbier (exclusive ski resort, Four Valleys, après-ski), St Moritz (glamorous ski resort, frozen lake polo, Cresta Run), Lucerne (beautiful lake city, Chapel Bridge, day trip base), Bern (federal capital, bears, old town UNESCO)",
+  "must_do": "Jungfraujoch 'Top of Europe' train journey (highest railway station in Europe, at 3,454m), Glacier Express scenic train (Zermatt to St Moritz, 8 hours), Matterhorn at sunset from Zermatt, Schilthorn Piz Gloria revolving restaurant (James Bond location), paragliding from Männlichen above Grindelwald, Swiss chocolate and cheese factory tour, Harder Kulm above Interlaken sunset, Lauterbrunnen valley waterfalls",
+  "transport_tips": "Swiss Travel Pass covers trains, buses, boats, most mountain railways and many museums (4/8/15 day options - expensive but worth it if travelling extensively). Swiss trains run with legendary punctuality. Jungfraujoch needs advance booking especially in peak season. Zermatt is car-free - park at Täsch and take shuttle. Airport trains from Zurich and Geneva are excellent.",
+  "safety_notes": "Mountain safety paramount: check avalanche conditions in winter, always tell someone your hiking route. Weather changes fast - carry layers and waterproof. Altitude sickness possible at Jungfraujoch (3,454m) - acclimatise, take it slowly. Glacier hiking requires proper footwear and guides. Piste safety: follow marked runs, helmet recommended for skiing.",
+  "budget_notes": "Budget: $220-280 AUD/day. Mid-range: $350-500 AUD/day. Luxury: $600+ AUD/day. (Switzerland is very expensive). Supermarket lunch $15-20 AUD. Restaurant $55-90 AUD. Fondue for two $80-120 AUD. Ski day pass $80-120 AUD. Jungfraujoch return train ~$180 AUD. Accommodation from $80 (hostel) to $800+ (luxury chalet).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Jungfraujoch train journey from Grindelwald (earliest train)", "duration": "4 hours", "cost_aud": 180},
+    {"time": "afternoon", "activity": "Mürren and Gimmelwald villages hike + Lauterbrunnen waterfalls", "duration": "4 hours", "cost_aud": 20},
+    {"time": "evening", "activity": "Cheese fondue dinner in Grindelwald village restaurant", "duration": "2.5 hours", "cost_aud": 70}
+  ],
+  "raw_text": "Swiss Alps Switzerland Western Europe mountains skiing hiking scenery luxury trains chocolate wellness Zermatt Matterhorn Interlaken Jungfraujoch Grindelwald St Moritz Verbier Glacier Express Eiger Jungfrau Monch paragliding cheese fondue raclette rösti Swiss chocolate praline Lauterbrunnen waterfall alpine meadow edelweiss cow bells skiing snowboarding"
+}

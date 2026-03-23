@@ -1,0 +1,18 @@
+{
+  "destination": "Kyoto",
+  "region": "East Asia",
+  "tags": ["culture", "temples", "history", "spiritual", "food", "geisha", "gardens", "traditional"],
+  "best_season": "March-May (cherry blossom) or November (autumn foliage) - book accommodation far in advance",
+  "summary": "Kyoto is Japan's cultural soul, preserving 1,200 years of imperial history through 2,000 temples and shrines, traditional tea houses, geisha districts, and some of Japan's finest cuisine. The city moves at a different pace to Tokyo - more reflective, more beautiful, more ancient.",
+  "neighbourhoods": "Higashiyama (Kiyomizudera, Gion, preserved machiya townhouses), Gion (geisha district, ochaya teahouses), Arashiyama (bamboo grove, Tenryu-ji, monkeys), Fushimi (Fushimi Inari, sake breweries), Nishiki Market area (narrow food market street), Philosopher's Path (canal walk, temples)",
+  "must_do": "Fushimi Inari Taisha at dawn (avoid crowds), Arashiyama Bamboo Grove early morning, Kinkaku-ji (Golden Pavilion), Ryoan-ji rock garden, evening walk in Gion (spot maiko), Nishiki Market street food, Philosopher's Path, Kiyomizudera Temple at dusk, day trip to Nara (deer park + Todai-ji)",
+  "transport_tips": "IC card (Suica/ICOCA) for all buses and subways. City buses comprehensive but crowded in peak season. Taxis available. Bicycle rental excellent for temple hopping (~$12 AUD/day). JR Shinkansen from Tokyo (2h15m, $150 AUD one way). Trains from Osaka (30 min, $5 AUD).",
+  "safety_notes": "Extremely safe. Very respectful culture - follow local customs. No tipping. Photography restrictions at some temples and in Gion geisha district (strict - no photos of geiko/maiko). Temple etiquette: remove shoes, quiet voices, don't disturb worshippers.",
+  "budget_notes": "Budget: $100-130 AUD/day. Mid-range: $180-260 AUD/day. Luxury: $350+ AUD/day. Ramen $12 AUD. Kaiseki set lunch $40-80 AUD. Most temples $5-10 AUD entry. Accommodation from $40 (guesthouse) to $600+ (ryokan with kaiseki). Consider ryokan night as special experience.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Fushimi Inari Taisha pre-dawn + torii gates climb", "duration": "3 hours", "cost_aud": 0},
+    {"time": "afternoon", "activity": "Kinkaku-ji + Ryoan-ji rock garden + Nishiki Market lunch", "duration": "4 hours", "cost_aud": 25},
+    {"time": "evening", "activity": "Gion district twilight walk + kaiseki dinner", "duration": "3 hours", "cost_aud": 80}
+  ],
+  "raw_text": "Kyoto Japan East Asia culture temples history spiritual food geisha gardens traditional Fushimi Inari torii gates Arashiyama bamboo grove Kinkaku-ji Golden Pavilion Ryoan-ji rock garden Gion maiko geiko Kiyomizudera Philosopher's Path Nishiki Market Nara deer ryokan kaiseki matcha tea ceremony ikebana zen Buddhism Shinto cherry blossom sakura autumn maple momiji"
+}

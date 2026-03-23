@@ -1,0 +1,18 @@
+{
+  "destination": "Amalfi Coast",
+  "region": "Southern Europe",
+  "tags": ["coastal", "romantic", "food", "hiking", "scenery", "luxury", "history", "beach"],
+  "best_season": "May-June or September-October (avoid July-August crowds and heat)",
+  "summary": "The Amalfi Coast is one of the world's most dramatic stretches of coastline: vertical limestone cliffs plunging into impossibly blue Mediterranean waters, pastel-coloured villages clinging to cliffsides, lemon groves perfuming the air, and some of Italy's finest seafood. A UNESCO World Heritage Site of astonishing beauty.",
+  "neighbourhoods": "Positano (most photographed, steep and chic), Amalfi town (historical cathedral, ferry hub), Ravello (hilltop gardens and music festival, quieter), Praiano (less touristy, good diving), Cetara (authentic fishing village, tuna and colatura di alici), Sorrento (larger town, good base for regional exploration)",
+  "must_do": "Drive or bus the SS163 Amalfi Drive (spectacular but vertigo-inducing), Path of the Gods hike (Sentiero degli Dei, Positano to Nocelle), Villa Rufolo and Villa Cimbrone gardens in Ravello, Amalfi Cathedral, boat trip to Grotta dello Smeraldo, limoncello tasting, fresh seafood lunch by the water, day trip to Pompeii",
+  "transport_tips": "Ferries connect towns along the coast (recommended over narrow roads). SITA buses run the coastal road (cheap, crowded, spectacular). Hiring a car is possible but very challenging on narrow roads. Water taxis between towns for flexibility. Base yourself in Sorrento for trains to Naples and Pompeii.",
+  "safety_notes": "Steep paths require good shoes. Sun protection essential on open boats. Very crowded in peak season (July-August). Roads extremely narrow - car hire challenging. Some beaches are private (pay to use sun loungers). Jellyfish can be present in summer.",
+  "budget_notes": "Budget: $150-200 AUD/day. Mid-range: $280-400 AUD/day. Luxury: $500+ AUD/day. Pizza in Sorrento $15-20 AUD. Seafood restaurant $60-100 AUD. Limoncello bottle $15 AUD. Boat hire $100-200 AUD/half day. Accommodation varies wildly by season - book months ahead.",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Path of the Gods hike Positano to Nocelle (guided recommended)", "duration": "4 hours", "cost_aud": 0},
+    {"time": "afternoon", "activity": "Ferry to Amalfi + Cathedral + beach club swim", "duration": "3 hours", "cost_aud": 35},
+    {"time": "evening", "activity": "Ravello sunset at Villa Rufolo + seafood dinner", "duration": "3 hours", "cost_aud": 80}
+  ],
+  "raw_text": "Amalfi Coast Italy Southern Europe coastal romantic food hiking scenery luxury history beach Positano Ravello Amalfi Sorrento Praiano Cetara Path of the Gods hike Villa Rufolo Cimbrone limoncello seafood mozzarella pasta lemon groves Mediterranean cliff ferry boat Pompeii UNESCO World Heritage dramatic coastline honeymoon anniversary"
+}

@@ -1,0 +1,18 @@
+{
+  "destination": "Sri Lanka",
+  "region": "South Asia",
+  "tags": ["culture", "temples", "wildlife", "beaches", "tea", "history", "food", "budget-friendly"],
+  "best_season": "December-April for west/south coast; May-September for east coast",
+  "summary": "Sri Lanka is an island of extraordinary diversity packed into a small area: ancient Buddhist kingdoms, colonial hill towns with tea plantations, magnificent wildlife (leopards, elephants, blue whales), gorgeous beaches, and some of Asia's finest food. Incredibly warm and welcoming people make every visit memorable.",
+  "neighbourhoods": "Colombo (capital, Pettah market, Galle Face Green, craft beer scene), Galle (UNESCO Dutch fort, hipster boutiques, whale watching), Mirissa (beach, whale watching November-April, party vibes), Ella (hill country, Nine Arch Bridge, Little Adam's Peak hike, train journey), Kandy (Temple of the Tooth, Kandy Lake, tea country gateway), Sigiriya (rock fortress, Dambulla caves, wildlife), Arugam Bay (world-class surf, east coast, July-October)",
+  "must_do": "Sigiriya Rock Fortress climb (sunrise recommended), Dambulla Cave Temple, Temple of the Tooth Relic in Kandy, scenic train journey Kandy to Ella (7 hours - one of world's great train trips), blue whale watching from Mirissa (December-April), Yala National Park leopard safari, Ancient City of Polonnaruwa by bicycle, tea estate walk and tasting near Nuwara Eliya",
+  "transport_tips": "Trains are spectacular and cheap but book ahead for popular routes (Colombo-Kandy, Kandy-Ella). Tuk-tuks for local transport - agree price upfront or use meter. Private driver hire reasonable for touring ($50-80 AUD/day). Buses cheap and comprehensive but slow and crowded. PickMe app (like Uber) available in cities. Colombo Bandaranaike airport 32km from city.",
+  "safety_notes": "Recovered well from 2019 Easter bombings and COVID - security back to normal. Rip currents serious on some beaches - swim at lifeguarded spots. Wild elephants on roads especially at night - do not approach. Buddhist temples: strict dress code (cover all limbs, remove shoes). Monsoon season: roads can flood. Tap water unsafe - use filtered or bottled.",
+  "budget_notes": "Budget: $50-75 AUD/day. Mid-range: $100-170 AUD/day. Luxury: $250+ AUD/day. Rice and curry $5-8 AUD. Kottu roti $4-6 AUD. Beach cafe $15-25 AUD. Safari jeep $80-120 AUD (shared). Train Kandy-Ella $3 AUD (3rd class). Accommodation from $20 (guesthouse) to $300+ (boutique villa).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Sigiriya Rock Fortress sunrise climb (open from 7am)", "duration": "3 hours", "cost_aud": 40},
+    {"time": "afternoon", "activity": "Dambulla Cave Temple + Sigiriya village tuk-tuk", "duration": "3 hours", "cost_aud": 15},
+    {"time": "evening", "activity": "Sunset over paddy fields + Sri Lankan rice and curry feast", "duration": "2 hours", "cost_aud": 20}
+  ],
+  "raw_text": "Sri Lanka South Asia culture temples wildlife beaches tea history food budget Colombo Galle Kandy Ella Sigiriya Mirissa Arugam Bay Yala National Park leopard elephant blue whale whale watching nine arch bridge scenic train ride tea plantation Polonnaruwa Anuradhapura ancient kingdoms Buddhist Hindu Tamil Sinhalese coconut sambol hoppers kottu roti spice curry"
+}

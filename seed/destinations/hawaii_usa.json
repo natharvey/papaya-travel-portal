@@ -1,0 +1,18 @@
+{
+  "destination": "Hawaii",
+  "region": "North America",
+  "tags": ["beach", "volcanic", "surfing", "family", "culture", "snorkelling", "hiking", "relaxation"],
+  "best_season": "April-June or September-November (fewer crowds, lower prices)",
+  "summary": "Hawaii is America's paradise archipelago: volcanic peaks draped in rainforest, legendary surf breaks, sacred Polynesian culture, turquoise snorkelling waters, and unfailingly warm hospitality. Each of the main islands has a distinct personality - O'ahu for culture and history, Maui for romance and whale watching, Big Island for volcanoes, Kauai for dramatic scenery.",
+  "neighbourhoods": "Honolulu/O'ahu (Waikiki Beach, Pearl Harbor, Diamondhead, North Shore surfing), Maui (Lahaina, Road to Hana, Haleakalā National Park, Wailea resort strip), Big Island/Hawaii Island (Hawai'i Volcanoes National Park, Kona coffee, manta ray night dive, black sand Punalu'u Beach), Kauai (Na Pali Coast, Waimea Canyon, Poipu Beach, lush north shore)",
+  "must_do": "Pearl Harbor memorial and USS Arizona, Diamond Head crater hike, North Shore surfing/spectating (November-February), Road to Hana (Maui, full day drive with waterfalls), Haleakalā sunrise (book permit months in advance), Hawai'i Volcanoes National Park lava flows, manta ray night snorkel (Big Island), Na Pali Coast boat trip or helicopter (Kauai), snorkel Molokini Crater",
+  "transport_tips": "Inter-island flights frequent and affordable ($50-100 AUD) via Hawaiian Airlines or Southwest. Car hire essential on each island - book ahead. O'ahu: TheBus public transport in Honolulu. Road to Hana one-way is best clockwise. Haleakalā sunrise permit must be booked months ahead online. Maui's Road to Hana requires a full day.",
+  "safety_notes": "Ocean safety paramount: rip currents, strong shorebreak, sharp reef. Always check surf conditions before swimming. Some beaches dangerous even when they look calm. Hurricane season June-November. Vog (volcanic smog) affects Big Island air quality - check conditions. Sun protection essential. Respectful of Hawaiian culture and sacred sites.",
+  "budget_notes": "Budget: $180-230 AUD/day. Mid-range: $300-420 AUD/day. Luxury: $500+ AUD/day. Plate lunch $15-20 AUD. Shave ice $8 AUD. Restaurant dinner $55-90 AUD. Manta ray dive $120-160 AUD. Accommodation from $80 (hostel) to $600+ (Wailea resort).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Haleakalā National Park sunrise (permit required) + crater walk", "duration": "5 hours", "cost_aud": 35},
+    {"time": "afternoon", "activity": "Road to Hana waterfalls and jungle pools drive", "duration": "4 hours", "cost_aud": 15},
+    {"time": "evening", "activity": "Lahaina waterfront dinner + luau show", "duration": "3 hours", "cost_aud": 120}
+  ],
+  "raw_text": "Hawaii USA North America beach volcanic surfing family culture snorkelling hiking relaxation Honolulu Waikiki Maui Big Island Kauai O'ahu Pearl Harbor Diamond Head Haleakala Volcanoes National Park Road to Hana Na Pali Coast manta ray night dive mango shave ice luau hula lei aloha ono grindz plate lunch Polynesian culture whale watching"
+}

@@ -1,0 +1,18 @@
+{
+  "destination": "Iceland",
+  "region": "Northern Europe",
+  "tags": ["nature", "northern-lights", "adventure", "volcanic", "geothermal", "scenic", "hiking", "photography"],
+  "best_season": "June-August (midnight sun, hiking) or November-February (northern lights)",
+  "summary": "Iceland is nature on an epic scale: erupting geysers, lava fields, glaciers, volcanic craters, roaring waterfalls, and the mesmerising dancing green curtains of the Aurora Borealis. The capital Reykjavík punches well above its size with a vibrant arts, music, and food scene fuelled by geothermal energy.",
+  "neighbourhoods": "Reykjavík (capital, Hallgrímskirkja, Old Harbour, vibrant bars), Golden Circle (Geysir, Gullfoss, Þingvellir National Park), South Coast (Seljalandsfoss, Skógafoss, black sand beaches, Jökulsárlón glacier lagoon), West Fjords (remote, dramatic fjords, Dynjandi waterfall), Snæfellsnes Peninsula (glacier-capped volcano, Arnarstapi), Akureyri (north, whale watching, midnight sun skiing)",
+  "must_do": "Golden Circle full day tour, South Coast waterfalls + Jökulsárlón glacier lagoon, Blue Lagoon geothermal spa (book ahead), Northern Lights chasing (September-March), glacier walk and ice cave tour on Vatnajökull, whale watching from Húsavík, Reykjavík nightlife on a Friday (bars stay open until 5am), Westman Islands puffin colony (summer)",
+  "transport_tips": "Rental car (4WD recommended, essential for F-roads in interior) gives maximum flexibility. Ring Road (Route 1) circles the country in 7-10 days. Fly into Keflavík airport, 45 min from Reykjavík by Flybus or rental car. Domestic flights to Akureyri. Bus service connects main Ring Road towns. Ferries to Westman Islands and Westfjords.",
+  "safety_notes": "Weather changes extremely rapidly - check forecasts and mountain road conditions (road.is). Never drive off-road (illegal, severely damages fragile lava fields). F-roads only open summer and require 4WD. Never turn your back on ocean waves on black sand beaches. Volcanic activity: monitor vedur.is. Earthquake activity normal.",
+  "budget_notes": "Budget: $180-230 AUD/day. Mid-range: $280-400 AUD/day. Luxury: $500+ AUD/day. Convenience store hot dog $5 AUD. Skyr yogurt $4 AUD. Restaurant lunch $30-45 AUD. Dinner $60-100 AUD. Lamb soup $15-20 AUD. Blue Lagoon entry $80-150 AUD. Accommodation from $60 (hostel) to $400+ (boutique hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Golden Circle: Þingvellir National Park tectonic plates walk", "duration": "3 hours", "cost_aud": 0},
+    {"time": "afternoon", "activity": "Geysir eruptions + Gullfoss waterfall", "duration": "3 hours", "cost_aud": 5},
+    {"time": "evening", "activity": "Northern Lights hunt (winter) or midnight sun drive (summer)", "duration": "3 hours", "cost_aud": 80}
+  ],
+  "raw_text": "Iceland Northern Europe nature northern lights adventure volcanic geothermal scenic hiking photography Reykjavík Golden Circle Geysir Gullfoss Þingvellir Blue Lagoon Jökulsárlón glacier lagoon Vatnajökull South Coast waterfalls Seljalandsfoss Skógafoss black sand beach puffins whale watching midnight sun aurora borealis Ring Road 4WD rental car lava field hot spring"
+}

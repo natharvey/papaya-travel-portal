@@ -1,0 +1,18 @@
+{
+  "destination": "Rome",
+  "region": "Southern Europe",
+  "tags": ["history", "culture", "food", "art", "architecture", "romance", "religion", "ancient"],
+  "best_season": "April-May or September-October",
+  "summary": "The Eternal City layers 3,000 years of history into every cobblestone street. Ancient Rome's ruins stand alongside Renaissance piazzas, Baroque fountains, and one of the world's greatest art collections. Arguably the world's best food city for Italian classics: cacio e pepe, carbonara, supplì, and gelato.",
+  "neighbourhoods": "Historic Centre/Campo de' Fiori (Pantheon, Navona, trastevere-adjacent), Trastevere (romantic cobblestones, ivy-covered trattorias, nightlife), Testaccio (authentic working-class, best street food, MACRO museum), Prati (Vatican-adjacent, upscale), Pigneto (young bohemian, craft beer), Garbatella (local neighbourhood, vintage market)",
+  "must_do": "Colosseum + Roman Forum (book skip-the-line timed entry), Vatican Museums + Sistine Chapel (book months ahead), Pantheon (now ticketed), Trevi Fountain early morning, Borghese Gallery (timed entry essential), Trastevere evening wander, sunset from Gianicolo Hill, day trip to Ostia Antica or Tivoli",
+  "transport_tips": "Walking is best for historic centre (many sites within 20 min walk). Metro lines A and B for longer distances. Tram 8 to Trastevere. Roma Pass (48h or 72h) covers public transport + museum entries. Taxi: only white official taxis, fixed rates from airports. Termini-Fiumicino airport: Leonardo Express ~$20 AUD (32 min).",
+  "safety_notes": "Pickpockets on bus 40/64 to Vatican and at Trevi Fountain. Validate bus/tram tickets or face fines. Unofficial tour guides at Colosseum are unlicensed - use official entry with audio guide. Water fountains (nasoni) throughout city are drinkable and refreshing.",
+  "budget_notes": "Budget: $120-160 AUD/day. Mid-range: $200-280 AUD/day. Luxury: $350+ AUD/day. Espresso at bar $2 AUD. Pizza al taglio $5-8 AUD. Trattoria lunch $25-35 AUD. Restaurant dinner $50-80 AUD. Accommodation from $60 (B&B) to $400+ (boutique hotel).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Colosseum + Roman Forum + Palatine Hill (pre-booked)", "duration": "4 hours", "cost_aud": 30},
+    {"time": "afternoon", "activity": "Pantheon + Piazza Navona + Campo de' Fiori", "duration": "3 hours", "cost_aud": 8},
+    {"time": "evening", "activity": "Dinner in Trastevere + gelato walk", "duration": "3 hours", "cost_aud": 55}
+  ],
+  "raw_text": "Rome Italy Southern Europe history culture food art architecture romance religion ancient Colosseum Vatican Sistine Chapel Pantheon Trevi Fountain Trastevere Forum Palatine Hill Borghese Gallery pasta carbonara cacio e pepe gelato espresso pizza tiramisu aperitivo prosecco Catholic papal Rome eternal city ancient ruins Renaissance Baroque"
+}

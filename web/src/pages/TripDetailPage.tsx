@@ -1,0 +1,245 @@
+import { useEffect, useState } from 'react'
+import { useParams, Link } from 'react-router-dom'
+import Layout from '../components/Layout'
+import ItineraryTimeline from '../components/ItineraryTimeline'
+import MessageThread from '../components/MessageThread'
+import LoadingSpinner from '../components/LoadingSpinner'
+import { getClientTrip, sendClientMessage, getApiError } from '../api/client'
+import type { TripDetail, Message } from '../types'
+
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  INTAKE: { bg: '#EEF2FF', text: '#4F46E5' },
+  DRAFT: { bg: '#FFF7ED', text: '#C2410C' },
+  REVIEW: { bg: '#FEF9C3', text: '#A16207' },
+  CONFIRMED: { bg: '#DCFCE7', text: '#15803D' },
+  ARCHIVED: { bg: '#F3F4F6', text: '#6B7280' },
+}
+
+function formatDate(d: string): string {
+  return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'transparent',
+        border: 'none',
+        borderBottom: active ? '3px solid var(--color-primary)' : '3px solid transparent',
+        padding: '12px 20px',
+        fontSize: '14px',
+        fontWeight: active ? 700 : 500,
+        color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+export default function TripDetailPage() {
+  const { tripId } = useParams<{ tripId: string }>()
+  const [trip, setTrip] = useState<TripDetail | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [tab, setTab] = useState<'itinerary' | 'messages' | 'details'>('itinerary')
+
+  useEffect(() => {
+    if (!tripId) return
+    getClientTrip(tripId)
+      .then(data => {
+        setTrip(data)
+        setMessages(data.messages)
+      })
+      .catch(e => setError(getApiError(e)))
+      .finally(() => setLoading(false))
+  }, [tripId])
+
+  async function handleSendMessage(body: string) {
+    if (!tripId) return
+    const msg = await sendClientMessage(tripId, body)
+    setMessages(prev => [...prev, msg])
+  }
+
+  if (loading) {
+    return (
+      <Layout variant="client">
+        <LoadingSpinner label="Loading trip details..." />
+      </Layout>
+    )
+  }
+
+  if (error || !trip) {
+    return (
+      <Layout variant="client">
+        <div style={{ maxWidth: '600px', margin: '40px auto', padding: '0 24px' }}>
+          <div style={{
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: 'var(--radius)',
+            padding: '16px',
+            color: '#B91C1C',
+            marginBottom: '16px',
+          }}>
+            {error || 'Trip not found.'}
+          </div>
+          <Link to="/portal" style={{ color: 'var(--color-primary)' }}>← Back to your trips</Link>
+        </div>
+      </Layout>
+    )
+  }
+
+  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.INTAKE
+  const latestItinerary = trip.itineraries.length > 0
+    ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
+    : null
+
+  const tripDays = Math.ceil(
+    (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
+  )
+
+  return (
+    <Layout variant="client">
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px 60px' }}>
+        {/* Breadcrumb */}
+        <div style={{ marginBottom: '20px' }}>
+          <Link to="/portal" style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+            ← Your Trips
+          </Link>
+        </div>
+
+        {/* Trip header */}
+        <div style={{
+          background: 'linear-gradient(135deg, var(--color-secondary), #1a2639)',
+          color: 'white',
+          borderRadius: 'var(--radius-lg)',
+          padding: '28px 32px',
+          marginBottom: '24px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '8px' }}>{trip.title}</h1>
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '14px', color: '#94A3B8' }}>✈️ From {trip.origin_city}</span>
+                <span style={{ fontSize: '14px', color: '#94A3B8' }}>📅 {formatDate(trip.start_date)} — {formatDate(trip.end_date)}</span>
+                <span style={{ fontSize: '14px', color: '#94A3B8' }}>🕐 {tripDays} days</span>
+                <span style={{ fontSize: '14px', color: '#94A3B8' }}>💰 {trip.budget_range}</span>
+                <span style={{ fontSize: '14px', color: '#94A3B8' }}>🚶 {trip.pace}</span>
+              </div>
+            </div>
+            <span style={{
+              background: statusColors.bg,
+              color: statusColors.text,
+              padding: '6px 16px',
+              borderRadius: '100px',
+              fontSize: '13px',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              alignSelf: 'flex-start',
+            }}>
+              {trip.status}
+            </span>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{
+          background: 'white',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--color-border)',
+          boxShadow: 'var(--shadow-sm)',
+          overflow: 'hidden',
+        }}>
+          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex' }}>
+            <TabButton label="🗓 Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
+            <TabButton label={`💬 Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
+            <TabButton label="📋 Trip Details" active={tab === 'details'} onClick={() => setTab('details')} />
+          </div>
+
+          <div style={{ padding: '28px' }}>
+            {/* Itinerary Tab */}
+            {tab === 'itinerary' && (
+              <>
+                {!latestItinerary && (
+                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
+                      Your itinerary is being prepared
+                    </h3>
+                    <p style={{ color: 'var(--color-text-muted)', lineHeight: '1.6' }}>
+                      Our team is working on your personalised itinerary. You'll see it here once it's ready.
+                      Feel free to send us a message in the Messages tab!
+                    </p>
+                  </div>
+                )}
+                {latestItinerary && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                        Version {latestItinerary.version} · Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU')}
+                      </span>
+                      {trip.itineraries.length > 1 && (
+                        <span style={{ fontSize: '12px', color: 'var(--color-primary)' }}>
+                          {trip.itineraries.length} versions available
+                        </span>
+                      )}
+                    </div>
+                    <ItineraryTimeline data={latestItinerary.itinerary_json} />
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Messages Tab */}
+            {tab === 'messages' && (
+              <MessageThread
+                messages={messages}
+                currentRole="CLIENT"
+                onSend={handleSendMessage}
+              />
+            )}
+
+            {/* Trip Details Tab */}
+            {tab === 'details' && (
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--color-secondary)' }}>
+                  Your Trip Preferences
+                </h3>
+                {trip.intake_response ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                    {[
+                      ['Travellers', trip.intake_response.travellers_count.toString()],
+                      ['Accommodation', trip.intake_response.accommodation_style],
+                      ['Interests', trip.intake_response.interests.join(', ') || '—'],
+                      ['Must-Dos', trip.intake_response.must_dos || '—'],
+                      ['Must-Avoid', trip.intake_response.must_avoid || '—'],
+                      ['Constraints', trip.intake_response.constraints || '—'],
+                      ['Notes', trip.intake_response.notes || '—'],
+                    ].map(([label, value]) => (
+                      <div key={label} style={{
+                        background: '#F8FAFC',
+                        borderRadius: 'var(--radius)',
+                        padding: '14px 16px',
+                      }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+                          {label}
+                        </div>
+                        <div style={{ fontSize: '14px', color: 'var(--color-text)' }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ color: 'var(--color-text-muted)' }}>No intake details found.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </Layout>
+  )
+}

@@ -1,0 +1,60 @@
+import os
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from jose import jwt
+
+from app.db import get_db
+from app.models import Client
+from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
+ALGORITHM = "HS256"
+CLIENT_TOKEN_EXPIRE_HOURS = 24
+ADMIN_TOKEN_EXPIRE_HOURS = 8
+
+
+def create_token(data: dict, expires_delta: timedelta) -> str:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=ALGORITHM)
+
+
+def decode_token(token: str) -> dict:
+    return jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+
+
+@router.post("/client-login", response_model=TokenResponse)
+def client_login(payload: ClientLoginRequest, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(
+        Client.email == payload.email,
+        Client.reference_code == payload.reference_code,
+    ).first()
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or reference code",
+        )
+    token = create_token(
+        {"sub": str(client.id), "role": "client"},
+        timedelta(hours=CLIENT_TOKEN_EXPIRE_HOURS),
+    )
+    return TokenResponse(access_token=token, role="client")
+
+
+@router.post("/admin-login", response_model=TokenResponse)
+def admin_login(payload: AdminLoginRequest):
+    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
+    if payload.password != admin_password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin password",
+        )
+    token = create_token(
+        {"sub": "admin", "role": "admin"},
+        timedelta(hours=ADMIN_TOKEN_EXPIRE_HOURS),
+    )
+    return TokenResponse(access_token=token, role="admin")

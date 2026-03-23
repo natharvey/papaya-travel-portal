@@ -1,0 +1,18 @@
+{
+  "destination": "Singapore",
+  "region": "Southeast Asia",
+  "tags": ["food", "culture", "family", "shopping", "modern", "clean", "gardens", "multicultural"],
+  "best_season": "February-April (least rain), though tropical year-round",
+  "summary": "Singapore is Southeast Asia's gateway: a gleaming city-state with world-class infrastructure, extraordinary multicultural food scene (hawker centres are UNESCO-listed), lush gardens, and fascinating cultural enclaves. A superb base for exploring the wider region with excellent connections.",
+  "neighbourhoods": "Marina Bay (Gardens by the Bay, Marina Bay Sands, Merlion), Chinatown (temples, hawker centres, shophouses), Little India (Mustafa Centre, colourful streets, banana leaf curry), Kampong Glam (Arab Street, Sultan Mosque, hipster shops), Orchard Road (luxury shopping), Tiong Bahru (vintage cafes, art deco shophouses), Sentosa (Universal Studios, beach, resorts)",
+  "must_do": "Gardens by the Bay (Supertrees light show at night), Marina Bay Sands infinity pool (hotel guests only - SkyPark observation deck for non-guests), Hawker Centre food tour (Maxwell, Newton, Old Airport Road), Singapore Zoo or Night Safari, Pulau Ubin day trip, Chinatown temples, Little India on Sunday, Universal Studios Sentosa",
+  "transport_tips": "MRT (subway) is world-class, clean, cheap. EZ-Link card for all transport. Buses excellent coverage. Grab for door-to-door. Cycling on park connectors and Pulau Ubin. Airport: MRT Changi Airport station to city ~$2 AUD (30 min). Changi Airport itself is a destination - Casino, Jewel waterfall.",
+  "safety_notes": "One of the world's safest cities. Very strict laws: no chewing gum, $1000 fine for jaywalking, zero tolerance for drugs (death penalty). No smoking in most public areas. Tap water is excellent. Extreme heat and humidity - stay hydrated.",
+  "budget_notes": "Budget: $80-110 AUD/day. Mid-range: $150-220 AUD/day. Luxury: $300+ AUD/day. Hawker centre meal $5-10 AUD. Coffee shop kaya toast set $6 AUD. Restaurant dinner $40-70 AUD. Cocktail at rooftop bar $25-35 AUD. Accommodation from $30 (hostel) to $500+ (Marina Bay Sands).",
+  "sample_day_blocks": [
+    {"time": "morning", "activity": "Maxwell Food Centre hawker breakfast + Chinatown temples", "duration": "3 hours", "cost_aud": 20},
+    {"time": "afternoon", "activity": "Gardens by the Bay + Cloud Forest + Flower Dome", "duration": "3 hours", "cost_aud": 35},
+    {"time": "evening", "activity": "Supertree Grove light show + Marina Bay waterfront walk", "duration": "2 hours", "cost_aud": 10}
+  ],
+  "raw_text": "Singapore Southeast Asia food culture family shopping modern clean gardens multicultural hawker centre Marina Bay Gardens by the Bay Sentosa Little India Chinatown Orchard Road MRT Grab Zoo Night Safari Universal Studios Pulau Ubin chili crab laksa chicken rice roti prata kaya toast bak kut teh safe clean efficient multicultural Malay Chinese Indian"
+}
