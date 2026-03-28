@@ -4,18 +4,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from alembic.config import Config
+from alembic import command
 from app.limiter import limiter
 import os
-from app.db import engine, Base, SessionLocal
+from app.db import SessionLocal
 from app.routes import auth, intake, client, admin
 from app.services.seed import seed_destinations
 from app.security import hash_password
 
 
+def run_migrations():
+    alembic_cfg = Config("/app/alembic.ini")
+    alembic_cfg.set_main_option("script_location", "/app/alembic")
+    command.upgrade(alembic_cfg, "head")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    run_migrations()
     # Hash the admin password once at startup and cache in memory
     plain = os.getenv("ADMIN_PASSWORD", "admin123")
     auth.ADMIN_PASSWORD_HASH = hash_password(plain)
