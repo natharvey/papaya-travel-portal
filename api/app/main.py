@@ -8,15 +8,21 @@ from alembic.config import Config
 from alembic import command
 from app.limiter import limiter
 import os
-from app.db import SessionLocal
+from pathlib import Path
+from app.db import engine, Base, SessionLocal, DATABASE_URL
 from app.routes import auth, intake, client, admin
 from app.services.seed import seed_destinations
 from app.security import hash_password
 
 
 def run_migrations():
-    alembic_cfg = Config("/app/alembic.ini")
-    alembic_cfg.set_main_option("script_location", "/app/alembic")
+    # SQLite is only used in tests — use create_all there, Alembic for Postgres
+    if DATABASE_URL.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
+        return
+    here = Path(__file__).parent.parent  # api/
+    alembic_cfg = Config(str(here / "alembic.ini"))
+    alembic_cfg.set_main_option("script_location", str(here / "alembic"))
     command.upgrade(alembic_cfg, "head")
 
 
