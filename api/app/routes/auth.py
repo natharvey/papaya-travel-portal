@@ -6,7 +6,8 @@ from jose import jwt
 
 from app.db import get_db
 from app.models import Client
-from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse
+from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse, ResendReferenceRequest
+from app.services.email import send_intake_confirmation
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -43,6 +44,23 @@ def client_login(payload: ClientLoginRequest, db: Session = Depends(get_db)):
         timedelta(hours=CLIENT_TOKEN_EXPIRE_HOURS),
     )
     return TokenResponse(access_token=token, role="client")
+
+
+@router.post("/resend-reference")
+def resend_reference(payload: ResendReferenceRequest, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.email == payload.email).first()
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with that email address. Please check the address or submit a new trip enquiry.",
+        )
+    send_intake_confirmation(
+        to=client.email,
+        client_name=client.name,
+        reference_code=client.reference_code,
+        trip_title="your trip",
+    )
+    return {"message": f"Your reference code has been sent to {client.email}. Please check your inbox."}
 
 
 @router.post("/admin-login", response_model=TokenResponse)

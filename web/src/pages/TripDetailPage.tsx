@@ -4,7 +4,7 @@ import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { getClientTrip, sendClientMessage, getApiError } from '../api/client'
+import { getClientTrip, sendClientMessage, confirmTrip, getApiError } from '../api/client'
 import type { TripDetail, Message } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -47,6 +47,8 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'itinerary' | 'messages' | 'details'>('itinerary')
+  const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState('')
 
   useEffect(() => {
     if (!tripId) return
@@ -58,6 +60,20 @@ export default function TripDetailPage() {
       .catch(e => setError(getApiError(e)))
       .finally(() => setLoading(false))
   }, [tripId])
+
+  async function handleConfirm() {
+    if (!tripId || !trip) return
+    setConfirming(true)
+    setConfirmError('')
+    try {
+      await confirmTrip(tripId)
+      setTrip(prev => prev ? { ...prev, status: 'CONFIRMED' } : prev)
+    } catch (e) {
+      setConfirmError(getApiError(e))
+    } finally {
+      setConfirming(false)
+    }
+  }
 
   async function handleSendMessage(body: string) {
     if (!tripId) return
@@ -178,6 +194,75 @@ export default function TripDetailPage() {
                 )}
                 {latestItinerary && (
                   <>
+                    {/* Review / approval banner */}
+                    {trip.status === 'REVIEW' && (
+                      <div style={{
+                        background: 'linear-gradient(135deg, #FEF9C3, #FFF)',
+                        border: '1px solid #FDE68A',
+                        borderRadius: 'var(--radius)',
+                        padding: '20px',
+                        marginBottom: '24px',
+                      }}>
+                        <div style={{ fontWeight: 700, fontSize: '16px', color: '#92400E', marginBottom: '6px' }}>
+                          Your itinerary is ready for approval
+                        </div>
+                        <p style={{ fontSize: '14px', color: '#78350F', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                          Review the itinerary below. If you're happy with it, click confirm to lock it in. If you'd like changes, send us a message.
+                        </p>
+                        {confirmError && (
+                          <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '12px' }}>{confirmError}</p>
+                        )}
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={handleConfirm}
+                            disabled={confirming}
+                            style={{
+                              background: confirming ? 'var(--color-border)' : '#15803D',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 'var(--radius)',
+                              padding: '10px 22px',
+                              fontSize: '14px',
+                              fontWeight: 700,
+                              cursor: confirming ? 'default' : 'pointer',
+                            }}
+                          >
+                            {confirming ? 'Confirming...' : 'Confirm this itinerary'}
+                          </button>
+                          <button
+                            onClick={() => setTab('messages')}
+                            style={{
+                              background: 'white',
+                              color: '#92400E',
+                              border: '1px solid #FDE68A',
+                              borderRadius: 'var(--radius)',
+                              padding: '10px 22px',
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Request changes
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {trip.status === 'CONFIRMED' && (
+                      <div style={{
+                        background: '#F0FDF4',
+                        border: '1px solid #BBF7D0',
+                        borderRadius: 'var(--radius)',
+                        padding: '14px 18px',
+                        marginBottom: '24px',
+                        fontSize: '14px',
+                        color: '#15803D',
+                        fontWeight: 600,
+                      }}>
+                        Your trip is confirmed! Our team will be in touch with next steps.
+                      </div>
+                    )}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
                         Version {latestItinerary.version} · Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU')}

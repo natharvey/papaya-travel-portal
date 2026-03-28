@@ -77,6 +77,11 @@ export async function adminLogin(password: string): Promise<TokenResponse> {
   return res.data
 }
 
+export async function resendReferenceCode(email: string): Promise<{ message: string }> {
+  const res = await api.post<{ message: string }>('/auth/resend-reference', { email })
+  return res.data
+}
+
 // ─── Intake ──────────────────────────────────────────────────────────────────
 
 export async function submitIntake(payload: IntakeCreatePayload): Promise<IntakeSubmitResponse> {
@@ -93,6 +98,11 @@ export async function getClientTrips(): Promise<TripWithLatestItinerary[]> {
 
 export async function getClientTrip(tripId: string): Promise<TripDetail> {
   const res = await api.get<TripDetail>(`/client/trips/${tripId}`)
+  return res.data
+}
+
+export async function confirmTrip(tripId: string): Promise<{ message: string }> {
+  const res = await api.post<{ message: string }>(`/client/trips/${tripId}/confirm`)
   return res.data
 }
 

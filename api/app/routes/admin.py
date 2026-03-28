@@ -13,6 +13,7 @@ from app.schemas import (
     ItineraryOut, RegenerateRequest,
 )
 from app.services.ai import generate_itinerary
+from app.services.email import send_itinerary_for_review
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 security = HTTPBearer()
@@ -109,9 +110,17 @@ def update_trip(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     if payload.status is not None:
-        if payload.status.upper() not in VALID_STATUSES:
+        new_status = payload.status.upper()
+        if new_status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {VALID_STATUSES}")
-        trip.status = payload.status.upper()
+        if new_status == "REVIEW" and trip.status != "REVIEW":
+            send_itinerary_for_review(
+                to=trip.client.email,
+                client_name=trip.client.name,
+                trip_title=trip.title,
+                trip_id=str(trip_id),
+            )
+        trip.status = new_status
     if payload.title is not None:
         trip.title = payload.title
     from datetime import datetime
@@ -127,7 +136,7 @@ def generate_itinerary_endpoint(
     _admin=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    trip = db.query(Trip).options(joinedload(Trip.client)).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     try:

@@ -12,6 +12,10 @@ class ClientLoginRequest(BaseModel):
     reference_code: str
 
 
+class ResendReferenceRequest(BaseModel):
+    email: EmailStr
+
+
 class AdminLoginRequest(BaseModel):
     password: str
 

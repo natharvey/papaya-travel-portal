@@ -232,7 +232,7 @@ def generate_itinerary(
             "json_schema": ITINERARY_SCHEMA,
         },
         temperature=0.7,
-        max_tokens=4096,
+        max_tokens=16000,
     )
 
     raw_content = response.choices[0].message.content

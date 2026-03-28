@@ -386,7 +386,7 @@ export default function IntakePage() {
             Your trip is submitted!
           </h1>
           <p style={{ color: 'var(--color-text-muted)', marginBottom: '32px', lineHeight: '1.6' }}>
-            Our team will start working on your personalised itinerary. You can log in to your portal to check progress and send messages.
+            Our team will start working on your personalised itinerary. We've also sent your login details to your email — check your inbox (and spam folder just in case).
           </p>
 
           <div style={{

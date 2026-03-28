@@ -54,6 +54,7 @@ export default function AdminTripPage() {
 
   // Status update
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [sendingForReview, setSendingForReview] = useState(false)
 
   // Itinerary generation
   const [generating, setGenerating] = useState(false)
@@ -87,6 +88,21 @@ export default function AdminTripPage() {
       alert('Failed to update status: ' + getApiError(e))
     } finally {
       setStatusUpdating(false)
+    }
+  }
+
+  async function handleSendForReview() {
+    if (!tripId || !trip) return
+    if (!window.confirm(`This will email ${trip.client.name} their itinerary for review. Continue?`)) return
+    setSendingForReview(true)
+    try {
+      const updated = await updateAdminTrip(tripId, { status: 'REVIEW' })
+      setTrip(updated)
+      setMessages(updated.messages)
+    } catch (e) {
+      alert('Failed to send for review: ' + getApiError(e))
+    } finally {
+      setSendingForReview(false)
     }
   }
 
@@ -333,6 +349,50 @@ export default function AdminTripPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Send for Review */}
+                {trip.itineraries.length > 0 && trip.status === 'DRAFT' && (
+                  <div style={{
+                    background: '#FFF7ED',
+                    border: '1px solid #FED7AA',
+                    borderRadius: 'var(--radius)',
+                    padding: '16px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#C2410C' }}>Ready to send to client?</div>
+                      <div style={{ fontSize: '13px', color: '#9A3412', marginTop: '2px' }}>
+                        This will email {trip.client.name} and ask them to review and approve the itinerary.
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSendForReview}
+                      disabled={sendingForReview}
+                      style={{
+                        background: sendingForReview ? 'var(--color-border)' : '#C2410C',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 'var(--radius)',
+                        padding: '10px 20px',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: sendingForReview ? 'default' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {sendingForReview ? <LoadingSpinner size={14} color="white" label="" /> : null}
+                      {sendingForReview ? 'Sending...' : 'Send for Review'}
+                    </button>
+                  </div>
+                )}
 
                 {/* Regenerate section */}
                 {trip.itineraries.length > 0 && (

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Client, Trip, IntakeResponse as IntakeResponseModel
 from app.schemas import IntakeCreate, IntakeResponse
+from app.services.email import send_intake_confirmation
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 
@@ -69,12 +70,19 @@ def create_intake(payload: IntakeCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(trip)
 
+    send_intake_confirmation(
+        to=client.email,
+        client_name=client.name,
+        reference_code=client.reference_code,
+        trip_title=trip.title,
+    )
+
     return IntakeResponse(
         email=client.email,
         reference_code=client.reference_code,
         trip_id=trip.id,
         message=(
             f"Your Papaya portal login is {client.email} + {client.reference_code}. "
-            "Please save this reference code — you will need it to log in to your portal."
+            "We've sent your reference code to your email — please save it to log in to your portal."
         ),
     )
