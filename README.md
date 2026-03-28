@@ -48,14 +48,15 @@ INTAKE → DRAFT → REVIEW → CONFIRMED → ARCHIVED
 
 ### Full Flow
 
-1. Client submits enquiry via intake form → receives **welcome email** with reference code
+1. Client submits enquiry via intake form → receives **welcome email** with a one-click magic login link + reference code as fallback
 2. Admin generates AI itinerary (status: `DRAFT`)
-3. Admin reviews, refines, and regenerates with custom instructions as needed
+3. Admin reviews, adds internal notes, refines, and regenerates with custom instructions as needed
 4. Admin clicks **"Send for Review"** → client receives **itinerary review email** (status: `REVIEW`)
 5. Client logs in and either:
    - Clicks **"Confirm this itinerary"** → both parties receive **confirmation emails** (status: `CONFIRMED`)
    - Clicks **"Request changes"** → types feedback inline, message saved, trip reverts to `DRAFT`, admin receives **change request email**
-6. Admin archives the trip once complete (status: `ARCHIVED`)
+6. Admin and client can exchange messages at any time — both receive email notifications for new messages
+7. Admin archives the trip once complete (status: `ARCHIVED`)
 
 **Unread message badges** appear on the Messages tab and admin dashboard cards whenever a new message arrives.
 
@@ -93,12 +94,12 @@ INTAKE → DRAFT → REVIEW → CONFIRMED → ARCHIVED
 ### Key Components
 
 **Backend (`/api`)**
-- `app/main.py` — FastAPI app, CORS, Alembic migrations at startup, Sentry init
-- `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, DestinationCard
-- `app/routes/auth.py` — JWT auth (client + admin), resend reference code, rate limiting
-- `app/routes/intake.py` — Public intake form, triggers welcome email, rate limited
+- `app/main.py` — FastAPI app, CORS, Alembic migrations at startup, Sentry init, JWT secret enforcement
+- `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, LoginToken, DestinationCard
+- `app/routes/auth.py` — JWT auth (client + admin), magic link login, resend reference code, rate limiting
+- `app/routes/intake.py` — Public intake form, generates magic login token, triggers welcome email, rate limited
 - `app/routes/client.py` — Client portal: trips, messages, confirm itinerary, request changes, mark-read
-- `app/routes/admin.py` — Admin: trip management, AI generation, send-for-review, mark-read
+- `app/routes/admin.py` — Admin: trip management, admin notes, AI generation, send-for-review, mark-read
 - `app/services/ai.py` — GPT-4o generation with retry logic (3 attempts, exponential backoff)
 - `app/services/email.py` — Gmail SMTP with branded HTML templates for all notification types
 - `app/services/retrieval.py` — Destination card retrieval for AI context injection
@@ -108,8 +109,11 @@ INTAKE → DRAFT → REVIEW → CONFIRMED → ARCHIVED
 **Frontend (`/web`)**
 - React 18 + Vite + TypeScript
 - React Router v6, Axios with JWT interceptors
-- Lucide React icon library
-- Calendar-style day picker itinerary view
+- Lucide React icon library (zero emojis)
+- Multi-step intake form with animated progress bar
+- Calendar-style day-by-day itinerary timeline view
+- PDF itinerary export via `@react-pdf/renderer`
+- Magic link handler at `/magic/:token`
 - Sentry browser error tracking
 
 **Seed Data (`/seed/destinations`)**
@@ -125,7 +129,8 @@ Copy `.env.example` to `.env` and configure:
 ```env
 DATABASE_URL=postgresql://papaya:papaya_secret@db:5432/papaya
 OPENAI_API_KEY=sk-your-key-here          # Required for AI generation
-JWT_SECRET=change-me-in-production       # Use a long random string
+JWT_SECRET=change-me-in-production       # Required — use a long random string
+                                         # Generate: python -c "import secrets; print(secrets.token_hex(32))"
 ADMIN_PASSWORD=admin123                  # Change for production
 ADMIN_EMAIL=admin@papaya.travel          # Receives admin notifications
 CORS_ORIGINS=http://localhost:5173
@@ -135,7 +140,7 @@ SEED_ON_STARTUP=true
 # Generate an App Password at: myaccount.google.com > Security > App passwords
 EMAIL_ADDRESS=you@gmail.com
 EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
-PORTAL_URL=http://localhost:5173
+PORTAL_URL=http://localhost:5173        # Used in email links and magic login URLs
 
 # Sentry error tracking (optional — leave blank to disable)
 SENTRY_DSN=                              # Backend DSN from sentry.io
@@ -145,13 +150,22 @@ ENVIRONMENT=production
 
 ### Email Notifications
 
-| Trigger | Recipient |
-|---------|-----------|
-| Intake form submitted | Client — welcome email with reference code |
-| Reference code resend | Client — reference code reminder |
-| Admin sends for review | Client — itinerary ready to review |
-| Client confirms | Client + Admin — confirmation notification |
-| Client requests changes | Admin — change request with quoted message |
+| Trigger | Recipient | Contents |
+|---------|-----------|----------|
+| Intake form submitted | Client | Welcome email with magic login link + reference code |
+| Reference code resend | Client | Fresh magic login link + reference code reminder |
+| Admin sends for review | Client | Itinerary ready — link to portal |
+| Client confirms | Client + Admin | Confirmation notification |
+| Client requests changes | Admin | Change request with quoted message |
+| Admin sends message | Client | Message notification with reply link |
+| Client sends message | Admin | Message notification with portal link |
+
+### Magic Link Login
+
+When a client submits an intake form or requests a reference code resend, their email includes a one-click login button. The link:
+- Is single-use and expires after **1 hour**
+- Automatically logs the client in and redirects to their portal
+- Falls back gracefully — if expired, the client is directed to log in with their email and reference code
 
 ---
 
@@ -174,23 +188,26 @@ Full interactive documentation at http://localhost:8000/docs
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/intake` | None | Submit trip enquiry |
-| POST | `/auth/client-login` | None | Client login |
+| POST | `/auth/client-login` | None | Client login with email + reference code |
 | POST | `/auth/admin-login` | None | Admin login |
-| POST | `/auth/resend-reference` | None | Resend reference code |
+| GET | `/auth/magic/{token}` | None | Magic link login (single-use, 1hr expiry) |
+| POST | `/auth/resend-reference` | None | Resend reference code + fresh magic link |
 | GET | `/client/trips` | Client JWT | List client's trips |
 | GET | `/client/trips/{id}` | Client JWT | Trip detail + itinerary |
 | POST | `/client/trips/{id}/confirm` | Client JWT | Confirm itinerary |
 | POST | `/client/trips/{id}/request-changes` | Client JWT | Request changes (reverts to DRAFT) |
+| GET | `/client/trips/{id}/messages` | Client JWT | Get messages |
 | POST | `/client/trips/{id}/messages/read` | Client JWT | Mark admin messages as read |
 | POST | `/client/trips/{id}/messages` | Client JWT | Send message |
 | GET | `/admin/trips` | Admin JWT | All trips (filterable by status) |
 | GET | `/admin/trips/{id}` | Admin JWT | Trip detail |
-| PATCH | `/admin/trips/{id}` | Admin JWT | Update trip (DRAFT→REVIEW sends email) |
+| PATCH | `/admin/trips/{id}` | Admin JWT | Update trip status, title, or admin notes |
 | POST | `/admin/trips/{id}/generate-itinerary` | Admin JWT | Generate AI itinerary |
 | POST | `/admin/trips/{id}/regenerate-itinerary` | Admin JWT | Regenerate with instructions |
+| GET | `/admin/trips/{id}/messages` | Admin JWT | Get messages |
 | POST | `/admin/trips/{id}/messages/read` | Admin JWT | Mark client messages as read |
 | POST | `/admin/trips/{id}/messages` | Admin JWT | Send admin message |
-| GET | `/health` | None | Health check |
+| GET | `/health` | None | Health check (includes DB ping) |
 
 ---
 
@@ -226,9 +243,10 @@ VITE_API_URL=http://localhost:8000 npm run dev
 
 ## Production Checklist
 
-- [ ] Change `JWT_SECRET`, `ADMIN_PASSWORD`, and database password
+- [ ] Set `JWT_SECRET` to a strong random value (`python -c "import secrets; print(secrets.token_hex(32))"`)
+- [ ] Change `ADMIN_PASSWORD` and database password
 - [ ] Set `CORS_ORIGINS` to your production domain
-- [ ] Set `PORTAL_URL` to your production domain (email links)
+- [ ] Set `PORTAL_URL` to your production domain (used in email links and magic login URLs)
 - [ ] Switch `EMAIL_ADDRESS` to your company Google Workspace address
 - [ ] Add `SENTRY_DSN` and `VITE_SENTRY_DSN` for error tracking
 - [ ] Use managed PostgreSQL (RDS, Cloud SQL, Supabase)
