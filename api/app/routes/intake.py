@@ -1,3 +1,4 @@
+import os
 import random
 import string
 from datetime import datetime, timezone
@@ -9,6 +10,7 @@ from app.models import Client, Trip, IntakeResponse as IntakeResponseModel
 from app.schemas import IntakeCreate, IntakeResponse
 from app.services.email import send_intake_confirmation
 from app.limiter import limiter
+from app.routes.auth import create_magic_token
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 
@@ -72,11 +74,16 @@ def create_intake(request: Request, payload: IntakeCreate, db: Session = Depends
     db.commit()
     db.refresh(trip)
 
+    magic_token = create_magic_token(db, client.id)
+    portal_url = os.getenv("PORTAL_URL", "http://localhost:5173")
+    magic_link = f"{portal_url}/magic/{magic_token}"
+
     send_intake_confirmation(
         to=client.email,
         client_name=client.name,
         reference_code=client.reference_code,
         trip_title=trip.title,
+        magic_link=magic_link,
     )
 
     return IntakeResponse(

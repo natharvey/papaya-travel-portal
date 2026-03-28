@@ -130,6 +130,19 @@ class Message(Base):
     trip = relationship("Trip", back_populates="messages")
 
 
+class LoginToken(Base):
+    __tablename__ = "login_tokens"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    client_id = Column(UUIDType, ForeignKey("clients.id"), nullable=False, index=True)
+    token = Column(String(64), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    client = relationship("Client")
+
+
 class DestinationCard(Base):
     __tablename__ = "destination_cards"
 

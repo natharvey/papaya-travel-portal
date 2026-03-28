@@ -3,6 +3,7 @@ import logging
 import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,54 +43,68 @@ def send_intake_confirmation(
     client_name: str,
     reference_code: str,
     trip_title: str,
+    magic_link: Optional[str] = None,
 ) -> None:
     subject = "Your Papaya Travel enquiry has been received"
+
+    login_line = f"\nOr log in with your code at: {PORTAL_URL}/login\n" if magic_link else f"\nLog in at: {PORTAL_URL}/login\n"
+    magic_section_plain = f"Jump straight in:\n{magic_link}\n(This link expires in 1 hour){login_line}" if magic_link else f"Log in at: {PORTAL_URL}/login"
 
     plain = f"""Hi {client_name},
 
 Thanks for your enquiry — we've received your trip request and our team will be in touch soon.
 
-Your portal login details:
+{magic_section_plain}
+
+Your portal login details (keep these safe):
   Email:          {to}
   Reference code: {reference_code}
 
 Trip: {trip_title}
 
-Log in any time at: {PORTAL_URL}/login
-
-Keep this email safe — your reference code is how you access your portal.
-
 The Papaya Travel Team
+"""
+
+    magic_button = f"""
+  <p>
+    <a href="{magic_link}"
+       style="background: #F97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 700; font-size: 15px;">
+      Log in to your portal
+    </a>
+  </p>
+  <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">This link expires in 1 hour and can only be used once.</p>
+""" if magic_link else f"""
+  <p>
+    <a href="{PORTAL_URL}/login"
+       style="background: #F97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 700; font-size: 15px;">
+      Log in to your portal
+    </a>
+  </p>
 """
 
     html = f"""
 <!DOCTYPE html>
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
-  <div style="border-top: 4px solid #FF6B35; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #FF6B35; margin: 0;">Papaya Travel</h1>
+  <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
+    <h1 style="color: #F97316; margin: 0;">Papaya Travel</h1>
   </div>
 
   <p>Hi {client_name},</p>
 
   <p>Thanks for your enquiry — we've received your trip request and our team will be in touch soon.</p>
 
-  <div style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin: 24px 0;">
-    <p style="margin: 0 0 8px 0;"><strong>Your portal login details:</strong></p>
-    <p style="margin: 4px 0;">Email: <code>{to}</code></p>
-    <p style="margin: 4px 0;">Reference code: <code style="font-size: 18px; color: #FF6B35; font-weight: bold;">{reference_code}</code></p>
-    <p style="margin: 12px 0 0 0; font-size: 13px; color: #666;">Trip: {trip_title}</p>
+  {magic_button}
+
+  <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+    <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B;">Your login details — keep these safe</p>
+    <p style="margin: 4px 0; font-size: 14px;">Email: <code style="background: #E2E8F0; padding: 2px 6px; border-radius: 4px;">{to}</code></p>
+    <p style="margin: 8px 0 4px 0; font-size: 14px;">Reference code: <code style="font-size: 20px; color: #F97316; font-weight: bold; background: #FFF7ED; padding: 4px 10px; border-radius: 4px;">{reference_code}</code></p>
+    <p style="margin: 12px 0 0 0; font-size: 13px; color: #64748B;">Trip: {trip_title}</p>
   </div>
 
-  <p>
-    <a href="{PORTAL_URL}/login"
-       style="background: #FF6B35; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-      Log in to your portal
-    </a>
-  </p>
-
-  <p style="font-size: 13px; color: #666; margin-top: 32px;">
-    Keep this email safe — your reference code is how you access your Papaya portal.
+  <p style="font-size: 13px; color: #94A3B8; margin-top: 32px;">
+    The magic link above expires in 1 hour. After that, use your email and reference code to log in at <a href="{PORTAL_URL}/login" style="color: #F97316;">{PORTAL_URL}/login</a>.
   </p>
 
   <p>The Papaya Travel Team</p>

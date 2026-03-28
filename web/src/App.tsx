@@ -6,6 +6,7 @@ import TripDetailPage from './pages/TripDetailPage'
 import AdminLoginPage from './pages/AdminLoginPage'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminTripPage from './pages/AdminTripPage'
+import MagicLoginPage from './pages/MagicLoginPage'
 import { useAuth } from './hooks/useAuth'
 
 function ProtectedRoute({ children, role }: { children: React.ReactNode; role: 'client' | 'admin' }) {
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/intake" replace />} />
         <Route path="/intake" element={<IntakePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/magic/:token" element={<MagicLoginPage />} />
 
         {/* Client portal */}
         <Route

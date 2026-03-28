@@ -1,4 +1,6 @@
 import os
+import secrets
+from typing import Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -6,7 +8,7 @@ from jose import jwt
 from app.limiter import limiter
 
 from app.db import get_db
-from app.models import Client
+from app.models import Client, LoginToken
 from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse, ResendReferenceRequest
 from app.services.email import send_intake_confirmation
 from app.security import verify_password
@@ -31,6 +33,16 @@ def create_token(data: dict, expires_delta: timedelta) -> str:
 
 def decode_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+
+
+def create_magic_token(db: Session, client_id) -> str:
+    """Generate a one-time login token valid for 1 hour."""
+    token_str = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    record = LoginToken(client_id=client_id, token=token_str, expires_at=expires)
+    db.add(record)
+    db.commit()
+    return token_str
 
 
 @router.post("/client-login", response_model=TokenResponse)
@@ -61,11 +73,15 @@ def resend_reference(request: Request, payload: ResendReferenceRequest, db: Sess
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No account found with that email address. Please check the address or submit a new trip enquiry.",
         )
+    magic_token = create_magic_token(db, client.id)
+    portal_url = os.getenv("PORTAL_URL", "http://localhost:5173")
+    magic_link = f"{portal_url}/magic/{magic_token}"
     send_intake_confirmation(
         to=client.email,
         client_name=client.name,
         reference_code=client.reference_code,
         trip_title="your trip",
+        magic_link=magic_link,
     )
     return {"message": f"Your reference code has been sent to {client.email}. Please check your inbox."}
 
@@ -83,3 +99,30 @@ def admin_login(request: Request, payload: AdminLoginRequest):
         timedelta(hours=ADMIN_TOKEN_EXPIRE_HOURS),
     )
     return TokenResponse(access_token=token, role="admin")
+
+
+@router.get("/magic/{token}", response_model=TokenResponse)
+@limiter.limit("20/minute")
+def magic_login(request: Request, token: str, db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    record = (
+        db.query(LoginToken)
+        .filter(
+            LoginToken.token == token,
+            LoginToken.used == False,  # noqa: E712
+            LoginToken.expires_at > now,
+        )
+        .first()
+    )
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This login link has expired or has already been used. Please log in with your email and reference code.",
+        )
+    record.used = True
+    db.commit()
+    jwt_token = create_token(
+        {"sub": str(record.client_id), "role": "client"},
+        timedelta(hours=CLIENT_TOKEN_EXPIRE_HOURS),
+    )
+    return TokenResponse(access_token=jwt_token, role="client")
