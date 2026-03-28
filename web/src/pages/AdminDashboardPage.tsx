@@ -42,8 +42,24 @@ function TripKanbanCard({ trip }: { trip: AdminTripListItem }) {
         onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'}
         onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'}
       >
-        <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px', color: 'var(--color-text)', lineHeight: '1.3' }}>
-          {trip.title}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
+          <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text)', lineHeight: '1.3' }}>
+            {trip.title}
+          </div>
+          {trip.unread_count > 0 && (
+            <span style={{
+              background: '#EF4444',
+              color: 'white',
+              borderRadius: '100px',
+              fontSize: '11px',
+              fontWeight: 700,
+              padding: '1px 7px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}>
+              {trip.unread_count} new
+            </span>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
           <User size={11} strokeWidth={2} />

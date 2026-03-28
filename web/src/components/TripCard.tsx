@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PlaneTakeoff, Calendar, Wallet, Gauge } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -77,16 +78,16 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
         {/* Meta */}
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            ✈️ {trip.origin_city}
+            <PlaneTakeoff size={13} strokeWidth={2} /> {trip.origin_city}
           </span>
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            📅 {formatDate(trip.start_date)} – {formatDate(trip.end_date)}
+            <Calendar size={13} strokeWidth={2} /> {formatDate(trip.start_date)} – {formatDate(trip.end_date)}
           </span>
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            💰 {trip.budget_range}
+            <Wallet size={13} strokeWidth={2} /> {trip.budget_range}
           </span>
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            🚶 {trip.pace}
+            <Gauge size={13} strokeWidth={2} /> {trip.pace}
           </span>
         </div>
 

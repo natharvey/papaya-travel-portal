@@ -123,6 +123,7 @@ class Message(Base):
     trip_id = Column(UUIDType, ForeignKey("trips.id"), nullable=False, index=True)
     sender_type = Column(String(10), nullable=False)
     body = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     trip = relationship("Trip", back_populates="messages")

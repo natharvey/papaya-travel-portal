@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PlaneTakeoff } from 'lucide-react'
 import Layout from '../components/Layout'
 import TripCard from '../components/TripCard'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -70,7 +71,9 @@ export default function PortalPage() {
             borderRadius: 'var(--radius-lg)',
             border: '2px dashed var(--color-border)',
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>✈️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <PlaneTakeoff size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
+            </div>
             <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>No trips yet</h2>
             <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px' }}>
               Submit your first trip enquiry and we'll craft a personalised itinerary for you.

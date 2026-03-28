@@ -106,9 +106,18 @@ export async function confirmTrip(tripId: string): Promise<{ message: string }> 
   return res.data
 }
 
+export async function requestChanges(tripId: string, body: string): Promise<Message> {
+  const res = await api.post<Message>(`/client/trips/${tripId}/request-changes`, { body })
+  return res.data
+}
+
 export async function getClientMessages(tripId: string): Promise<Message[]> {
   const res = await api.get<Message[]>(`/client/trips/${tripId}/messages`)
   return res.data
+}
+
+export async function markClientMessagesRead(tripId: string): Promise<void> {
+  await api.post(`/client/trips/${tripId}/messages/read`)
 }
 
 export async function sendClientMessage(tripId: string, body: string): Promise<Message> {
@@ -150,6 +159,10 @@ export async function regenerateItinerary(tripId: string, instructions: string):
 export async function getAdminMessages(tripId: string): Promise<Message[]> {
   const res = await api.get<Message[]>(`/admin/trips/${tripId}/messages`)
   return res.data
+}
+
+export async function markAdminMessagesRead(tripId: string): Promise<void> {
+  await api.post(`/admin/trips/${tripId}/messages/read`)
 }
 
 export async function sendAdminMessage(tripId: string, body: string): Promise<Message> {

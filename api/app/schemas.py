@@ -123,6 +123,7 @@ class MessageOut(BaseModel):
     trip_id: uuid.UUID
     sender_type: str
     body: str
+    is_read: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -197,5 +198,6 @@ class AdminTripListItem(BaseModel):
     updated_at: datetime
     client_name: str
     client_email: str
+    unread_count: int = 0
 
     model_config = {"from_attributes": True}

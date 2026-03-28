@@ -109,6 +109,7 @@ export interface Message {
   trip_id: string
   sender_type: 'CLIENT' | 'ADMIN'
   body: string
+  is_read: boolean
   created_at: string
 }
 
@@ -142,4 +143,5 @@ export interface TripDetail extends Trip {
 export interface AdminTripListItem extends Trip {
   client_name: string
   client_email: string
+  unread_count: number
 }

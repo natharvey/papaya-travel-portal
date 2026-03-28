@@ -83,7 +83,7 @@ export default function MessageThread({ messages, currentRole, onSend, loading }
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 600, opacity: 0.8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {msg.sender_type === 'ADMIN' ? '👤 Papaya Team' : '✈️ You'}
+                    {msg.sender_type === 'ADMIN' ? 'Papaya Team' : 'You'}
                   </span>
                   <span style={{ fontSize: '10px', opacity: 0.7, whiteSpace: 'nowrap' }}>
                     {formatTime(msg.created_at)}

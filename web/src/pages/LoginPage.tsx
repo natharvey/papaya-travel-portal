@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
+import PapayaLogo from '../components/PapayaLogo'
 import { clientLogin, resendReferenceCode, getApiError } from '../api/client'
 import { useAuth } from '../hooks/useAuth'
 
@@ -76,18 +77,8 @@ export default function LoginPage() {
         }}>
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: 'var(--color-primary)',
-              borderRadius: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '28px',
-              margin: '0 auto 16px',
-            }}>
-              🌴
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <PapayaLogo size={56} />
             </div>
             <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '6px' }}>Client Portal Login</h1>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>

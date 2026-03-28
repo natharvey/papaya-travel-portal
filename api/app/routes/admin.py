@@ -43,12 +43,13 @@ def list_trips(
     _admin=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    q = db.query(Trip).options(joinedload(Trip.client)).order_by(Trip.created_at.desc())
+    q = db.query(Trip).options(joinedload(Trip.client), joinedload(Trip.messages)).order_by(Trip.created_at.desc())
     if trip_status:
         q = q.filter(Trip.status == trip_status.upper())
     trips = q.all()
     result = []
     for t in trips:
+        unread = sum(1 for m in t.messages if m.sender_type == "CLIENT" and not m.is_read)
         item = AdminTripListItem(
             id=t.id,
             title=t.title,
@@ -62,6 +63,7 @@ def list_trips(
             updated_at=t.updated_at,
             client_name=t.client.name,
             client_email=t.client.email,
+            unread_count=unread,
         )
         result.append(item)
     return result
@@ -179,6 +181,22 @@ def get_messages(
         .all()
     )
     return [MessageOut.model_validate(m) for m in messages]
+
+
+@router.post("/trips/{trip_id}/messages/read")
+def mark_messages_read(
+    trip_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Mark all CLIENT messages on this trip as read."""
+    db.query(Message).filter(
+        Message.trip_id == trip_id,
+        Message.sender_type == "CLIENT",
+        Message.is_read == False,  # noqa: E712
+    ).update({"is_read": True})
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/trips/{trip_id}/messages", response_model=MessageOut)

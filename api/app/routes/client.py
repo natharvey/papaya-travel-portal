@@ -12,7 +12,7 @@ from app.models import Client, Trip, Itinerary, Message
 from app.schemas import (
     TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut
 )
-from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin
+from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin
 
 router = APIRouter(prefix="/client", tags=["client"])
 security = HTTPBearer()
@@ -116,6 +116,38 @@ def confirm_trip(
     return {"message": "Trip confirmed successfully."}
 
 
+@router.post("/trips/{trip_id}/request-changes", response_model=MessageOut)
+def request_changes(
+    trip_id: uuid.UUID,
+    payload: MessageCreate,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.status != "REVIEW":
+        raise HTTPException(status_code=400, detail="Changes can only be requested when the itinerary is under review.")
+    msg = Message(
+        trip_id=trip_id,
+        sender_type="CLIENT",
+        body=payload.body,
+    )
+    db.add(msg)
+    trip.status = "DRAFT"
+    trip.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(msg)
+    send_changes_requested_admin(
+        client_name=client.name,
+        client_email=client.email,
+        trip_title=trip.title,
+        trip_id=str(trip_id),
+        message_body=payload.body,
+    )
+    return MessageOut.model_validate(msg)
+
+
 @router.get("/trips/{trip_id}/messages", response_model=list[MessageOut])
 def get_messages(
     trip_id: uuid.UUID,
@@ -132,6 +164,25 @@ def get_messages(
         .all()
     )
     return [MessageOut.model_validate(m) for m in messages]
+
+
+@router.post("/trips/{trip_id}/messages/read")
+def mark_messages_read(
+    trip_id: uuid.UUID,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    """Mark all ADMIN messages on this trip as read for the client."""
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    db.query(Message).filter(
+        Message.trip_id == trip_id,
+        Message.sender_type == "ADMIN",
+        Message.is_read == False,  # noqa: E712
+    ).update({"is_read": True})
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/trips/{trip_id}/messages", response_model=MessageOut)

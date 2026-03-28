@@ -11,6 +11,7 @@ import {
   generateItinerary,
   regenerateItinerary,
   sendAdminMessage,
+  markAdminMessagesRead,
   getApiError,
 } from '../api/client'
 import type { TripDetail, Itinerary, Message } from '../types'
@@ -52,6 +53,14 @@ export default function AdminTripPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages'>('itinerary')
+
+  function switchTab(next: 'itinerary' | 'intake' | 'messages') {
+    setTab(next)
+    if (next === 'messages' && tripId) {
+      markAdminMessagesRead(tripId)
+      setMessages(prev => prev.map(m => m.sender_type === 'CLIENT' ? { ...m, is_read: true } : m))
+    }
+  }
 
   // Status update
   const [statusUpdating, setStatusUpdating] = useState(false)
@@ -266,10 +275,33 @@ export default function AdminTripPage() {
           boxShadow: 'var(--shadow-sm)',
           overflow: 'hidden',
         }}>
-          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex' }}>
-            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
-            <TabButton label="Intake" active={tab === 'intake'} onClick={() => setTab('intake')} />
-            <TabButton label={`Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
+          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
+            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
+            <TabButton label="Intake" active={tab === 'intake'} onClick={() => switchTab('intake')} />
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <TabButton
+                label={`Messages (${messages.length})`}
+                active={tab === 'messages'}
+                onClick={() => switchTab('messages')}
+              />
+              {(() => {
+                const unread = messages.filter(m => m.sender_type === 'CLIENT' && !m.is_read).length
+                return unread > 0 ? (
+                  <span style={{
+                    background: '#EF4444',
+                    color: 'white',
+                    borderRadius: '100px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '1px 7px',
+                    marginLeft: '-8px',
+                    marginTop: '-10px',
+                  }}>
+                    {unread}
+                  </span>
+                ) : null
+              })()}
+            </div>
           </div>
 
           <div style={{ padding: '24px' }}>

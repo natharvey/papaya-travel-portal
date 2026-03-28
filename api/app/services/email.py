@@ -249,6 +249,64 @@ View in admin portal: {trip_url}
     _send(admin_email, subject, html, plain)
 
 
+def send_changes_requested_admin(
+    client_name: str,
+    client_email: str,
+    trip_title: str,
+    trip_id: str,
+    message_body: str,
+) -> None:
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    if not admin_email:
+        return
+
+    subject = f"Client requested changes — {trip_title}"
+    trip_url = f"{PORTAL_URL}/admin/trips/{trip_id}"
+
+    plain = f"""A client has requested changes to their itinerary.
+
+Client: {client_name} ({client_email})
+Trip: {trip_title}
+
+Their message:
+{message_body}
+
+View in admin portal: {trip_url}
+"""
+
+    html = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
+    <h1 style="color: #F97316; margin: 0;">Papaya Travel — Changes Requested</h1>
+  </div>
+
+  <p>A client has reviewed their itinerary and requested changes. The trip has been moved back to <strong>Draft</strong>.</p>
+
+  <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+    <tr><td style="padding: 8px; color: #666; width: 120px;">Client</td><td style="padding: 8px; font-weight: 600;">{client_name} ({client_email})</td></tr>
+    <tr style="background:#f9f9f9;"><td style="padding: 8px; color: #666;">Trip</td><td style="padding: 8px; font-weight: 600;">{trip_title}</td></tr>
+  </table>
+
+  <div style="background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 6px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700; color: #C2410C; text-transform: uppercase; letter-spacing: 0.5px;">Client's message</p>
+    <p style="margin: 0; white-space: pre-wrap;">{message_body}</p>
+  </div>
+
+  <p>
+    <a href="{trip_url}"
+       style="background: #2D3A4A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+      View trip in admin portal
+    </a>
+  </p>
+</body>
+</html>
+"""
+
+    _send(admin_email, subject, html, plain)
+
+
 def send_itinerary_ready(
     to: str,
     client_name: str,

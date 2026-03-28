@@ -4,8 +4,8 @@ import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge } from 'lucide-react'
-import { getClientTrip, sendClientMessage, confirmTrip, getApiError } from '../api/client'
+import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText } from 'lucide-react'
+import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, getApiError } from '../api/client'
 import type { TripDetail, Message } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -48,8 +48,20 @@ export default function TripDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'itinerary' | 'messages' | 'details'>('itinerary')
+
+  function switchTab(next: 'itinerary' | 'messages' | 'details') {
+    setTab(next)
+    if (next === 'messages' && tripId) {
+      markClientMessagesRead(tripId)
+      setMessages(prev => prev.map(m => m.sender_type === 'ADMIN' ? { ...m, is_read: true } : m))
+    }
+  }
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState('')
+  const [requestingChanges, setRequestingChanges] = useState(false)
+  const [changesOpen, setChangesOpen] = useState(false)
+  const [changesBody, setChangesBody] = useState('')
+  const [changesError, setChangesError] = useState('')
 
   useEffect(() => {
     if (!tripId) return
@@ -73,6 +85,23 @@ export default function TripDetailPage() {
       setConfirmError(getApiError(e))
     } finally {
       setConfirming(false)
+    }
+  }
+
+  async function handleRequestChanges() {
+    if (!tripId || !changesBody.trim()) return
+    setRequestingChanges(true)
+    setChangesError('')
+    try {
+      const msg = await requestChanges(tripId, changesBody.trim())
+      setMessages(prev => [...prev, msg])
+      setTrip(prev => prev ? { ...prev, status: 'DRAFT' } : prev)
+      setChangesBody('')
+      setChangesOpen(false)
+    } catch (e) {
+      setChangesError(getApiError(e))
+    } finally {
+      setRequestingChanges(false)
     }
   }
 
@@ -178,29 +207,55 @@ export default function TripDetailPage() {
           boxShadow: 'var(--shadow-sm)',
           overflow: 'hidden',
         }}>
-          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex' }}>
-            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
-            <TabButton label={`Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
-            <TabButton label="Trip Details" active={tab === 'details'} onClick={() => setTab('details')} />
+          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
+            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <TabButton
+                label={`Messages (${messages.length})`}
+                active={tab === 'messages'}
+                onClick={() => switchTab('messages')}
+              />
+              {(() => {
+                const unread = messages.filter(m => m.sender_type === 'ADMIN' && !m.is_read).length
+                return unread > 0 ? (
+                  <span style={{
+                    background: '#EF4444',
+                    color: 'white',
+                    borderRadius: '100px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '1px 7px',
+                    marginLeft: '-8px',
+                    marginTop: '-10px',
+                  }}>
+                    {unread}
+                  </span>
+                ) : null
+              })()}
+            </div>
+            <TabButton label="Trip Details" active={tab === 'details'} onClick={() => switchTab('details')} />
           </div>
 
           <div style={{ padding: '28px' }}>
             {/* Itinerary Tab */}
             {tab === 'itinerary' && (
               <>
-                {!latestItinerary && (
+                {(!latestItinerary || !['REVIEW', 'CONFIRMED'].includes(trip.status)) && (
                   <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
+                    <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                      <FileText size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
+                    </div>
                     <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
-                      Your itinerary is being prepared
+                      {trip.status === 'DRAFT' ? 'Your changes are being reviewed' : 'Your itinerary is being prepared'}
                     </h3>
                     <p style={{ color: 'var(--color-text-muted)', lineHeight: '1.6' }}>
-                      Our team is working on your personalised itinerary. You'll see it here once it's ready.
-                      Feel free to send us a message in the Messages tab!
+                      {trip.status === 'DRAFT'
+                        ? "Our team has received your change request and is working on an updated itinerary. We'll notify you when it's ready to review."
+                        : "Our team is working on your personalised itinerary. You'll see it here once it's ready. Feel free to send us a message in the Messages tab!"}
                     </p>
                   </div>
                 )}
-                {latestItinerary && (
+                {latestItinerary && ['REVIEW', 'CONFIRMED'].includes(trip.status) && (
                   <>
                     {/* Review / approval banner */}
                     {trip.status === 'REVIEW' && (
@@ -220,39 +275,115 @@ export default function TripDetailPage() {
                         {confirmError && (
                           <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '12px' }}>{confirmError}</p>
                         )}
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={handleConfirm}
-                            disabled={confirming}
-                            style={{
-                              background: confirming ? 'var(--color-border)' : '#15803D',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 'var(--radius)',
-                              padding: '10px 22px',
-                              fontSize: '14px',
-                              fontWeight: 700,
-                              cursor: confirming ? 'default' : 'pointer',
-                            }}
-                          >
-                            {confirming ? 'Confirming...' : 'Confirm this itinerary'}
-                          </button>
-                          <button
-                            onClick={() => setTab('messages')}
-                            style={{
-                              background: 'white',
-                              color: '#92400E',
-                              border: '1px solid #FDE68A',
-                              borderRadius: 'var(--radius)',
-                              padding: '10px 22px',
-                              fontSize: '14px',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Request changes
-                          </button>
-                        </div>
+                        {!changesOpen ? (
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={handleConfirm}
+                              disabled={confirming}
+                              style={{
+                                background: confirming ? 'var(--color-border)' : '#15803D',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 'var(--radius)',
+                                padding: '10px 22px',
+                                fontSize: '14px',
+                                fontWeight: 700,
+                                cursor: confirming ? 'default' : 'pointer',
+                              }}
+                            >
+                              {confirming ? 'Confirming...' : 'Confirm this itinerary'}
+                            </button>
+                            <button
+                              onClick={() => setChangesOpen(true)}
+                              style={{
+                                background: 'white',
+                                color: '#92400E',
+                                border: '1px solid #FDE68A',
+                                borderRadius: 'var(--radius)',
+                                padding: '10px 22px',
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Request changes
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <p style={{ fontSize: '13px', color: '#78350F', marginBottom: '8px', fontWeight: 600 }}>
+                              What would you like us to change?
+                            </p>
+                            <textarea
+                              value={changesBody}
+                              onChange={e => setChangesBody(e.target.value)}
+                              placeholder="e.g. We'd love more beach time in Bali and fewer museums..."
+                              rows={4}
+                              style={{
+                                width: '100%',
+                                boxSizing: 'border-box',
+                                padding: '10px 12px',
+                                borderRadius: 'var(--radius)',
+                                border: '1px solid #FDE68A',
+                                fontSize: '14px',
+                                resize: 'vertical',
+                                fontFamily: 'inherit',
+                                background: 'white',
+                                marginBottom: '10px',
+                              }}
+                            />
+                            {changesError && (
+                              <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '8px' }}>{changesError}</p>
+                            )}
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                onClick={handleRequestChanges}
+                                disabled={requestingChanges || !changesBody.trim()}
+                                style={{
+                                  background: requestingChanges || !changesBody.trim() ? 'var(--color-border)' : '#C2410C',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: 'var(--radius)',
+                                  padding: '10px 22px',
+                                  fontSize: '14px',
+                                  fontWeight: 700,
+                                  cursor: requestingChanges || !changesBody.trim() ? 'default' : 'pointer',
+                                }}
+                              >
+                                {requestingChanges ? 'Sending...' : 'Send request'}
+                              </button>
+                              <button
+                                onClick={() => { setChangesOpen(false); setChangesBody(''); setChangesError('') }}
+                                style={{
+                                  background: 'white',
+                                  color: '#92400E',
+                                  border: '1px solid #FDE68A',
+                                  borderRadius: 'var(--radius)',
+                                  padding: '10px 16px',
+                                  fontSize: '14px',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {trip.status === 'DRAFT' && (
+                      <div style={{
+                        background: '#FFF7ED',
+                        border: '1px solid #FED7AA',
+                        borderRadius: 'var(--radius)',
+                        padding: '14px 18px',
+                        marginBottom: '24px',
+                        fontSize: '14px',
+                        color: '#C2410C',
+                        fontWeight: 600,
+                      }}>
+                        Your change request has been sent. Our team will be in touch with an updated itinerary.
                       </div>
                     )}
 
