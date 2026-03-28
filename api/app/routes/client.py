@@ -12,7 +12,7 @@ from app.models import Client, Trip, Itinerary, Message
 from app.schemas import (
     TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut
 )
-from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin
+from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
 
 router = APIRouter(prefix="/client", tags=["client"])
 security = HTTPBearer()
@@ -203,4 +203,11 @@ def send_message(
     db.add(msg)
     db.commit()
     db.refresh(msg)
+    send_new_message_to_admin(
+        client_name=client.name,
+        client_email=client.email,
+        trip_title=trip.title,
+        trip_id=str(trip_id),
+        message_body=payload.body,
+    )
     return MessageOut.model_validate(msg)

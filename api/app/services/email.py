@@ -355,3 +355,114 @@ The Papaya Travel Team
 """
 
     _send(to, subject, html, plain)
+
+
+def send_new_message_to_client(
+    to: str,
+    client_name: str,
+    trip_title: str,
+    trip_id: str,
+    message_body: str,
+) -> None:
+    subject = f"New message from Papaya Travel — {trip_title}"
+    trip_url = f"{PORTAL_URL}/portal/trips/{trip_id}"
+
+    plain = f"""Hi {client_name},
+
+You have a new message from the Papaya Travel team regarding your trip "{trip_title}".
+
+---
+{message_body}
+---
+
+Reply and view your full conversation here: {trip_url}
+
+The Papaya Travel Team
+"""
+
+    html = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
+    <h1 style="color: #F97316; margin: 0;">Papaya Travel</h1>
+  </div>
+
+  <p>Hi {client_name},</p>
+  <p>You have a new message from our team regarding your trip <strong>{trip_title}</strong>.</p>
+
+  <div style="background: #F8FAFC; border-left: 4px solid #F97316; border-radius: 4px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0; white-space: pre-wrap; font-size: 15px;">{message_body}</p>
+  </div>
+
+  <p>
+    <a href="{trip_url}"
+       style="background: #F97316; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+      Reply in portal
+    </a>
+  </p>
+
+  <p style="color: #94A3B8; font-size: 13px;">The Papaya Travel Team</p>
+</body>
+</html>
+"""
+
+    _send(to, subject, html, plain)
+
+
+def send_new_message_to_admin(
+    client_name: str,
+    client_email: str,
+    trip_title: str,
+    trip_id: str,
+    message_body: str,
+) -> None:
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    if not admin_email:
+        return
+
+    subject = f"New message from {client_name} — {trip_title}"
+    trip_url = f"{PORTAL_URL}/admin/trips/{trip_id}"
+
+    plain = f"""New message from a client.
+
+Client: {client_name} ({client_email})
+Trip: {trip_title}
+
+---
+{message_body}
+---
+
+View conversation: {trip_url}
+"""
+
+    html = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <div style="border-top: 4px solid #2D3A4A; padding-top: 24px; margin-bottom: 32px;">
+    <h1 style="color: #2D3A4A; margin: 0;">Papaya Travel — Admin Notification</h1>
+  </div>
+
+  <p>New message from a client.</p>
+
+  <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+    <tr><td style="padding: 8px; color: #666; width: 120px;">Client</td><td style="padding: 8px; font-weight: 600;">{client_name} ({client_email})</td></tr>
+    <tr style="background:#f9f9f9;"><td style="padding: 8px; color: #666;">Trip</td><td style="padding: 8px; font-weight: 600;">{trip_title}</td></tr>
+  </table>
+
+  <div style="background: #F8FAFC; border-left: 4px solid #2D3A4A; border-radius: 4px; padding: 16px; margin: 20px 0;">
+    <p style="margin: 0; white-space: pre-wrap; font-size: 15px;">{message_body}</p>
+  </div>
+
+  <p>
+    <a href="{trip_url}"
+       style="background: #2D3A4A; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+      View in admin portal
+    </a>
+  </p>
+</body>
+</html>
+"""
+
+    _send(admin_email, subject, html, plain)

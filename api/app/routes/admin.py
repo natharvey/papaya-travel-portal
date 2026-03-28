@@ -13,7 +13,7 @@ from app.schemas import (
     ItineraryOut, RegenerateRequest,
 )
 from app.services.ai import generate_itinerary
-from app.services.email import send_itinerary_for_review
+from app.services.email import send_itinerary_for_review, send_new_message_to_client
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 security = HTTPBearer()
@@ -206,7 +206,7 @@ def send_message(
     _admin=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    trip = db.query(Trip).options(joinedload(Trip.client)).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     msg = Message(
@@ -217,4 +217,11 @@ def send_message(
     db.add(msg)
     db.commit()
     db.refresh(msg)
+    send_new_message_to_client(
+        to=trip.client.email,
+        client_name=trip.client.name,
+        trip_title=trip.title,
+        trip_id=str(trip_id),
+        message_body=payload.body,
+    )
     return MessageOut.model_validate(msg)
