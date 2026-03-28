@@ -5,11 +5,15 @@ import os
 from app.db import engine, Base, SessionLocal
 from app.routes import auth, intake, client, admin
 from app.services.seed import seed_destinations
+from app.security import hash_password
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    # Hash the admin password once at startup and cache in memory
+    plain = os.getenv("ADMIN_PASSWORD", "admin123")
+    auth.ADMIN_PASSWORD_HASH = hash_password(plain)
     if os.getenv("SEED_ON_STARTUP", "true").lower() == "true":
         db = SessionLocal()
         try:

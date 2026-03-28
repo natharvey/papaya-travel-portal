@@ -8,6 +8,7 @@ from app.db import get_db
 from app.models import Client
 from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse, ResendReferenceRequest
 from app.services.email import send_intake_confirmation
+from app.security import verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -15,6 +16,9 @@ JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
 ALGORITHM = "HS256"
 CLIENT_TOKEN_EXPIRE_HOURS = 24
 ADMIN_TOKEN_EXPIRE_HOURS = 8
+
+# Set at startup by main.py lifespan — never holds plain text
+ADMIN_PASSWORD_HASH: str = ""
 
 
 def create_token(data: dict, expires_delta: timedelta) -> str:
@@ -65,8 +69,7 @@ def resend_reference(payload: ResendReferenceRequest, db: Session = Depends(get_
 
 @router.post("/admin-login", response_model=TokenResponse)
 def admin_login(payload: AdminLoginRequest):
-    admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-    if payload.password != admin_password:
+    if not ADMIN_PASSWORD_HASH or not verify_password(payload.password, ADMIN_PASSWORD_HASH):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid admin password",
