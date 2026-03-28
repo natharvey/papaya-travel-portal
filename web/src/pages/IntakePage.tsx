@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { User, Mail, MapPin, Calendar, Wallet, Zap, Coffee, Wind, Users, Hotel, Star, AlertCircle, FileText, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
 import LoadingSpinner from '../components/LoadingSpinner'
@@ -47,7 +48,7 @@ const inputStyle: React.CSSProperties = {
   transition: 'border-color 0.15s',
 }
 
-function InputWithIcon({ icon: Icon, children }: { icon: React.ComponentType<{ size?: number; strokeWidth?: number; color?: string }>, children: React.ReactNode }) {
+function InputWithIcon({ icon: Icon, children }: { icon: LucideIcon, children: React.ReactNode }) {
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
