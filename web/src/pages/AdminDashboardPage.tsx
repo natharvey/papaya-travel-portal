@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { User, Mail, PlaneTakeoff, Calendar } from 'lucide-react'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { getAdminTrips, getApiError } from '../api/client'
@@ -41,21 +42,25 @@ function TripKanbanCard({ trip }: { trip: AdminTripListItem }) {
         onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'}
         onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'}
       >
-        <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '6px', color: 'var(--color-text)', lineHeight: '1.3' }}>
+        <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '8px', color: 'var(--color-text)', lineHeight: '1.3' }}>
           {trip.title}
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-          👤 {trip.client_name}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
+          <User size={11} strokeWidth={2} />
+          {trip.client_name}
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-          ✉️ {trip.client_email}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
+          <Mail size={11} strokeWidth={2} />
+          {trip.client_email}
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-            ✈️ {trip.origin_city}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+            <PlaneTakeoff size={11} strokeWidth={2} />
+            {trip.origin_city}
           </span>
-          <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
-            📅 {formatDate(trip.start_date)} · {tripDays}d
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+            <Calendar size={11} strokeWidth={2} />
+            {formatDate(trip.start_date)} · {tripDays}d
           </span>
         </div>
       </div>
@@ -228,8 +233,12 @@ export default function AdminDashboardPage() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>✈️ {trip.origin_city}</span>
-                          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>📅 {formatDate(trip.start_date)}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                            <PlaneTakeoff size={13} strokeWidth={2} /> {trip.origin_city}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                            <Calendar size={13} strokeWidth={2} /> {formatDate(trip.start_date)}
+                          </span>
                           <span style={{ fontSize: '13px', color: 'var(--color-primary)' }}>View →</span>
                         </div>
                       </div>

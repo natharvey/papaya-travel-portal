@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send } from 'lucide-react'
 import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
@@ -210,51 +211,46 @@ export default function AdminTripPage() {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ flex: 1 }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '8px' }}>{trip.title}</h1>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>
-                  👤 {trip.client.name} · {trip.client.email}
-                </span>
+              <h1 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '12px' }}>{trip.title}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <User size={13} color="#64748B" strokeWidth={2} />
+                <span style={{ fontSize: '13px', color: '#94A3B8' }}>{trip.client.name} · {trip.client.email}</span>
               </div>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>✈️ {trip.origin_city}</span>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>
-                  📅 {new Date(trip.start_date).toLocaleDateString('en-AU')} — {new Date(trip.end_date).toLocaleDateString('en-AU')}
-                </span>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>🕐 {tripDays}d</span>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>💰 {trip.budget_range}</span>
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>🚶 {trip.pace}</span>
+                {[
+                  { Icon: PlaneTakeoff, label: trip.origin_city },
+                  { Icon: Calendar, label: `${new Date(trip.start_date).toLocaleDateString('en-AU')} — ${new Date(trip.end_date).toLocaleDateString('en-AU')}` },
+                  { Icon: Clock, label: `${tripDays} days` },
+                  { Icon: Wallet, label: trip.budget_range },
+                  { Icon: Gauge, label: trip.pace },
+                ].map(({ Icon, label }) => (
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#94A3B8' }}>
+                    <Icon size={13} color="#64748B" strokeWidth={2} />
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
 
-            {/* Status dropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{
-                background: statusColors.bg,
-                color: statusColors.text,
-                padding: '4px 12px',
-                borderRadius: '100px',
-                fontSize: '12px',
-                fontWeight: 700,
-              }}>
-                {trip.status}
-              </span>
+            {/* Status */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <select
                 value={trip.status}
                 onChange={e => handleStatusChange(e.target.value)}
                 disabled={statusUpdating}
                 style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'white',
+                  background: statusColors.bg,
+                  border: 'none',
+                  color: statusColors.text,
                   borderRadius: 'var(--radius)',
                   padding: '6px 12px',
                   fontSize: '13px',
+                  fontWeight: 700,
                   cursor: 'pointer',
                 }}
               >
                 {VALID_STATUSES.map(s => (
-                  <option key={s} value={s} style={{ color: 'black', background: 'white' }}>{s}</option>
+                  <option key={s} value={s}>{s}</option>
                 ))}
               </select>
               {statusUpdating && <LoadingSpinner size={16} label="" />}
@@ -271,9 +267,9 @@ export default function AdminTripPage() {
           overflow: 'hidden',
         }}>
           <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex' }}>
-            <TabButton label="🗓 Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
-            <TabButton label="📋 Intake" active={tab === 'intake'} onClick={() => setTab('intake')} />
-            <TabButton label={`💬 Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
+            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
+            <TabButton label="Intake" active={tab === 'intake'} onClick={() => setTab('intake')} />
+            <TabButton label={`Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
           </div>
 
           <div style={{ padding: '24px' }}>
@@ -310,8 +306,8 @@ export default function AdminTripPage() {
                           gap: '8px',
                         }}
                       >
-                        {generating && <LoadingSpinner size={16} color="white" label="" />}
-                        {generating ? 'Generating itinerary...' : '✨ Generate Itinerary with AI'}
+                        {generating ? <LoadingSpinner size={16} color="white" label="" /> : <Sparkles size={15} strokeWidth={2} />}
+                        {generating ? 'Generating itinerary...' : 'Generate Itinerary with AI'}
                       </button>
                       <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
                         Uses OpenAI GPT-4o with destination knowledge
@@ -388,7 +384,7 @@ export default function AdminTripPage() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {sendingForReview ? <LoadingSpinner size={14} color="white" label="" /> : null}
+                      {sendingForReview ? <LoadingSpinner size={14} color="white" label="" /> : <Send size={14} strokeWidth={2} />}
                       {sendingForReview ? 'Sending...' : 'Send for Review'}
                     </button>
                   </div>
@@ -402,8 +398,9 @@ export default function AdminTripPage() {
                     padding: '14px',
                     marginBottom: '24px',
                   }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
-                      🔄 Regenerate with Instructions
+                    <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text)' }}>
+                      <RefreshCw size={13} strokeWidth={2} color="#64748B" />
+                      Regenerate with Instructions
                     </div>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       <input
@@ -439,8 +436,8 @@ export default function AdminTripPage() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {generating && <LoadingSpinner size={14} color="white" label="" />}
-                        {generating ? 'Generating...' : '🔄 Regenerate'}
+                        {generating ? <LoadingSpinner size={14} color="white" label="" /> : <RefreshCw size={13} strokeWidth={2} />}
+                        {generating ? 'Generating...' : 'Regenerate'}
                       </button>
                     </div>
                   </div>
@@ -456,7 +453,9 @@ export default function AdminTripPage() {
                     color: '#B91C1C',
                     marginBottom: '16px',
                   }}>
-                    ⚠️ {genError}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <AlertCircle size={15} strokeWidth={2} />{genError}
+                    </div>
                   </div>
                 )}
 

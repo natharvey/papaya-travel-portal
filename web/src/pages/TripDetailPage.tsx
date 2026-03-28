@@ -4,6 +4,7 @@ import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
+import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge } from 'lucide-react'
 import { getClientTrip, sendClientMessage, confirmTrip, getApiError } from '../api/client'
 import type { TripDetail, Message } from '../types'
 
@@ -140,11 +141,18 @@ export default function TripDetailPage() {
             <div>
               <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '8px' }}>{trip.title}</h1>
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '14px', color: '#94A3B8' }}>✈️ From {trip.origin_city}</span>
-                <span style={{ fontSize: '14px', color: '#94A3B8' }}>📅 {formatDate(trip.start_date)} — {formatDate(trip.end_date)}</span>
-                <span style={{ fontSize: '14px', color: '#94A3B8' }}>🕐 {tripDays} days</span>
-                <span style={{ fontSize: '14px', color: '#94A3B8' }}>💰 {trip.budget_range}</span>
-                <span style={{ fontSize: '14px', color: '#94A3B8' }}>🚶 {trip.pace}</span>
+                {[
+                  { Icon: PlaneTakeoff, label: `From ${trip.origin_city}` },
+                  { Icon: Calendar, label: `${formatDate(trip.start_date)} — ${formatDate(trip.end_date)}` },
+                  { Icon: Clock, label: `${tripDays} days` },
+                  { Icon: Wallet, label: trip.budget_range },
+                  { Icon: Gauge, label: trip.pace },
+                ].map(({ Icon, label }) => (
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#94A3B8' }}>
+                    <Icon size={13} color="#64748B" strokeWidth={2} />
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
             <span style={{
@@ -171,9 +179,9 @@ export default function TripDetailPage() {
           overflow: 'hidden',
         }}>
           <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex' }}>
-            <TabButton label="🗓 Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
-            <TabButton label={`💬 Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
-            <TabButton label="📋 Trip Details" active={tab === 'details'} onClick={() => setTab('details')} />
+            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => setTab('itinerary')} />
+            <TabButton label={`Messages (${messages.length})`} active={tab === 'messages'} onClick={() => setTab('messages')} />
+            <TabButton label="Trip Details" active={tab === 'details'} onClick={() => setTab('details')} />
           </div>
 
           <div style={{ padding: '28px' }}>

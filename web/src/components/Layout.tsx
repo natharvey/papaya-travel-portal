@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import PapayaLogo from './PapayaLogo'
 
 interface LayoutProps {
   children: ReactNode
@@ -21,12 +22,12 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
       <header style={{
         background: 'var(--color-secondary)',
         color: 'white',
-        padding: '0 24px',
-        height: '64px',
+        padding: '0 32px',
+        height: '56px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: 'var(--shadow-md)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
@@ -41,42 +42,63 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
             textDecoration: 'none',
           }}
         >
-          <div style={{
-            width: '36px',
-            height: '36px',
-            background: 'var(--color-primary)',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-          }}>
-            🌴
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '18px', letterSpacing: '-0.3px' }}>Papaya</div>
-            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '-2px' }}>
-              {variant === 'admin' ? 'Admin Dashboard' : 'Travel Portal'}
-            </div>
-          </div>
+          <PapayaLogo size={32} />
+          <span style={{ fontWeight: 700, fontSize: '17px', letterSpacing: '-0.3px' }}>Papaya</span>
+          {variant === 'admin' && (
+            <span style={{
+              fontSize: '11px',
+              fontWeight: 600,
+              color: '#F97316',
+              background: 'rgba(249,115,22,0.12)',
+              padding: '2px 8px',
+              borderRadius: '100px',
+              letterSpacing: '0.4px',
+              textTransform: 'uppercase',
+            }}>
+              Admin
+            </span>
+          )}
         </Link>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {variant === 'client' && isAuthenticated && userRole === 'client' && (
             <>
-              <Link to="/portal" style={{ color: '#CBD5E1', fontSize: '14px', textDecoration: 'none' }}>
+              <Link
+                to="/portal"
+                style={{
+                  color: '#94A3B8',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius)',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
+              >
                 My Trips
               </Link>
               <button
                 onClick={handleLogout}
                 style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'white',
-                  padding: '6px 16px',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#94A3B8',
+                  padding: '6px 14px',
                   borderRadius: 'var(--radius)',
-                  fontSize: '14px',
+                  fontSize: '13px',
+                  fontWeight: 500,
                   cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'
+                  e.currentTarget.style.color = 'white'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                  e.currentTarget.style.color = '#94A3B8'
                 }}
               >
                 Sign out
@@ -85,28 +107,47 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
           )}
 
           {variant === 'admin' && isAuthenticated && userRole === 'admin' && (
-            <>
-              <span style={{ color: '#94A3B8', fontSize: '13px' }}>Admin</span>
-              <button
-                onClick={handleLogout}
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  color: 'white',
-                  padding: '6px 16px',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                Sign out
-              </button>
-            </>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#94A3B8',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius)',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'
+                e.currentTarget.style.color = 'white'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
+                e.currentTarget.style.color = '#94A3B8'
+              }}
+            >
+              Sign out
+            </button>
           )}
 
           {variant === 'public' && (
             <>
-              <Link to="/login" style={{ color: '#CBD5E1', fontSize: '14px', textDecoration: 'none' }}>
+              <Link
+                to="/login"
+                style={{
+                  color: '#94A3B8',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius)',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
+              >
                 Client Login
               </Link>
               <Link
@@ -114,7 +155,7 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
                 style={{
                   background: 'var(--color-primary)',
                   color: 'white',
-                  padding: '8px 18px',
+                  padding: '7px 16px',
                   borderRadius: 'var(--radius)',
                   fontSize: '14px',
                   fontWeight: 600,
