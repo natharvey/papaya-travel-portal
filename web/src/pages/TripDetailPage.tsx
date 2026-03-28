@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { PDFDownloadLink } from '@react-pdf/renderer'
 import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
+import ItineraryPDF from '../components/ItineraryPDF'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download } from 'lucide-react'
 import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, getApiError } from '../api/client'
 import type { TripDetail, Message } from '../types'
 
@@ -405,12 +407,47 @@ export default function TripDetailPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
                         Version {latestItinerary.version} · Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU')}
+                        {trip.itineraries.length > 1 && (
+                          <span style={{ marginLeft: '10px', color: 'var(--color-primary)' }}>
+                            · {trip.itineraries.length} versions
+                          </span>
+                        )}
                       </span>
-                      {trip.itineraries.length > 1 && (
-                        <span style={{ fontSize: '12px', color: 'var(--color-primary)' }}>
-                          {trip.itineraries.length} versions available
-                        </span>
-                      )}
+                      <PDFDownloadLink
+                        document={
+                          <ItineraryPDF
+                            data={latestItinerary.itinerary_json}
+                            tripTitle={trip.title}
+                            clientName={trip.client.name}
+                            startDate={trip.start_date}
+                            endDate={trip.end_date}
+                            originCity={trip.origin_city}
+                          />
+                        }
+                        fileName={`${trip.title.replace(/\s+/g, '-').toLowerCase()}-itinerary.pdf`}
+                        style={{ textDecoration: 'none' }}
+                      >
+                        {({ loading }) => (
+                          <button
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: loading ? 'var(--color-border)' : 'var(--color-secondary)',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: 'var(--radius)',
+                              padding: '7px 14px',
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              cursor: loading ? 'default' : 'pointer',
+                            }}
+                          >
+                            <Download size={13} strokeWidth={2} />
+                            {loading ? 'Preparing PDF...' : 'Download PDF'}
+                          </button>
+                        )}
+                      </PDFDownloadLink>
                     </div>
                     <ItineraryTimeline data={latestItinerary.itinerary_json} />
                   </>
