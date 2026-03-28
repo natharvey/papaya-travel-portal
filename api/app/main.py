@@ -8,11 +8,21 @@ from alembic.config import Config
 from alembic import command
 from app.limiter import limiter
 import os
+import sentry_sdk
 from pathlib import Path
 from app.db import engine, Base, SessionLocal, DATABASE_URL
 from app.routes import auth, intake, client, admin
 from app.services.seed import seed_destinations
 from app.security import hash_password
+
+sentry_dsn = os.getenv("SENTRY_DSN", "")
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        environment=os.getenv("ENVIRONMENT", "production"),
+        traces_sample_rate=0.2,
+        send_default_pii=False,
+    )
 
 
 def run_migrations():
