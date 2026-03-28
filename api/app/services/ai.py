@@ -1,12 +1,31 @@
 import os
 import json
 import uuid
+import time
+import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
-from openai import OpenAI
+from openai import OpenAI, RateLimitError, APITimeoutError, APIStatusError, APIConnectionError
 
 from app.models import Trip, Itinerary, IntakeResponse, Client
 from app.services.retrieval import retrieve_destination_cards
+
+logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+RETRY_DELAYS = [5, 15, 30]  # seconds between attempts
+
+
+def _is_retryable(exc: Exception) -> bool:
+    if isinstance(exc, RateLimitError):
+        return True
+    if isinstance(exc, APITimeoutError):
+        return True
+    if isinstance(exc, APIConnectionError):
+        return True
+    if isinstance(exc, APIStatusError) and exc.status_code >= 500:
+        return True
+    return False
 
 ITINERARY_SCHEMA = {
     "name": "itinerary",
@@ -214,29 +233,60 @@ def generate_itinerary(
     # Build prompts
     user_prompt = build_user_prompt(trip, intake, client, destination_context, additional_instructions)
 
-    # Call OpenAI
+    # Call OpenAI with retry logic
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable not set")
+        raise ValueError("OPENAI_API_KEY is not configured")
 
     openai_client = OpenAI(api_key=api_key)
 
-    response = openai_client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        response_format={
-            "type": "json_schema",
-            "json_schema": ITINERARY_SCHEMA,
-        },
-        temperature=0.7,
-        max_tokens=16000,
-    )
+    last_exc: Exception | None = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": ITINERARY_SCHEMA,
+                },
+                temperature=0.7,
+                max_tokens=16000,
+                timeout=120,
+            )
+            raw_content = response.choices[0].message.content
 
-    raw_content = response.choices[0].message.content
-    itinerary_data = json.loads(raw_content)
+            finish_reason = response.choices[0].finish_reason
+            if finish_reason == "length":
+                raise ValueError(
+                    "The itinerary was too long to generate in one response. "
+                    "Try a shorter trip or ask the AI to be more concise."
+                )
+
+            itinerary_data = json.loads(raw_content)
+            break  # success
+
+        except (RateLimitError, APITimeoutError, APIConnectionError, APIStatusError) as e:
+            last_exc = e
+            if _is_retryable(e) and attempt < MAX_RETRIES - 1:
+                delay = RETRY_DELAYS[attempt]
+                logger.warning("OpenAI error (attempt %d/%d), retrying in %ds: %s", attempt + 1, MAX_RETRIES, delay, e)
+                time.sleep(delay)
+                continue
+            # Not retryable or out of attempts
+            if isinstance(e, RateLimitError):
+                raise ValueError("OpenAI rate limit reached. Please wait a moment and try again.") from e
+            if isinstance(e, (APITimeoutError, APIConnectionError)):
+                raise ValueError("OpenAI request timed out. Please try again.") from e
+            raise ValueError(f"OpenAI API error: {e}") from e
+
+        except json.JSONDecodeError as e:
+            raise ValueError("The AI returned an invalid response. Please try generating again.") from e
+    else:
+        raise ValueError(f"Generation failed after {MAX_RETRIES} attempts. Last error: {last_exc}")
 
     # Determine version number
     existing = db.query(Itinerary).filter(Itinerary.trip_id == trip_id).all()

@@ -480,13 +480,38 @@ export default function AdminTripPage() {
                     background: '#FEF2F2',
                     border: '1px solid #FECACA',
                     borderRadius: 'var(--radius)',
-                    padding: '12px 14px',
-                    fontSize: '14px',
-                    color: '#B91C1C',
+                    padding: '14px 16px',
                     marginBottom: '16px',
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <AlertCircle size={15} strokeWidth={2} />{genError}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <AlertCircle size={16} strokeWidth={2} color="#B91C1C" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', color: '#B91C1C', fontWeight: 600, marginBottom: '4px' }}>
+                          Generation failed
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#991B1B', marginBottom: '12px' }}>
+                          {genError}
+                        </div>
+                        <button
+                          onClick={trip.itineraries.length === 0 ? handleGenerate : handleRegenerate}
+                          disabled={generating || (trip.itineraries.length > 0 && !regenInstructions.trim())}
+                          style={{
+                            background: '#B91C1C',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: 'var(--radius)',
+                            padding: '7px 16px',
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <RefreshCw size={13} strokeWidth={2} /> Try again
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
