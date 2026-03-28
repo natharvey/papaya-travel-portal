@@ -64,6 +64,7 @@ export default function TripDetailPage() {
   const [changesOpen, setChangesOpen] = useState(false)
   const [changesBody, setChangesBody] = useState('')
   const [changesError, setChangesError] = useState('')
+  const [sendMessageError, setSendMessageError] = useState('')
 
   useEffect(() => {
     if (!tripId) return
@@ -109,8 +110,13 @@ export default function TripDetailPage() {
 
   async function handleSendMessage(body: string) {
     if (!tripId) return
-    const msg = await sendClientMessage(tripId, body)
-    setMessages(prev => [...prev, msg])
+    setSendMessageError('')
+    try {
+      const msg = await sendClientMessage(tripId, body)
+      setMessages(prev => [...prev, msg])
+    } catch (e) {
+      setSendMessageError(getApiError(e))
+    }
   }
 
   if (loading) {
@@ -457,11 +463,26 @@ export default function TripDetailPage() {
 
             {/* Messages Tab */}
             {tab === 'messages' && (
-              <MessageThread
-                messages={messages}
-                currentRole="CLIENT"
-                onSend={handleSendMessage}
-              />
+              <>
+                {sendMessageError && (
+                  <div style={{
+                    background: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    borderRadius: 'var(--radius)',
+                    padding: '10px 14px',
+                    marginBottom: '12px',
+                    fontSize: '13px',
+                    color: '#B91C1C',
+                  }}>
+                    Failed to send message: {sendMessageError}
+                  </div>
+                )}
+                <MessageThread
+                  messages={messages}
+                  currentRole="CLIENT"
+                  onSend={handleSendMessage}
+                />
+              </>
             )}
 
             {/* Trip Details Tab */}

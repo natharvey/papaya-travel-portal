@@ -65,6 +65,8 @@ export default function AdminTripPage() {
   // Status update
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [sendingForReview, setSendingForReview] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const [sendMessageError, setSendMessageError] = useState('')
 
   // Admin notes
   const [notes, setNotes] = useState('')
@@ -96,12 +98,13 @@ export default function AdminTripPage() {
   async function handleStatusChange(newStatus: string) {
     if (!tripId || !trip) return
     setStatusUpdating(true)
+    setActionError('')
     try {
       const updated = await updateAdminTrip(tripId, { status: newStatus })
       setTrip(updated)
       setMessages(updated.messages)
     } catch (e) {
-      alert('Failed to update status: ' + getApiError(e))
+      setActionError('Failed to update status: ' + getApiError(e))
     } finally {
       setStatusUpdating(false)
     }
@@ -111,12 +114,13 @@ export default function AdminTripPage() {
     if (!tripId || !trip) return
     if (!window.confirm(`This will email ${trip.client.name} their itinerary for review. Continue?`)) return
     setSendingForReview(true)
+    setActionError('')
     try {
       const updated = await updateAdminTrip(tripId, { status: 'REVIEW' })
       setTrip(updated)
       setMessages(updated.messages)
     } catch (e) {
-      alert('Failed to send for review: ' + getApiError(e))
+      setActionError('Failed to send for review: ' + getApiError(e))
     } finally {
       setSendingForReview(false)
     }
@@ -170,13 +174,14 @@ export default function AdminTripPage() {
     if (!tripId) return
     setNotesSaving(true)
     setNotesSaved(false)
+    setActionError('')
     try {
       const updated = await updateAdminTrip(tripId, { admin_notes: notes })
       setTrip(updated)
       setNotesSaved(true)
       setTimeout(() => setNotesSaved(false), 2500)
     } catch (e) {
-      alert('Failed to save notes: ' + getApiError(e))
+      setActionError('Failed to save notes: ' + getApiError(e))
     } finally {
       setNotesSaving(false)
     }
@@ -184,8 +189,13 @@ export default function AdminTripPage() {
 
   async function handleSendMessage(body: string) {
     if (!tripId) return
-    const msg = await sendAdminMessage(tripId, body)
-    setMessages(prev => [...prev, msg])
+    setSendMessageError('')
+    try {
+      const msg = await sendAdminMessage(tripId, body)
+      setMessages(prev => [...prev, msg])
+    } catch (e) {
+      setSendMessageError(getApiError(e))
+    }
   }
 
   if (loading) {
@@ -288,6 +298,24 @@ export default function AdminTripPage() {
             </div>
           </div>
         </div>
+
+        {/* Action error banner */}
+        {actionError && (
+          <div style={{
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: 'var(--radius)',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+          }}>
+            <AlertCircle size={15} strokeWidth={2} color="#B91C1C" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: '13px', color: '#B91C1C', flex: 1 }}>{actionError}</span>
+            <button onClick={() => setActionError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: '16px', lineHeight: 1, padding: 0 }}>×</button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{
@@ -589,11 +617,30 @@ export default function AdminTripPage() {
 
             {/* ── MESSAGES TAB ── */}
             {tab === 'messages' && (
-              <MessageThread
-                messages={messages}
-                currentRole="ADMIN"
-                onSend={handleSendMessage}
-              />
+              <>
+                {sendMessageError && (
+                  <div style={{
+                    background: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    borderRadius: 'var(--radius)',
+                    padding: '10px 14px',
+                    marginBottom: '12px',
+                    fontSize: '13px',
+                    color: '#B91C1C',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
+                    <AlertCircle size={14} strokeWidth={2} color="#B91C1C" />
+                    {sendMessageError}
+                  </div>
+                )}
+                <MessageThread
+                  messages={messages}
+                  currentRole="ADMIN"
+                  onSend={handleSendMessage}
+                />
+              </>
             )}
 
             {/* ── NOTES TAB ── */}

@@ -58,7 +58,6 @@ jobs:
       - name: Type check
         working-directory: web
         run: npx tsc --noEmit
-        continue-on-error: true
 
       - name: Build
         working-directory: web

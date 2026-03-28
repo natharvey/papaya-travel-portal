@@ -38,6 +38,13 @@ def run_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    jwt_secret = os.getenv("JWT_SECRET", "")
+    if not jwt_secret or jwt_secret == "change-me-in-production":
+        if not DATABASE_URL.startswith("sqlite"):
+            raise RuntimeError(
+                "JWT_SECRET environment variable must be set to a strong random value. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
     run_migrations()
     # Hash the admin password once at startup and cache in memory
     plain = os.getenv("ADMIN_PASSWORD", "admin123")
@@ -79,6 +86,12 @@ app.include_router(admin.router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    try:
+        db = SessionLocal()
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db.close()
+        return {"status": "ok", "db": "ok"}
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "error", "db": "unreachable"})
 
 
