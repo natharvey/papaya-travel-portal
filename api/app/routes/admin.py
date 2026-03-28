@@ -125,6 +125,8 @@ def update_trip(
         trip.status = new_status
     if payload.title is not None:
         trip.title = payload.title
+    if payload.admin_notes is not None:
+        trip.admin_notes = payload.admin_notes
     from datetime import datetime
     trip.updated_at = datetime.utcnow()
     db.commit()

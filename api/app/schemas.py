@@ -153,6 +153,7 @@ class TripOut(BaseModel):
     budget_range: str
     pace: str
     status: str
+    admin_notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -175,6 +176,7 @@ class TripDetail(TripOut):
 class TripUpdate(BaseModel):
     status: Optional[str] = None
     title: Optional[str] = None
+    admin_notes: Optional[str] = None
 
 
 # ─── Admin Generate Itinerary ────────────────────────────────────────────────

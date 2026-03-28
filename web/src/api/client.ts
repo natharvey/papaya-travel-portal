@@ -140,7 +140,7 @@ export async function getAdminTrip(tripId: string): Promise<TripDetail> {
 
 export async function updateAdminTrip(
   tripId: string,
-  data: { status?: string; title?: string }
+  data: { status?: string; title?: string; admin_notes?: string }
 ): Promise<TripDetail> {
   const res = await api.patch<TripDetail>(`/admin/trips/${tripId}`, data)
   return res.data

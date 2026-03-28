@@ -125,6 +125,7 @@ export interface Trip {
   budget_range: string
   pace: string
   status: TripStatus
+  admin_notes: string | null
   created_at: string
   updated_at: string
 }

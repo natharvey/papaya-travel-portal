@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send } from 'lucide-react'
+import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send, StickyNote, Save } from 'lucide-react'
 import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
@@ -52,9 +52,9 @@ export default function AdminTripPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages' | 'notes'>('itinerary')
 
-  function switchTab(next: 'itinerary' | 'intake' | 'messages') {
+  function switchTab(next: 'itinerary' | 'intake' | 'messages' | 'notes') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markAdminMessagesRead(tripId)
@@ -65,6 +65,11 @@ export default function AdminTripPage() {
   // Status update
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [sendingForReview, setSendingForReview] = useState(false)
+
+  // Admin notes
+  const [notes, setNotes] = useState('')
+  const [notesSaving, setNotesSaving] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
 
   // Itinerary generation
   const [generating, setGenerating] = useState(false)
@@ -78,6 +83,7 @@ export default function AdminTripPage() {
       .then(data => {
         setTrip(data)
         setMessages(data.messages)
+        setNotes(data.admin_notes || '')
         if (data.itineraries.length > 0) {
           const latest = Math.max(...data.itineraries.map(i => i.version))
           setSelectedItineraryVersion(latest)
@@ -157,6 +163,22 @@ export default function AdminTripPage() {
       setGenError(getApiError(e))
     } finally {
       setGenerating(false)
+    }
+  }
+
+  async function handleSaveNotes() {
+    if (!tripId) return
+    setNotesSaving(true)
+    setNotesSaved(false)
+    try {
+      const updated = await updateAdminTrip(tripId, { admin_notes: notes })
+      setTrip(updated)
+      setNotesSaved(true)
+      setTimeout(() => setNotesSaved(false), 2500)
+    } catch (e) {
+      alert('Failed to save notes: ' + getApiError(e))
+    } finally {
+      setNotesSaving(false)
     }
   }
 
@@ -278,6 +300,7 @@ export default function AdminTripPage() {
           <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
             <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
             <TabButton label="Intake" active={tab === 'intake'} onClick={() => switchTab('intake')} />
+            <TabButton label="Notes" active={tab === 'notes'} onClick={() => switchTab('notes')} />
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <TabButton
                 label={`Messages (${messages.length})`}
@@ -571,6 +594,67 @@ export default function AdminTripPage() {
                 currentRole="ADMIN"
                 onSend={handleSendMessage}
               />
+            )}
+
+            {/* ── NOTES TAB ── */}
+            {tab === 'notes' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <StickyNote size={16} color="#64748B" strokeWidth={2} />
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>
+                    Internal Notes
+                  </h3>
+                  <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: '4px' }}>
+                    — not visible to the client
+                  </span>
+                </div>
+                <textarea
+                  value={notes}
+                  onChange={e => { setNotes(e.target.value); setNotesSaved(false) }}
+                  placeholder="Add internal notes about this trip — client preferences, supplier contacts, booking references, special requests..."
+                  rows={14}
+                  style={{
+                    width: '100%',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius)',
+                    padding: '14px',
+                    fontSize: '14px',
+                    lineHeight: '1.6',
+                    resize: 'vertical',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    color: 'var(--color-text)',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+                  {notesSaved && (
+                    <span style={{ fontSize: '13px', color: '#15803D', fontWeight: 500 }}>
+                      Saved
+                    </span>
+                  )}
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={notesSaving}
+                    style={{
+                      background: notesSaving ? 'var(--color-border)' : 'var(--color-secondary)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: 'var(--radius)',
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      cursor: notesSaving ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {notesSaving ? <LoadingSpinner size={14} color="white" label="" /> : <Save size={14} strokeWidth={2} />}
+                    {notesSaving ? 'Saving...' : 'Save Notes'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
