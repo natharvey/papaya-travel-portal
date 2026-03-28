@@ -1,8 +1,9 @@
 import os
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from jose import jwt
+from app.limiter import limiter
 
 from app.db import get_db
 from app.models import Client
@@ -33,7 +34,8 @@ def decode_token(token: str) -> dict:
 
 
 @router.post("/client-login", response_model=TokenResponse)
-def client_login(payload: ClientLoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def client_login(request: Request, payload: ClientLoginRequest, db: Session = Depends(get_db)):
     client = db.query(Client).filter(
         Client.email == payload.email,
         Client.reference_code == payload.reference_code,
@@ -51,7 +53,8 @@ def client_login(payload: ClientLoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/resend-reference")
-def resend_reference(payload: ResendReferenceRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def resend_reference(request: Request, payload: ResendReferenceRequest, db: Session = Depends(get_db)):
     client = db.query(Client).filter(Client.email == payload.email).first()
     if not client:
         raise HTTPException(
@@ -68,7 +71,8 @@ def resend_reference(payload: ResendReferenceRequest, db: Session = Depends(get_
 
 
 @router.post("/admin-login", response_model=TokenResponse)
-def admin_login(payload: AdminLoginRequest):
+@limiter.limit("5/minute")
+def admin_login(request: Request, payload: AdminLoginRequest):
     if not ADMIN_PASSWORD_HASH or not verify_password(payload.password, ADMIN_PASSWORD_HASH):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

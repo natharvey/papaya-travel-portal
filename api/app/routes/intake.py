@@ -1,13 +1,14 @@
 import random
 import string
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Client, Trip, IntakeResponse as IntakeResponseModel
 from app.schemas import IntakeCreate, IntakeResponse
 from app.services.email import send_intake_confirmation
+from app.limiter import limiter
 
 router = APIRouter(prefix="/intake", tags=["intake"])
 
@@ -38,7 +39,8 @@ def get_or_create_client(db: Session, email: str, name: str) -> Client:
 
 
 @router.post("", response_model=IntakeResponse)
-def create_intake(payload: IntakeCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/hour")
+def create_intake(request: Request, payload: IntakeCreate, db: Session = Depends(get_db)):
     client = get_or_create_client(db, str(payload.client_email), payload.client_name)
 
     trip = Trip(
