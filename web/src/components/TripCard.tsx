@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { PlaneTakeoff, Calendar, Wallet, Gauge } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Wallet, Gauge, Timer } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -20,6 +20,69 @@ interface TripCardProps {
 
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function getDaysUntilTrip(startDate: string): number | null {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tripStart = new Date(startDate)
+  tripStart.setHours(0, 0, 0, 0)
+  const diffMs = tripStart.getTime() - today.getTime()
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+}
+
+function CountdownBadge({ startDate }: { startDate: string }) {
+  const days = getDaysUntilTrip(startDate)
+
+  if (days === null) return null
+
+  let label: string
+  let bg: string
+  let color: string
+
+  if (days < 0) {
+    // Trip is in the past — don't show the badge
+    return null
+  } else if (days === 0) {
+    label = '🎉 Trip starts today!'
+    bg = '#DCFCE7'
+    color = '#15803D'
+  } else if (days === 1) {
+    label = '✈️ 1 day until your trip'
+    bg = '#FFF7ED'
+    color = '#C2410C'
+  } else if (days <= 7) {
+    label = `✈️ ${days} days until your trip`
+    bg = '#FFF7ED'
+    color = '#C2410C'
+  } else if (days <= 30) {
+    label = `🗓️ ${days} days until your trip`
+    bg = '#FEF9C3'
+    color = '#A16207'
+  } else {
+    label = `⏳ ${days} days until your trip`
+    bg = '#EEF2FF'
+    color = '#4F46E5'
+  }
+
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        background: bg,
+        color: color,
+        padding: '4px 10px',
+        borderRadius: '100px',
+        fontSize: '12px',
+        fontWeight: 600,
+      }}
+    >
+      <Timer size={12} strokeWidth={2.5} />
+      {label}
+    </div>
+  )
 }
 
 export default function TripCard({ trip, linkTo, showClient, clientName, clientEmail }: TripCardProps) {
@@ -90,6 +153,13 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
             <Gauge size={13} strokeWidth={2} /> {trip.pace}
           </span>
         </div>
+
+        {/* Countdown Timer */}
+        {trip.status !== 'ARCHIVED' && (
+          <div style={{ marginBottom: '12px' }}>
+            <CountdownBadge startDate={trip.start_date} />
+          </div>
+        )}
 
         {/* Itinerary status */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

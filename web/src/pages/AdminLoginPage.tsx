@@ -58,10 +58,22 @@ export default function AdminLoginPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '24px',
               margin: '0 auto 16px',
             }}>
-              🔐
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2C9.24 2 7 4.24 7 7v4H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-2V7c0-2.76-2.24-5-5-5z" />
+                <path d="M9 7c0-1.66 1.34-3 3-3s3 1.34 3 3v4H9V7z" />
+                <circle cx="12" cy="16" r="1.5" />
+              </svg>
             </div>
             <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '6px' }}>Admin Access</h1>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
