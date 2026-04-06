@@ -8,9 +8,9 @@ from jose import jwt, JWTError
 import os
 
 from app.db import get_db
-from app.models import Client, Trip, Itinerary, Message
+from app.models import Client, Trip, Itinerary, Message, Flight, Stay
 from app.schemas import (
-    TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut
+    TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut, FlightOut
 )
 from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
 
@@ -79,6 +79,8 @@ def get_trip(
             joinedload(Trip.intake_response),
             joinedload(Trip.itineraries),
             joinedload(Trip.messages),
+            joinedload(Trip.flights),
+            joinedload(Trip.stays),
         )
         .first()
     )

@@ -6,11 +6,13 @@ from sqlalchemy.orm import Session, joinedload
 from jose import jwt, JWTError
 import os
 
+import httpx
+
 from app.db import get_db
-from app.models import Trip, Client, Itinerary, Message
+from app.models import Trip, Client, Itinerary, Message, Flight, Stay
 from app.schemas import (
     TripDetail, AdminTripListItem, TripUpdate, MessageCreate, MessageOut,
-    ItineraryOut, RegenerateRequest,
+    ItineraryOut, RegenerateRequest, FlightCreate, FlightOut, StayCreate, StayOut,
 )
 from app.services.ai import generate_itinerary
 from app.services.email import send_itinerary_for_review, send_new_message_to_client
@@ -83,6 +85,8 @@ def get_trip(
             joinedload(Trip.intake_response),
             joinedload(Trip.itineraries),
             joinedload(Trip.messages),
+            joinedload(Trip.flights),
+            joinedload(Trip.stays),
         )
         .first()
     )
@@ -106,6 +110,7 @@ def update_trip(
             joinedload(Trip.intake_response),
             joinedload(Trip.itineraries),
             joinedload(Trip.messages),
+            joinedload(Trip.flights),
         )
         .first()
     )
@@ -227,3 +232,193 @@ def send_message(
         message_body=payload.body,
     )
     return MessageOut.model_validate(msg)
+
+
+# ─── Flights ─────────────────────────────────────────────────────────────────
+
+@router.get("/flights/lookup")
+def lookup_flight(
+    flight_number: str = Query(...),
+    date: str = Query(...),  # YYYY-MM-DD
+    _admin=Depends(require_admin),
+):
+    """Look up a flight via AeroDataBox and return pre-filled form data."""
+    api_key = os.getenv("AERODATABOX_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Flight lookup not configured — set AERODATABOX_API_KEY")
+
+    url = f"https://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
+    headers = {
+        "x-rapidapi-key": api_key,
+        "x-rapidapi-host": "aerodatabox.p.rapidapi.com",
+    }
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.get(url, headers=headers)
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Flight lookup service unavailable")
+
+    if resp.status_code == 404:
+        raise HTTPException(status_code=404, detail="Flight not found for that number and date")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Flight lookup failed (status {resp.status_code})")
+
+    data = resp.json()
+    if not data:
+        raise HTTPException(status_code=404, detail="No flight data returned")
+
+    flight = data[0] if isinstance(data, list) else data
+
+    def parse_local_time(t: str) -> str:
+        """Convert '2024-03-29 17:00+11:00' → 'YYYY-MM-DDTHH:MM' for datetime-local inputs."""
+        if not t:
+            return ""
+        t = t.strip().replace(" ", "T")
+        for i in range(len(t) - 1, 9, -1):
+            if t[i] in ("+", "-"):
+                t = t[:i]
+                break
+        if t.endswith("Z"):
+            t = t[:-1]
+        return t[:16]
+
+    dep = flight.get("departure") or {}
+    arr = flight.get("arrival") or {}
+
+    return {
+        "flight_number": (flight.get("number") or flight_number).replace(" ", ""),
+        "airline": (flight.get("airline") or {}).get("name", ""),
+        "departure_airport": (dep.get("airport") or {}).get("iata", ""),
+        "arrival_airport": (arr.get("airport") or {}).get("iata", ""),
+        "departure_time": parse_local_time(dep.get("scheduledTimeLocal") or dep.get("scheduledTimeUtc", "")),
+        "arrival_time": parse_local_time(arr.get("scheduledTimeLocal") or arr.get("scheduledTimeUtc", "")),
+        "terminal_departure": dep.get("terminal") or "",
+        "terminal_arrival": arr.get("terminal") or "",
+    }
+
+
+@router.get("/trips/{trip_id}/flights", response_model=list[FlightOut])
+def list_flights(
+    trip_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    flights = db.query(Flight).filter(Flight.trip_id == trip_id).order_by(Flight.leg_order).all()
+    return [FlightOut.model_validate(f) for f in flights]
+
+
+@router.post("/trips/{trip_id}/flights", response_model=FlightOut, status_code=201)
+def add_flight(
+    trip_id: uuid.UUID,
+    payload: FlightCreate,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    flight = Flight(trip_id=trip_id, **payload.model_dump())
+    db.add(flight)
+    db.commit()
+    db.refresh(flight)
+    return FlightOut.model_validate(flight)
+
+
+@router.patch("/trips/{trip_id}/flights/{flight_id}", response_model=FlightOut)
+def update_flight(
+    trip_id: uuid.UUID,
+    flight_id: uuid.UUID,
+    payload: FlightCreate,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    flight = db.query(Flight).filter(Flight.id == flight_id, Flight.trip_id == trip_id).first()
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+    for field, value in payload.model_dump().items():
+        setattr(flight, field, value)
+    db.commit()
+    db.refresh(flight)
+    return FlightOut.model_validate(flight)
+
+
+@router.delete("/trips/{trip_id}/flights/{flight_id}", status_code=204)
+def delete_flight(
+    trip_id: uuid.UUID,
+    flight_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    flight = db.query(Flight).filter(Flight.id == flight_id, Flight.trip_id == trip_id).first()
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+    db.delete(flight)
+    db.commit()
+
+
+# ─── Stays ───────────────────────────────────────────────────────────────────
+
+@router.get("/trips/{trip_id}/stays", response_model=list[StayOut])
+def list_stays(
+    trip_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    stays = db.query(Stay).filter(Stay.trip_id == trip_id).order_by(Stay.stay_order).all()
+    return [StayOut.model_validate(s) for s in stays]
+
+
+@router.post("/trips/{trip_id}/stays", response_model=StayOut, status_code=201)
+def add_stay(
+    trip_id: uuid.UUID,
+    payload: StayCreate,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    stay = Stay(trip_id=trip_id, **payload.model_dump())
+    db.add(stay)
+    db.commit()
+    db.refresh(stay)
+    return StayOut.model_validate(stay)
+
+
+@router.patch("/trips/{trip_id}/stays/{stay_id}", response_model=StayOut)
+def update_stay(
+    trip_id: uuid.UUID,
+    stay_id: uuid.UUID,
+    payload: StayCreate,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    stay = db.query(Stay).filter(Stay.id == stay_id, Stay.trip_id == trip_id).first()
+    if not stay:
+        raise HTTPException(status_code=404, detail="Stay not found")
+    for field, value in payload.model_dump().items():
+        setattr(stay, field, value)
+    db.commit()
+    db.refresh(stay)
+    return StayOut.model_validate(stay)
+
+
+@router.delete("/trips/{trip_id}/stays/{stay_id}", status_code=204)
+def delete_stay(
+    trip_id: uuid.UUID,
+    stay_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    stay = db.query(Stay).filter(Stay.id == stay_id, Stay.trip_id == trip_id).first()
+    if not stay:
+        raise HTTPException(status_code=404, detail="Stay not found")
+    db.delete(stay)
+    db.commit()

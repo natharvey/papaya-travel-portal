@@ -169,6 +169,68 @@ class TripDetail(TripOut):
     intake_response: Optional[IntakeResponseOut] = None
     itineraries: list[ItineraryOut] = []
     messages: list[MessageOut] = []
+    flights: list[FlightOut] = []
+    stays: list[StayOut] = []
+
+
+# ─── Flight ──────────────────────────────────────────────────────────────────
+
+class FlightCreate(BaseModel):
+    leg_order: int = 1
+    flight_number: str
+    airline: str
+    departure_airport: str
+    arrival_airport: str
+    departure_time: datetime
+    arrival_time: datetime
+    terminal_departure: Optional[str] = None
+    terminal_arrival: Optional[str] = None
+    booking_ref: Optional[str] = None
+
+
+class FlightOut(BaseModel):
+    id: uuid.UUID
+    trip_id: uuid.UUID
+    leg_order: int
+    flight_number: str
+    airline: str
+    departure_airport: str
+    arrival_airport: str
+    departure_time: datetime
+    arrival_time: datetime
+    terminal_departure: Optional[str] = None
+    terminal_arrival: Optional[str] = None
+    booking_ref: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─── Stay ────────────────────────────────────────────────────────────────────
+
+class StayCreate(BaseModel):
+    stay_order: int = 1
+    name: str
+    address: Optional[str] = None
+    check_in: datetime
+    check_out: datetime
+    confirmation_number: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class StayOut(BaseModel):
+    id: uuid.UUID
+    trip_id: uuid.UUID
+    stay_order: int
+    name: str
+    address: Optional[str] = None
+    check_in: datetime
+    check_out: datetime
+    confirmation_number: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 # ─── Admin Trip Update ───────────────────────────────────────────────────────

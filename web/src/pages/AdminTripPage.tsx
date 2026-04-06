@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send, StickyNote, Save } from 'lucide-react'
+import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send, StickyNote, Save, Plus, Trash2, Pencil, X, Check, Search } from 'lucide-react'
 import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
+import FlightMap from '../components/FlightMap'
 import {
   getAdminTrip,
   updateAdminTrip,
@@ -12,9 +13,107 @@ import {
   regenerateItinerary,
   sendAdminMessage,
   markAdminMessagesRead,
+  addFlight,
+  updateFlight,
+  deleteFlight,
+  lookupFlight,
+  addStay,
+  updateStay,
+  deleteStay,
   getApiError,
+  type FlightPayload,
+  type StayPayload,
 } from '../api/client'
-import type { TripDetail, Itinerary, Message } from '../types'
+import type { TripDetail, Itinerary, Message, Flight, Stay } from '../types'
+
+type FlightFormState = FlightPayload & { terminal_departure: string; terminal_arrival: string; booking_ref: string }
+
+const FLIGHT_FIELDS: { label: string; key: keyof FlightFormState; type: string; placeholder?: string }[] = [
+  { label: 'Leg #', key: 'leg_order', type: 'number' },
+  { label: 'Flight Number', key: 'flight_number', type: 'text', placeholder: 'QF001' },
+  { label: 'Airline', key: 'airline', type: 'text', placeholder: 'Qantas' },
+  { label: 'From (IATA)', key: 'departure_airport', type: 'text', placeholder: 'SYD' },
+  { label: 'To (IATA)', key: 'arrival_airport', type: 'text', placeholder: 'BKK' },
+  { label: 'Departure', key: 'departure_time', type: 'datetime-local' },
+  { label: 'Arrival', key: 'arrival_time', type: 'datetime-local' },
+  { label: 'Dep. Terminal', key: 'terminal_departure', type: 'text', placeholder: 'T1 (optional)' },
+  { label: 'Arr. Terminal', key: 'terminal_arrival', type: 'text', placeholder: 'T2 (optional)' },
+  { label: 'Booking Ref', key: 'booking_ref', type: 'text', placeholder: 'ABC123 (optional)' },
+]
+
+function FlightFormFields({ flightForm, setFlightForm }: {
+  flightForm: FlightFormState
+  setFlightForm: React.Dispatch<React.SetStateAction<FlightFormState>>
+}) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+      {FLIGHT_FIELDS.map(({ label, key, type, placeholder }) => (
+        <div key={key}>
+          <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+            {label}
+          </div>
+          <input
+            type={type}
+            value={flightForm[key] as string}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setFlightForm(prev => ({ ...prev, [key]: type === 'number' ? Number(e.target.value) : e.target.value }))
+            }
+            placeholder={placeholder}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
+              padding: '8px 10px', fontSize: '13px', outline: 'none',
+              background: 'white',
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+type StayFormState = { stay_order: number; name: string; address: string; check_in: string; check_out: string; confirmation_number: string; notes: string }
+
+const STAY_FIELDS: { label: string; key: keyof StayFormState; type: string; placeholder?: string; span?: boolean }[] = [
+  { label: 'Stay #', key: 'stay_order', type: 'number' },
+  { label: 'Hotel / Property Name', key: 'name', type: 'text', placeholder: 'Sofitel Bangkok', span: true },
+  { label: 'Address', key: 'address', type: 'text', placeholder: '189 Silom Rd, Bangkok (optional)', span: true },
+  { label: 'Check-in', key: 'check_in', type: 'datetime-local' },
+  { label: 'Check-out', key: 'check_out', type: 'datetime-local' },
+  { label: 'Confirmation #', key: 'confirmation_number', type: 'text', placeholder: 'BKG-123456 (optional)' },
+  { label: 'Notes', key: 'notes', type: 'text', placeholder: 'e.g. pool view room, early check-in requested (optional)', span: true },
+]
+
+function StayFormFields({ stayForm, setStayForm }: {
+  stayForm: StayFormState
+  setStayForm: React.Dispatch<React.SetStateAction<StayFormState>>
+}) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+      {STAY_FIELDS.map(({ label, key, type, placeholder, span }) => (
+        <div key={key} style={span ? { gridColumn: '1 / -1' } : undefined}>
+          <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+            {label}
+          </div>
+          <input
+            type={type}
+            value={stayForm[key] as string}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setStayForm(prev => ({ ...prev, [key]: type === 'number' ? Number(e.target.value) : e.target.value }))
+            }
+            placeholder={placeholder}
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
+              padding: '8px 10px', fontSize: '13px', outline: 'none',
+              background: 'white',
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
 
 const VALID_STATUSES = ['INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
 
@@ -52,9 +151,9 @@ export default function AdminTripPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages' | 'notes'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays'>('itinerary')
 
-  function switchTab(next: 'itinerary' | 'intake' | 'messages' | 'notes') {
+  function switchTab(next: 'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markAdminMessagesRead(tripId)
@@ -73,6 +172,31 @@ export default function AdminTripPage() {
   const [notesSaving, setNotesSaving] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
 
+  // Flights
+  const [flights, setFlights] = useState<Flight[]>([])
+  const [flightFormOpen, setFlightFormOpen] = useState(false)
+  const [editingFlight, setEditingFlight] = useState<Flight | null>(null)
+  const [flightForm, setFlightForm] = useState<FlightFormState>({
+    leg_order: 1, flight_number: '', airline: '', departure_airport: '', arrival_airport: '',
+    departure_time: '', arrival_time: '', terminal_departure: '', terminal_arrival: '', booking_ref: '',
+  })
+  const [flightSaving, setFlightSaving] = useState(false)
+  const [flightError, setFlightError] = useState('')
+  const [lookupFlightNum, setLookupFlightNum] = useState('')
+  const [lookupDate, setLookupDate] = useState('')
+  const [flightLooking, setFlightLooking] = useState(false)
+  const [lookupError, setLookupError] = useState('')
+
+  // Stays
+  const [stays, setStays] = useState<Stay[]>([])
+  const [stayFormOpen, setStayFormOpen] = useState(false)
+  const [editingStay, setEditingStay] = useState<Stay | null>(null)
+  const [stayForm, setStayForm] = useState<StayFormState>({
+    stay_order: 1, name: '', address: '', check_in: '', check_out: '', confirmation_number: '', notes: '',
+  })
+  const [staySaving, setStaySaving] = useState(false)
+  const [stayError, setStayError] = useState('')
+
   // Itinerary generation
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState('')
@@ -85,6 +209,8 @@ export default function AdminTripPage() {
       .then(data => {
         setTrip(data)
         setMessages(data.messages)
+        setFlights(data.flights || [])
+        setStays(data.stays || [])
         setNotes(data.admin_notes || '')
         if (data.itineraries.length > 0) {
           const latest = Math.max(...data.itineraries.map(i => i.version))
@@ -184,6 +310,162 @@ export default function AdminTripPage() {
       setActionError('Failed to save notes: ' + getApiError(e))
     } finally {
       setNotesSaving(false)
+    }
+  }
+
+  function openNewFlightForm() {
+    setEditingFlight(null)
+    setFlightForm({
+      leg_order: flights.length + 1, flight_number: '', airline: '',
+      departure_airport: '', arrival_airport: '', departure_time: '', arrival_time: '',
+      terminal_departure: '', terminal_arrival: '', booking_ref: '',
+    })
+    setFlightError('')
+    setLookupFlightNum('')
+    setLookupDate('')
+    setLookupError('')
+    setFlightFormOpen(true)
+  }
+
+  function openEditFlightForm(flight: Flight) {
+    setEditingFlight(flight)
+    setFlightForm({
+      leg_order: flight.leg_order,
+      flight_number: flight.flight_number,
+      airline: flight.airline,
+      departure_airport: flight.departure_airport,
+      arrival_airport: flight.arrival_airport,
+      departure_time: flight.departure_time.slice(0, 16),
+      arrival_time: flight.arrival_time.slice(0, 16),
+      terminal_departure: flight.terminal_departure || '',
+      terminal_arrival: flight.terminal_arrival || '',
+      booking_ref: flight.booking_ref || '',
+    })
+    setFlightError('')
+    setLookupFlightNum(flight.flight_number)
+    setLookupDate(flight.departure_time.slice(0, 10))
+    setLookupError('')
+    setFlightFormOpen(true)
+  }
+
+  async function handleLookupFlight() {
+    if (!lookupFlightNum.trim() || !lookupDate) return
+    setFlightLooking(true)
+    setLookupError('')
+    try {
+      const result = await lookupFlight(lookupFlightNum.trim(), lookupDate)
+      setFlightForm(prev => ({
+        ...prev,
+        flight_number: result.flight_number,
+        airline: result.airline,
+        departure_airport: result.departure_airport,
+        arrival_airport: result.arrival_airport,
+        departure_time: result.departure_time,
+        arrival_time: result.arrival_time,
+        terminal_departure: result.terminal_departure,
+        terminal_arrival: result.terminal_arrival,
+      }))
+    } catch (e) {
+      setLookupError(getApiError(e))
+    } finally {
+      setFlightLooking(false)
+    }
+  }
+
+  async function handleSaveFlight() {
+    if (!tripId) return
+    setFlightSaving(true)
+    setFlightError('')
+    try {
+      const payload: FlightPayload = {
+        ...flightForm,
+        terminal_departure: flightForm.terminal_departure || undefined,
+        terminal_arrival: flightForm.terminal_arrival || undefined,
+        booking_ref: flightForm.booking_ref || undefined,
+      }
+      if (editingFlight) {
+        const updated = await updateFlight(tripId, editingFlight.id, payload)
+        setFlights(prev => prev.map(f => f.id === updated.id ? updated : f).sort((a, b) => a.leg_order - b.leg_order))
+      } else {
+        const created = await addFlight(tripId, payload)
+        setFlights(prev => [...prev, created].sort((a, b) => a.leg_order - b.leg_order))
+      }
+      setFlightFormOpen(false)
+    } catch (e) {
+      setFlightError(getApiError(e))
+    } finally {
+      setFlightSaving(false)
+    }
+  }
+
+  async function handleDeleteFlight(flight: Flight) {
+    if (!tripId || !window.confirm(`Delete flight ${flight.flight_number}?`)) return
+    try {
+      await deleteFlight(tripId, flight.id)
+      setFlights(prev => prev.filter(f => f.id !== flight.id))
+    } catch (e) {
+      setActionError('Failed to delete flight: ' + getApiError(e))
+    }
+  }
+
+  function openNewStayForm() {
+    setEditingStay(null)
+    setStayForm({ stay_order: stays.length + 1, name: '', address: '', check_in: '', check_out: '', confirmation_number: '', notes: '' })
+    setStayError('')
+    setStayFormOpen(true)
+  }
+
+  function openEditStayForm(stay: Stay) {
+    setEditingStay(stay)
+    setStayForm({
+      stay_order: stay.stay_order,
+      name: stay.name,
+      address: stay.address || '',
+      check_in: stay.check_in.slice(0, 16),
+      check_out: stay.check_out.slice(0, 16),
+      confirmation_number: stay.confirmation_number || '',
+      notes: stay.notes || '',
+    })
+    setStayError('')
+    setStayFormOpen(true)
+  }
+
+  async function handleSaveStay() {
+    if (!tripId) return
+    setStaySaving(true)
+    setStayError('')
+    try {
+      const payload: StayPayload = {
+        stay_order: stayForm.stay_order,
+        name: stayForm.name,
+        address: stayForm.address || undefined,
+        check_in: stayForm.check_in,
+        check_out: stayForm.check_out,
+        confirmation_number: stayForm.confirmation_number || undefined,
+        notes: stayForm.notes || undefined,
+      }
+      if (editingStay) {
+        const updated = await updateStay(tripId, editingStay.id, payload)
+        setStays(prev => prev.map(s => s.id === updated.id ? updated : s).sort((a, b) => a.stay_order - b.stay_order))
+      } else {
+        const created = await addStay(tripId, payload)
+        setStays(prev => [...prev, created].sort((a, b) => a.stay_order - b.stay_order))
+      }
+      setStayFormOpen(false)
+    } catch (e) {
+      setStayError(getApiError(e))
+    } finally {
+      setStaySaving(false)
+    }
+  }
+
+  async function handleDeleteStay(stay: Stay) {
+    if (!tripId || !window.confirm(`Remove stay at ${stay.name}?`)) return
+    try {
+      await deleteStay(tripId, stay.id)
+      setStays(prev => prev.filter(s => s.id !== stay.id))
+    } catch (e) {
+      setActionError('Failed to delete stay: ' + getApiError(e))
     }
   }
 
@@ -299,6 +581,13 @@ export default function AdminTripPage() {
           </div>
         </div>
 
+        {/* Flight map */}
+        {flights.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <FlightMap flights={flights} originCity={trip.origin_city} />
+          </div>
+        )}
+
         {/* Action error banner */}
         {actionError && (
           <div style={{
@@ -327,6 +616,8 @@ export default function AdminTripPage() {
         }}>
           <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
             <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
+            <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
+            <TabButton label="Accommodation" active={tab === 'stays'} onClick={() => switchTab('stays')} />
             <TabButton label="Intake" active={tab === 'intake'} onClick={() => switchTab('intake')} />
             <TabButton label="Notes" active={tab === 'notes'} onClick={() => switchTab('notes')} />
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -575,6 +866,317 @@ export default function AdminTripPage() {
 
                 {selectedItinerary && (
                   <ItineraryTimeline data={selectedItinerary.itinerary_json} />
+                )}
+              </div>
+            )}
+
+            {/* ── FLIGHTS TAB ── */}
+            {tab === 'flights' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>
+                    Flights
+                  </h3>
+                  {!flightFormOpen && (
+                    <button
+                      onClick={openNewFlightForm}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        background: 'var(--color-primary)', color: 'white', border: 'none',
+                        borderRadius: 'var(--radius)', padding: '8px 16px', fontSize: '13px',
+                        fontWeight: 600, cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={14} strokeWidth={2.5} /> Add Flight
+                    </button>
+                  )}
+                </div>
+
+                {/* Flight form */}
+                {flightFormOpen && (
+                  <div style={{
+                    background: '#F8FAFC', border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text)' }}>
+                        {editingFlight ? 'Edit Flight' : 'New Flight'}
+                      </span>
+                      <button onClick={() => setFlightFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                        <X size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+                    {/* Quick Lookup */}
+                    <div style={{
+                      background: 'white', border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius)', padding: '12px 14px', marginBottom: '16px',
+                    }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
+                        Auto-fill from flight number
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          value={lookupFlightNum}
+                          onChange={e => setLookupFlightNum(e.target.value.toUpperCase())}
+                          placeholder="QF1"
+                          style={{
+                            border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
+                            padding: '7px 10px', fontSize: '13px', outline: 'none', width: '90px', background: 'white',
+                          }}
+                        />
+                        <input
+                          type="date"
+                          value={lookupDate}
+                          onChange={e => setLookupDate(e.target.value)}
+                          style={{
+                            border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
+                            padding: '7px 10px', fontSize: '13px', outline: 'none', background: 'white',
+                          }}
+                        />
+                        <button
+                          onClick={handleLookupFlight}
+                          disabled={flightLooking || !lookupFlightNum.trim() || !lookupDate}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            background: flightLooking || !lookupFlightNum.trim() || !lookupDate
+                              ? 'var(--color-border)' : 'var(--color-primary)',
+                            color: 'white', border: 'none', borderRadius: 'var(--radius)',
+                            padding: '7px 14px', fontSize: '13px', fontWeight: 600,
+                            cursor: flightLooking || !lookupFlightNum.trim() || !lookupDate ? 'default' : 'pointer',
+                          }}
+                        >
+                          {flightLooking
+                            ? <LoadingSpinner size={13} color="white" label="" />
+                            : <Search size={13} strokeWidth={2.5} />}
+                          {flightLooking ? 'Looking up...' : 'Lookup'}
+                        </button>
+                        {lookupError && (
+                          <span style={{ fontSize: '12px', color: '#B91C1C' }}>{lookupError}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <FlightFormFields flightForm={flightForm} setFlightForm={setFlightForm} />
+                    {flightError && (
+                      <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '10px' }}>{flightError}</p>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleSaveFlight}
+                        disabled={flightSaving || !flightForm.flight_number || !flightForm.airline || !flightForm.departure_time || !flightForm.arrival_time}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: (flightSaving || !flightForm.flight_number || !flightForm.airline || !flightForm.departure_time || !flightForm.arrival_time)
+                            ? 'var(--color-border)' : 'var(--color-secondary)',
+                          color: 'white', border: 'none', borderRadius: 'var(--radius)',
+                          padding: '8px 18px', fontSize: '13px', fontWeight: 600,
+                          cursor: (flightSaving || !flightForm.flight_number || !flightForm.airline || !flightForm.departure_time || !flightForm.arrival_time)
+                            ? 'default' : 'pointer',
+                        }}
+                      >
+                        {flightSaving ? <LoadingSpinner size={13} color="white" label="" /> : <Check size={13} strokeWidth={2.5} />}
+                        {flightSaving ? 'Saving...' : 'Save Flight'}
+                      </button>
+                      <button
+                        onClick={() => setFlightFormOpen(false)}
+                        style={{
+                          background: 'white', color: 'var(--color-text-muted)',
+                          border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
+                          padding: '8px 14px', fontSize: '13px', cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Flight list */}
+                {flights.length === 0 && !flightFormOpen ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                    <PlaneTakeoff size={36} strokeWidth={1.2} style={{ marginBottom: '12px', opacity: 0.4 }} />
+                    <p style={{ fontSize: '14px' }}>No flights added yet.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {flights.map(flight => (
+                      <div key={flight.id} style={{
+                        background: 'white', border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius)', padding: '16px 20px',
+                        display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
+                      }}>
+                        <div style={{
+                          background: 'var(--color-secondary)', color: 'white',
+                          borderRadius: '6px', padding: '6px 12px',
+                          fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
+                        }}>
+                          {flight.flight_number}
+                        </div>
+                        <div style={{ flex: 1, minWidth: '200px' }}>
+                          <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
+                            {flight.departure_airport} → {flight.arrival_airport}
+                            <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '8px', fontSize: '13px' }}>
+                              {flight.airline}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                            <span>Dep: {new Date(flight.departure_time).toLocaleString('en-AU', { dateStyle: 'short', timeStyle: 'short' })}{flight.terminal_departure ? ` · ${flight.terminal_departure}` : ''}</span>
+                            <span>Arr: {new Date(flight.arrival_time).toLocaleString('en-AU', { dateStyle: 'short', timeStyle: 'short' })}{flight.terminal_arrival ? ` · ${flight.terminal_arrival}` : ''}</span>
+                            {flight.booking_ref && <span>Ref: <strong>{flight.booking_ref}</strong></span>}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => openEditFlightForm(flight)}
+                            title="Edit"
+                            style={{
+                              background: '#F1F5F9', border: 'none', borderRadius: '6px',
+                              padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            }}
+                          >
+                            <Pencil size={13} strokeWidth={2} color="#475569" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFlight(flight)}
+                            title="Delete"
+                            style={{
+                              background: '#FEF2F2', border: 'none', borderRadius: '6px',
+                              padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            }}
+                          >
+                            <Trash2 size={13} strokeWidth={2} color="#B91C1C" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── ACCOMMODATION TAB ── */}
+            {tab === 'stays' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>
+                    Accommodation
+                  </h3>
+                  {!stayFormOpen && (
+                    <button
+                      onClick={openNewStayForm}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        background: 'var(--color-primary)', color: 'white', border: 'none',
+                        borderRadius: 'var(--radius)', padding: '8px 16px', fontSize: '13px',
+                        fontWeight: 600, cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={14} strokeWidth={2.5} /> Add Stay
+                    </button>
+                  )}
+                </div>
+
+                {stayFormOpen && (
+                  <div style={{
+                    background: '#F8FAFC', border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text)' }}>
+                        {editingStay ? 'Edit Stay' : 'New Stay'}
+                      </span>
+                      <button onClick={() => setStayFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                        <X size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+                    <StayFormFields stayForm={stayForm} setStayForm={setStayForm} />
+                    {stayError && (
+                      <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '10px' }}>{stayError}</p>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleSaveStay}
+                        disabled={staySaving || !stayForm.name || !stayForm.check_in || !stayForm.check_out}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: staySaving ? 'var(--color-border)' : 'var(--color-secondary)',
+                          color: 'white', border: 'none', borderRadius: 'var(--radius)',
+                          padding: '8px 18px', fontSize: '13px', fontWeight: 600,
+                          cursor: staySaving ? 'default' : 'pointer',
+                        }}
+                      >
+                        {staySaving ? <LoadingSpinner size={13} color="white" label="" /> : <Check size={13} strokeWidth={2.5} />}
+                        {staySaving ? 'Saving...' : 'Save Stay'}
+                      </button>
+                      <button
+                        onClick={() => setStayFormOpen(false)}
+                        style={{
+                          background: 'white', color: 'var(--color-text-muted)',
+                          border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
+                          padding: '8px 14px', fontSize: '13px', cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {stays.length === 0 && !stayFormOpen ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ marginBottom: '12px', opacity: 0.4, display: 'block', margin: '0 auto 12px' }}>
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    <p style={{ fontSize: '14px' }}>No accommodation added yet.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {stays.map(stay => {
+                      const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
+                      return (
+                        <div key={stay.id} style={{
+                          background: 'white', border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius)', padding: '16px 20px',
+                          display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
+                        }}>
+                          <div style={{
+                            background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0',
+                            borderRadius: '6px', padding: '6px 12px',
+                            fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap',
+                          }}>
+                            {nights} night{nights !== 1 ? 's' : ''}
+                          </div>
+                          <div style={{ flex: 1, minWidth: '200px' }}>
+                            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>{stay.name}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                              <span>Check-in: {new Date(stay.check_in).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                              <span>Check-out: {new Date(stay.check_out).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                              {stay.confirmation_number && <span>Ref: <strong>{stay.confirmation_number}</strong></span>}
+                            </div>
+                            {stay.address && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{stay.address}</div>}
+                            {stay.notes && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px', fontStyle: 'italic' }}>{stay.notes}</div>}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button
+                              onClick={() => openEditStayForm(stay)}
+                              title="Edit"
+                              style={{ background: '#F1F5F9', border: 'none', borderRadius: '6px', padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            >
+                              <Pencil size={13} strokeWidth={2} color="#475569" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteStay(stay)}
+                              title="Delete"
+                              style={{ background: '#FEF2F2', border: 'none', borderRadius: '6px', padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            >
+                              <Trash2 size={13} strokeWidth={2} color="#B91C1C" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </div>
             )}

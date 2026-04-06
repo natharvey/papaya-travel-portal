@@ -33,7 +33,15 @@ def run_migrations():
     here = Path(__file__).parent.parent  # api/
     alembic_cfg = Config(str(here / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(here / "alembic"))
-    command.upgrade(alembic_cfg, "head")
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    if "alembic_version" not in tables:
+        # Fresh database: create all tables from models and stamp as up-to-date
+        Base.metadata.create_all(bind=engine)
+        command.stamp(alembic_cfg, "head")
+    else:
+        command.upgrade(alembic_cfg, "head")
 
 
 @asynccontextmanager

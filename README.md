@@ -241,6 +241,51 @@ VITE_API_URL=http://localhost:8000 npm run dev
 
 ---
 
+## AWS Deployment
+
+The app is deployed on AWS using ECS Fargate, RDS, ECR, ALB, and CloudWatch.
+
+**Live URL:** http://papaya-alb-1789522533.us-east-1.elb.amazonaws.com
+
+### Infrastructure
+
+| Component | AWS Service | Purpose |
+|-----------|-------------|---------|
+| Container registry | ECR (Elastic Container Registry) | Stores Docker images for API and web |
+| Container runtime | ECS Fargate (Elastic Container Service) | Runs containers without managing EC2 instances |
+| Database | RDS PostgreSQL (Relational Database Service) | Managed Postgres — `papaya-db.c230y8k047wv.us-east-1.rds.amazonaws.com` |
+| Load balancer | ALB (Application Load Balancer) | Stable public URL, routes traffic to ECS tasks |
+| Logging | CloudWatch | Container logs at `/ecs/papaya` |
+
+### Deploying a New Version
+
+```bash
+# Authenticate Docker with ECR
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 095523580645.dkr.ecr.us-east-1.amazonaws.com
+
+# Build and push (must use --platform linux/amd64 on Apple Silicon)
+docker build --platform linux/amd64 -t papaya-api ./api
+docker tag papaya-api:latest 095523580645.dkr.ecr.us-east-1.amazonaws.com/papaya-api:latest
+docker push 095523580645.dkr.ecr.us-east-1.amazonaws.com/papaya-api:latest
+
+docker build --platform linux/amd64 -t papaya-web ./web
+docker tag papaya-web:latest 095523580645.dkr.ecr.us-east-1.amazonaws.com/papaya-web:latest
+docker push 095523580645.dkr.ecr.us-east-1.amazonaws.com/papaya-web:latest
+
+# Force ECS to pull the new images
+aws ecs update-service --cluster papaya-cluster --service papaya-service --force-new-deployment --region us-east-1
+```
+
+### TODO
+
+- [ ] Register a custom domain and point it at the ALB via Route 53
+- [ ] Add HTTPS via AWS Certificate Manager (ACM) — request a free SSL certificate, attach to ALB listener on port 443
+- [ ] Update `CORS_ORIGINS` and `PORTAL_URL` environment variables to the custom domain
+- [ ] Enable RDS automated backups (currently set to 1 day retention — increase for production)
+- [ ] Switch to multi-AZ RDS for high availability
+
+---
+
 ## Production Checklist
 
 - [ ] Set `JWT_SECRET` to a strong random value (`python -c "import secrets; print(secrets.token_hex(32))"`)

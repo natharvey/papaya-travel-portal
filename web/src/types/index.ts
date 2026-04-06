@@ -134,11 +134,42 @@ export interface TripWithLatestItinerary extends Trip {
   latest_itinerary: Itinerary | null
 }
 
+export interface Stay {
+  id: string
+  trip_id: string
+  stay_order: number
+  name: string
+  address: string | null
+  check_in: string
+  check_out: string
+  confirmation_number: string | null
+  notes: string | null
+  created_at: string
+}
+
+export interface Flight {
+  id: string
+  trip_id: string
+  leg_order: number
+  flight_number: string
+  airline: string
+  departure_airport: string
+  arrival_airport: string
+  departure_time: string
+  arrival_time: string
+  terminal_departure: string | null
+  terminal_arrival: string | null
+  booking_ref: string | null
+  created_at: string
+}
+
 export interface TripDetail extends Trip {
   client: ClientInfo
   intake_response: IntakeResponseData | null
   itineraries: Itinerary[]
   messages: Message[]
+  flights: Flight[]
+  stays: Stay[]
 }
 
 export interface AdminTripListItem extends Trip {

@@ -85,6 +85,8 @@ class Trip(Base):
     intake_response = relationship("IntakeResponse", back_populates="trip", uselist=False)
     itineraries = relationship("Itinerary", back_populates="trip", order_by="Itinerary.version")
     messages = relationship("Message", back_populates="trip", order_by="Message.created_at")
+    flights = relationship("Flight", back_populates="trip", order_by="Flight.leg_order")
+    stays = relationship("Stay", back_populates="trip", order_by="Stay.stay_order")
 
 
 class IntakeResponse(Base):
@@ -141,6 +143,43 @@ class LoginToken(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     client = relationship("Client")
+
+
+class Flight(Base):
+    __tablename__ = "flights"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    trip_id = Column(UUIDType, ForeignKey("trips.id"), nullable=False, index=True)
+    leg_order = Column(Integer, nullable=False, default=1)
+    flight_number = Column(String(20), nullable=False)
+    airline = Column(String(255), nullable=False)
+    departure_airport = Column(String(10), nullable=False)
+    arrival_airport = Column(String(10), nullable=False)
+    departure_time = Column(DateTime, nullable=False)
+    arrival_time = Column(DateTime, nullable=False)
+    terminal_departure = Column(String(50), nullable=True)
+    terminal_arrival = Column(String(50), nullable=True)
+    booking_ref = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    trip = relationship("Trip", back_populates="flights")
+
+
+class Stay(Base):
+    __tablename__ = "stays"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    trip_id = Column(UUIDType, ForeignKey("trips.id"), nullable=False, index=True)
+    stay_order = Column(Integer, nullable=False, default=1)
+    name = Column(String(255), nullable=False)
+    address = Column(Text, nullable=True)
+    check_in = Column(DateTime, nullable=False)
+    check_out = Column(DateTime, nullable=False)
+    confirmation_number = Column(String(100), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    trip = relationship("Trip", back_populates="stays")
 
 
 class DestinationCard(Base):

@@ -8,6 +8,8 @@ import type {
   Message,
   Itinerary,
   AdminTripListItem,
+  Flight,
+  Stay,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -168,6 +170,79 @@ export async function markAdminMessagesRead(tripId: string): Promise<void> {
 export async function sendAdminMessage(tripId: string, body: string): Promise<Message> {
   const res = await api.post<Message>(`/admin/trips/${tripId}/messages`, { body })
   return res.data
+}
+
+// ─── Flights (Admin) ─────────────────────────────────────────────────────────
+
+export interface FlightPayload {
+  leg_order: number
+  flight_number: string
+  airline: string
+  departure_airport: string
+  arrival_airport: string
+  departure_time: string
+  arrival_time: string
+  terminal_departure?: string
+  terminal_arrival?: string
+  booking_ref?: string
+}
+
+export interface FlightLookupResult {
+  flight_number: string
+  airline: string
+  departure_airport: string
+  arrival_airport: string
+  departure_time: string
+  arrival_time: string
+  terminal_departure: string
+  terminal_arrival: string
+}
+
+export async function lookupFlight(flightNumber: string, date: string): Promise<FlightLookupResult> {
+  const res = await api.get<FlightLookupResult>('/admin/flights/lookup', {
+    params: { flight_number: flightNumber, date },
+  })
+  return res.data
+}
+
+export async function addFlight(tripId: string, payload: FlightPayload): Promise<Flight> {
+  const res = await api.post<Flight>(`/admin/trips/${tripId}/flights`, payload)
+  return res.data
+}
+
+export async function updateFlight(tripId: string, flightId: string, payload: FlightPayload): Promise<Flight> {
+  const res = await api.patch<Flight>(`/admin/trips/${tripId}/flights/${flightId}`, payload)
+  return res.data
+}
+
+export async function deleteFlight(tripId: string, flightId: string): Promise<void> {
+  await api.delete(`/admin/trips/${tripId}/flights/${flightId}`)
+}
+
+// ─── Stays (Admin) ───────────────────────────────────────────────────────────
+
+export interface StayPayload {
+  stay_order: number
+  name: string
+  address?: string
+  check_in: string
+  check_out: string
+  confirmation_number?: string
+  notes?: string
+}
+
+export async function addStay(tripId: string, payload: StayPayload): Promise<Stay> {
+  const res = await api.post<Stay>(`/admin/trips/${tripId}/stays`, payload)
+  return res.data
+}
+
+export async function updateStay(tripId: string, stayId: string, payload: StayPayload): Promise<Stay> {
+  const res = await api.patch<Stay>(`/admin/trips/${tripId}/stays/${stayId}`, payload)
+  return res.data
+}
+
+export async function deleteStay(tripId: string, stayId: string): Promise<void> {
+  await api.delete(`/admin/trips/${tripId}/stays/${stayId}`)
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
