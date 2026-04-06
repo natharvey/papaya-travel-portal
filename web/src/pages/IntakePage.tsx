@@ -143,7 +143,8 @@ function Step2({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
                 type="date"
                 value={data.start_date || ''}
                 onChange={e => onChange('start_date', e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '36px' }}
+                style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
+                className="hide-date-icon"
               />
             </InputWithIcon>
           </div>
@@ -154,7 +155,8 @@ function Step2({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
                 type="date"
                 value={data.end_date || ''}
                 onChange={e => onChange('end_date', e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '36px' }}
+                style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
+                className="hide-date-icon"
               />
             </InputWithIcon>
           </div>
@@ -376,7 +378,8 @@ export default function IntakePage() {
   function nextStep() {
     const err = validateStep(step)
     if (err) { setError(err); return }
-    setError('')
+    setError('');
+    (document.activeElement as HTMLElement)?.blur()
     setStep(s => s + 1)
   }
 
