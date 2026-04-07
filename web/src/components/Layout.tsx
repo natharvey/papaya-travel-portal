@@ -106,7 +106,7 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
             </>
           )}
 
-          {variant === 'admin' && isAuthenticated && userRole === 'admin' && (
+          {variant === 'admin' && isAuthenticated && (
             <button
               onClick={handleLogout}
               style={{
