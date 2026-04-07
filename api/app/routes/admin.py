@@ -1,12 +1,15 @@
 import uuid
+import base64
+import json
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from jose import jwt, JWTError
 import os
 
 import httpx
+from openai import OpenAI
 
 from app.db import get_db
 from app.models import Trip, Client, Itinerary, Message, Flight, Stay
@@ -296,6 +299,69 @@ def lookup_flight(
         "terminal_departure": dep.get("terminal") or "",
         "terminal_arrival": arr.get("terminal") or "",
     }
+
+
+FLIGHT_PARSE_PROMPT = """Extract all flights from this booking confirmation screenshot. There may be one or multiple flight legs.
+Return a JSON array where each element has these exact keys:
+flight_number, airline, departure_airport (IATA code), arrival_airport (IATA code),
+departure_time (YYYY-MM-DDTHH:MM format), arrival_time (YYYY-MM-DDTHH:MM format),
+terminal_departure, terminal_arrival, booking_ref.
+Use empty string for any field you cannot find. Order flights by departure_time ascending.
+Only return the JSON array, no other text."""
+
+STAY_PARSE_PROMPT = """Extract hotel/accommodation booking details from this screenshot. Return a JSON object with these exact keys:
+name (hotel/property name), address, check_in (YYYY-MM-DDTHH:MM format, use T14:00 if only date given),
+check_out (YYYY-MM-DDTHH:MM format, use T11:00 if only date given), confirmation_number, notes.
+Use empty string for any field you cannot find. Only return the JSON object, no other text."""
+
+
+@router.post("/parse-screenshot")
+async def parse_screenshot(
+    _admin=Depends(require_admin),
+    file: UploadFile = File(...),
+    type: str = Form(...),
+):
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured")
+
+    if type not in ("flight", "stay"):
+        raise HTTPException(status_code=400, detail="type must be 'flight' or 'stay'")
+
+    contents = await file.read()
+    b64 = base64.b64encode(contents).decode()
+    mime = file.content_type or "image/png"
+    prompt = FLIGHT_PARSE_PROMPT if type == "flight" else STAY_PARSE_PROMPT
+
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+            ],
+        }],
+        max_tokens=500,
+    )
+
+    raw = response.choices[0].message.content or ""
+    # Strip markdown code fences if present
+    raw = raw.strip()
+    if raw.startswith("```"):
+        raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+
+    try:
+        data = json.loads(raw)
+    except Exception:
+        raise HTTPException(status_code=422, detail=f"Could not parse GPT response: {raw}")
+
+    # Normalise flight response to always be a list
+    if type == "flight" and isinstance(data, dict):
+        data = [data]
+
+    return data
 
 
 @router.get("/trips/{trip_id}/flights", response_model=list[FlightOut])

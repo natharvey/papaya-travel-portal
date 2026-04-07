@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { User, Mail, MapPin, Calendar, Wallet, Zap, Coffee, Wind, Users, Hotel, Star, AlertCircle, FileText, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react'
+import { User, Mail, MapPin, Calendar, Wallet, Zap, Coffee, Wind, Users, Bed, Star, AlertCircle, FileText, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
@@ -272,7 +272,7 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
 
         <div>
           <label style={labelStyle}>Accommodation Style</label>
-          <InputWithIcon icon={Hotel}>
+          <InputWithIcon icon={Bed}>
             <select
               value={data.accommodation_style || ''}
               onChange={e => onChange('accommodation_style', e.target.value)}

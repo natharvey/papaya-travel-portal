@@ -20,6 +20,7 @@ import {
   addStay,
   updateStay,
   deleteStay,
+  parseScreenshot,
   getApiError,
   type FlightPayload,
   type StayPayload,
@@ -186,6 +187,7 @@ export default function AdminTripPage() {
   const [lookupDate, setLookupDate] = useState('')
   const [flightLooking, setFlightLooking] = useState(false)
   const [lookupError, setLookupError] = useState('')
+  const [flightScanning, setFlightScanning] = useState(false)
 
   // Stays
   const [stays, setStays] = useState<Stay[]>([])
@@ -196,6 +198,7 @@ export default function AdminTripPage() {
   })
   const [staySaving, setStaySaving] = useState(false)
   const [stayError, setStayError] = useState('')
+  const [stayScanning, setStayScanning] = useState(false)
 
   // Itinerary generation
   const [generating, setGenerating] = useState(false)
@@ -209,8 +212,8 @@ export default function AdminTripPage() {
       .then(data => {
         setTrip(data)
         setMessages(data.messages)
-        setFlights(data.flights || [])
-        setStays(data.stays || [])
+        setFlights((data.flights || []).slice().sort((a, b) => (a.departure_time || '').localeCompare(b.departure_time || '')))
+        setStays((data.stays || []).slice().sort((a, b) => (a.check_in || '').localeCompare(b.check_in || '')))
         setNotes(data.admin_notes || '')
         if (data.itineraries.length > 0) {
           const latest = Math.max(...data.itineraries.map(i => i.version))
@@ -372,6 +375,87 @@ export default function AdminTripPage() {
     }
   }
 
+  async function handleScanFlight(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !tripId) return
+    e.target.value = ''
+    setFlightScanning(true)
+    setFlightError('')
+    try {
+      const scanned = await parseScreenshot(file, 'flight')
+      // Sort by departure time
+      const sorted = [...scanned].sort((a, b) =>
+        (a.departure_time || '').localeCompare(b.departure_time || '')
+      )
+      if (sorted.length === 1) {
+        // Single flight: fill the form for review
+        const data = sorted[0]
+        setFlightForm(prev => ({
+          ...prev,
+          flight_number: data.flight_number || prev.flight_number,
+          airline: data.airline || prev.airline,
+          departure_airport: data.departure_airport || prev.departure_airport,
+          arrival_airport: data.arrival_airport || prev.arrival_airport,
+          departure_time: data.departure_time || prev.departure_time,
+          arrival_time: data.arrival_time || prev.arrival_time,
+          terminal_departure: data.terminal_departure || prev.terminal_departure,
+          terminal_arrival: data.terminal_arrival || prev.terminal_arrival,
+          booking_ref: data.booking_ref || prev.booking_ref,
+        }))
+      } else {
+        // Multiple flights: add them all directly, leg_order continuing from existing
+        let nextOrder = flights.length + 1
+        const created: Flight[] = []
+        for (const data of sorted) {
+          const payload: FlightPayload = {
+            leg_order: nextOrder++,
+            flight_number: data.flight_number || '',
+            airline: data.airline || '',
+            departure_airport: data.departure_airport || '',
+            arrival_airport: data.arrival_airport || '',
+            departure_time: data.departure_time || '',
+            arrival_time: data.arrival_time || '',
+            terminal_departure: data.terminal_departure || undefined,
+            terminal_arrival: data.terminal_arrival || undefined,
+            booking_ref: data.booking_ref || undefined,
+          }
+          const flight = await addFlight(tripId, payload)
+          created.push(flight)
+        }
+        setFlights(prev => [...prev, ...created].sort((a, b) => (a.departure_time || '').localeCompare(b.departure_time || '')))
+        setFlightFormOpen(false)
+      }
+    } catch (e) {
+      setFlightError(getApiError(e))
+    } finally {
+      setFlightScanning(false)
+    }
+  }
+
+  async function handleScanStay(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setStayScanning(true)
+    setStayError('')
+    try {
+      const data = await parseScreenshot(file, 'stay')
+      setStayForm(prev => ({
+        ...prev,
+        name: data.name || prev.name,
+        address: data.address || prev.address,
+        check_in: data.check_in || prev.check_in,
+        check_out: data.check_out || prev.check_out,
+        confirmation_number: data.confirmation_number || prev.confirmation_number,
+        notes: data.notes || prev.notes,
+      }))
+    } catch (e) {
+      setStayError(getApiError(e))
+    } finally {
+      setStayScanning(false)
+    }
+  }
+
   async function handleSaveFlight() {
     if (!tripId) return
     setFlightSaving(true)
@@ -385,10 +469,10 @@ export default function AdminTripPage() {
       }
       if (editingFlight) {
         const updated = await updateFlight(tripId, editingFlight.id, payload)
-        setFlights(prev => prev.map(f => f.id === updated.id ? updated : f).sort((a, b) => a.leg_order - b.leg_order))
+        setFlights(prev => prev.map(f => f.id === updated.id ? updated : f).sort((a, b) => (a.departure_time || '').localeCompare(b.departure_time || '')))
       } else {
         const created = await addFlight(tripId, payload)
-        setFlights(prev => [...prev, created].sort((a, b) => a.leg_order - b.leg_order))
+        setFlights(prev => [...prev, created].sort((a, b) => (a.departure_time || '').localeCompare(b.departure_time || '')))
       }
       setFlightFormOpen(false)
     } catch (e) {
@@ -446,10 +530,10 @@ export default function AdminTripPage() {
       }
       if (editingStay) {
         const updated = await updateStay(tripId, editingStay.id, payload)
-        setStays(prev => prev.map(s => s.id === updated.id ? updated : s).sort((a, b) => a.stay_order - b.stay_order))
+        setStays(prev => prev.map(s => s.id === updated.id ? updated : s).sort((a, b) => (a.check_in || '').localeCompare(b.check_in || '')))
       } else {
         const created = await addStay(tripId, payload)
-        setStays(prev => [...prev, created].sort((a, b) => a.stay_order - b.stay_order))
+        setStays(prev => [...prev, created].sort((a, b) => (a.check_in || '').localeCompare(b.check_in || '')))
       }
       setStayFormOpen(false)
     } catch (e) {
@@ -911,8 +995,15 @@ export default function AdminTripPage() {
                       background: 'white', border: '1px solid var(--color-border)',
                       borderRadius: 'var(--radius)', padding: '12px 14px', marginBottom: '16px',
                     }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                        Auto-fill from flight number
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.7px', color: 'var(--color-text-muted)' }}>
+                          Auto-fill from flight number
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }}>
+                          <input type="file" accept="image/*" onChange={handleScanFlight} style={{ display: 'none' }} />
+                          {flightScanning ? <LoadingSpinner size={12} color="var(--color-primary)" label="" /> : <Sparkles size={12} strokeWidth={2.5} />}
+                          {flightScanning ? 'Scanning...' : 'Scan screenshot'}
+                        </label>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <input
@@ -1086,9 +1177,16 @@ export default function AdminTripPage() {
                       <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text)' }}>
                         {editingStay ? 'Edit Stay' : 'New Stay'}
                       </span>
-                      <button onClick={() => setStayFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
-                        <X size={16} strokeWidth={2} />
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 600, color: 'var(--color-primary)', cursor: 'pointer' }}>
+                          <input type="file" accept="image/*" onChange={handleScanStay} style={{ display: 'none' }} />
+                          {stayScanning ? <LoadingSpinner size={12} color="var(--color-primary)" label="" /> : <Sparkles size={12} strokeWidth={2.5} />}
+                          {stayScanning ? 'Scanning...' : 'Scan screenshot'}
+                        </label>
+                        <button onClick={() => setStayFormOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                          <X size={16} strokeWidth={2} />
+                        </button>
+                      </div>
                     </div>
                     <StayFormFields stayForm={stayForm} setStayForm={setStayForm} />
                     {stayError && (

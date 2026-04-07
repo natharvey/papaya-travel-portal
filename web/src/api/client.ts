@@ -198,6 +198,18 @@ export interface FlightLookupResult {
   terminal_arrival: string
 }
 
+export async function parseScreenshot(file: File, type: 'flight'): Promise<Record<string, string>[]>
+export async function parseScreenshot(file: File, type: 'stay'): Promise<Record<string, string>>
+export async function parseScreenshot(file: File, type: 'flight' | 'stay'): Promise<Record<string, string>[] | Record<string, string>> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('type', type)
+  const res = await api.post<Record<string, string>[] | Record<string, string>>('/admin/parse-screenshot', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
+}
+
 export async function lookupFlight(flightNumber: string, date: string): Promise<FlightLookupResult> {
   const res = await api.get<FlightLookupResult>('/admin/flights/lookup', {
     params: { flight_number: flightNumber, date },
