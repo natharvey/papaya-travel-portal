@@ -8,12 +8,12 @@ import type { AdminTripListItem, TripStatus } from '../types'
 
 const STATUSES: TripStatus[] = ['INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  INTAKE: { bg: '#EEF2FF', text: '#4F46E5', border: '#C7D2FE' },
-  DRAFT: { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' },
-  REVIEW: { bg: '#FEF9C3', text: '#A16207', border: '#FDE68A' },
-  CONFIRMED: { bg: '#DCFCE7', text: '#15803D', border: '#BBF7D0' },
-  ARCHIVED: { bg: '#F3F4F6', text: '#6B7280', border: '#E5E7EB' },
+const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  INTAKE:    { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE', label: 'Intake' },
+  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)', border: '#FCD9B8', label: 'Draft' },
+  REVIEW:    { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', label: 'In Review' },
+  CONFIRMED: { bg: '#F0FDF6', text: '#166534', border: '#A7F0C4', label: 'Confirmed' },
+  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280', border: '#E5E7EB', label: 'Archived' },
 }
 
 function formatDate(d: string): string {
@@ -25,25 +25,31 @@ function TripKanbanCard({ trip }: { trip: AdminTripListItem }) {
     (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
   )
   return (
-    <Link
-      to={`/admin/trips/${trip.id}`}
-      style={{ textDecoration: 'none' }}
-    >
-      <div style={{
-        background: 'white',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius)',
-        padding: '14px',
-        marginBottom: '10px',
-        cursor: 'pointer',
-        transition: 'box-shadow 0.2s',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'}
-        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'}
+    <Link to={`/admin/trips/${trip.id}`} style={{ textDecoration: 'none' }}>
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius)',
+          padding: '14px 16px',
+          marginBottom: '10px',
+          cursor: 'pointer',
+          transition: 'box-shadow 0.2s, border-color 0.2s',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+        onMouseEnter={e => {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.boxShadow = 'var(--shadow-md)'
+          el.style.borderColor = 'var(--color-primary)'
+        }}
+        onMouseLeave={e => {
+          const el = e.currentTarget as HTMLDivElement
+          el.style.boxShadow = 'var(--shadow-sm)'
+          el.style.borderColor = 'var(--color-border)'
+        }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
-          <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--color-text)', lineHeight: '1.3' }}>
+          <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text)', lineHeight: '1.3' }}>
             {trip.title}
           </div>
           {trip.unread_count > 0 && (
@@ -53,7 +59,7 @@ function TripKanbanCard({ trip }: { trip: AdminTripListItem }) {
               borderRadius: '100px',
               fontSize: '11px',
               fontWeight: 700,
-              padding: '1px 7px',
+              padding: '2px 7px',
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}>
@@ -61,15 +67,15 @@ function TripKanbanCard({ trip }: { trip: AdminTripListItem }) {
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>
           <User size={11} strokeWidth={2} />
           {trip.client_name}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '10px' }}>
           <Mail size={11} strokeWidth={2} />
           {trip.client_email}
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', paddingTop: '8px', borderTop: '1px solid var(--color-border)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
             <PlaneTakeoff size={11} strokeWidth={2} />
             {trip.origin_city}
@@ -106,13 +112,12 @@ export default function AdminDashboardPage() {
 
   return (
     <Layout variant="admin">
-      <div style={{ padding: '32px 24px', maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--color-secondary)', marginBottom: '4px' }}>
+      <div style={{ padding: '40px 28px 80px', maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '6px', letterSpacing: '-0.4px' }}>
             Trip Dashboard
           </h1>
-          <p style={{ color: 'var(--color-text-muted)' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '15px' }}>
             {trips.length} total trip{trips.length !== 1 ? 's' : ''} across all statuses
           </p>
         </div>
@@ -123,7 +128,7 @@ export default function AdminDashboardPage() {
           <div style={{
             background: '#FEF2F2',
             border: '1px solid #FECACA',
-            borderRadius: 'var(--radius)',
+            borderRadius: 'var(--radius-lg)',
             padding: '16px',
             color: '#B91C1C',
           }}>
@@ -133,61 +138,68 @@ export default function AdminDashboardPage() {
 
         {!loading && !error && (
           <>
-            {/* Summary bar */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '28px', flexWrap: 'wrap' }}>
+            {/* Filter pills */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '32px', flexWrap: 'wrap' }}>
               {(['ALL', ...STATUSES] as const).map(s => {
+                const isActive = filter === s
+                const config = s === 'ALL' ? null : STATUS_CONFIG[s]
                 const count = s === 'ALL' ? trips.length : (tripsByStatus[s]?.length || 0)
-                const colors = s === 'ALL'
-                  ? { bg: '#F8FAFC', text: 'var(--color-text)', border: 'var(--color-border)' }
-                  : STATUS_COLORS[s]
                 return (
                   <button
                     key={s}
                     onClick={() => setFilter(s)}
                     style={{
-                      background: filter === s ? (s === 'ALL' ? 'var(--color-secondary)' : colors.bg) : 'white',
-                      color: filter === s ? (s === 'ALL' ? 'white' : colors.text) : 'var(--color-text-muted)',
-                      border: `1px solid ${filter === s ? (s === 'ALL' ? 'var(--color-secondary)' : colors.border) : 'var(--color-border)'}`,
+                      background: isActive
+                        ? (s === 'ALL' ? 'var(--color-secondary)' : config!.bg)
+                        : 'var(--color-surface)',
+                      color: isActive
+                        ? (s === 'ALL' ? 'white' : config!.text)
+                        : 'var(--color-text-muted)',
+                      border: `1.5px solid ${isActive
+                        ? (s === 'ALL' ? 'var(--color-secondary)' : config!.border)
+                        : 'var(--color-border)'}`,
                       borderRadius: '100px',
-                      padding: '6px 14px',
+                      padding: '6px 16px',
                       fontSize: '13px',
                       fontWeight: 600,
                       cursor: 'pointer',
                       transition: 'all 0.15s',
+                      fontFamily: 'inherit',
                     }}
                   >
-                    {s} <span style={{ marginLeft: '4px', opacity: 0.7 }}>{count}</span>
+                    {s === 'ALL' ? 'All' : config!.label}{' '}
+                    <span style={{ marginLeft: '4px', opacity: 0.65 }}>{count}</span>
                   </button>
                 )
               })}
             </div>
 
-            {/* Kanban view (when ALL selected) */}
+            {/* Kanban view */}
             {filter === 'ALL' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
                 {STATUSES.filter(s => s !== 'ARCHIVED').map(status => {
                   const statusTrips = tripsByStatus[status] || []
-                  const colors = STATUS_COLORS[status]
+                  const config = STATUS_CONFIG[status]
                   return (
                     <div key={status}>
                       <div style={{
-                        background: colors.bg,
+                        background: config.bg,
                         borderRadius: 'var(--radius)',
                         padding: '10px 14px',
-                        marginBottom: '10px',
-                        border: `1px solid ${colors.border}`,
+                        marginBottom: '12px',
+                        border: `1.5px solid ${config.border}`,
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
                       }}>
-                        <span style={{ fontWeight: 700, fontSize: '13px', color: colors.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          {status}
+                        <span style={{ fontWeight: 700, fontSize: '12px', color: config.text, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                          {config.label}
                         </span>
                         <span style={{
-                          background: colors.text,
+                          background: config.text,
                           color: 'white',
                           borderRadius: '100px',
-                          padding: '1px 8px',
+                          padding: '2px 8px',
                           fontSize: '11px',
                           fontWeight: 700,
                         }}>
@@ -198,7 +210,7 @@ export default function AdminDashboardPage() {
                         <div style={{
                           border: '2px dashed var(--color-border)',
                           borderRadius: 'var(--radius)',
-                          padding: '20px',
+                          padding: '24px',
                           textAlign: 'center',
                           color: 'var(--color-text-muted)',
                           fontSize: '13px',
@@ -213,37 +225,41 @@ export default function AdminDashboardPage() {
                 })}
               </div>
             ) : (
-              /* Filtered list view */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {filteredTrips.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
+                  <div style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-muted)' }}>
                     No trips with status {filter}
                   </div>
                 ) : (
                   filteredTrips.map(trip => (
-                    <Link
-                      key={trip.id}
-                      to={`/admin/trips/${trip.id}`}
-                      style={{ textDecoration: 'none' }}
-                    >
-                      <div style={{
-                        background: 'white',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-lg)',
-                        padding: '18px 22px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '16px',
-                        flexWrap: 'wrap',
-                        boxShadow: 'var(--shadow-sm)',
-                        transition: 'box-shadow 0.2s',
-                      }}
-                        onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-md)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)'}
+                    <Link key={trip.id} to={`/admin/trips/${trip.id}`} style={{ textDecoration: 'none' }}>
+                      <div
+                        style={{
+                          background: 'var(--color-surface)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 'var(--radius-lg)',
+                          padding: '18px 24px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '16px',
+                          flexWrap: 'wrap',
+                          boxShadow: 'var(--shadow-sm)',
+                          transition: 'box-shadow 0.2s, border-color 0.2s',
+                        }}
+                        onMouseEnter={e => {
+                          const el = e.currentTarget as HTMLDivElement
+                          el.style.boxShadow = 'var(--shadow-md)'
+                          el.style.borderColor = 'var(--color-primary)'
+                        }}
+                        onMouseLeave={e => {
+                          const el = e.currentTarget as HTMLDivElement
+                          el.style.boxShadow = 'var(--shadow-sm)'
+                          el.style.borderColor = 'var(--color-border)'
+                        }}
                       >
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>{trip.title}</div>
+                          <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px', color: 'var(--color-text)' }}>{trip.title}</div>
                           <div style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
                             {trip.client_name} · {trip.client_email}
                           </div>
@@ -255,7 +271,7 @@ export default function AdminDashboardPage() {
                           <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: 'var(--color-text-muted)' }}>
                             <Calendar size={13} strokeWidth={2} /> {formatDate(trip.start_date)}
                           </span>
-                          <span style={{ fontSize: '13px', color: 'var(--color-primary)' }}>View →</span>
+                          <span style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 600 }}>View →</span>
                         </div>
                       </div>
                     </Link>

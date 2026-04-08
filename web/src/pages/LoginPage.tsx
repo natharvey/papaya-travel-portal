@@ -33,65 +33,69 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px 24px',
-        background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-bg) 100%)',
+        padding: '48px 24px',
+        background: 'var(--color-bg)',
       }}>
         <div style={{
-          background: 'white',
-          borderRadius: 'var(--radius-lg)',
-          padding: '40px',
+          background: 'var(--color-surface)',
+          borderRadius: 'var(--radius-xl)',
+          padding: '48px 40px',
           width: '100%',
           maxWidth: '420px',
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--color-border)',
         }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <PapayaLogo size={56} />
+          <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+              <PapayaLogo size={110} />
             </div>
-            <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '6px' }}>Client Portal</h1>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
-              {sent ? 'Check your inbox' : 'Enter your email and we\'ll send you a login link'}
+            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '8px', letterSpacing: '-0.3px' }}>
+              {sent ? 'Check your inbox' : 'Welcome back'}
+            </h1>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', lineHeight: '1.5' }}>
+              {sent ? `We've sent a login link to ${email}` : "Enter your email and we'll send you a secure login link"}
             </p>
           </div>
 
           {sent ? (
             <div style={{ textAlign: 'center' }}>
               <div style={{
-                background: '#F0FDF4',
-                border: '1px solid #BBF7D0',
-                borderRadius: 'var(--radius)',
+                background: '#F0FDF6',
+                border: '1px solid #A7F0C4',
+                borderRadius: 'var(--radius-lg)',
                 padding: '20px',
                 marginBottom: '24px',
               }}>
-                <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#15803D' }}>Login link sent!</p>
-                <p style={{ margin: 0, fontSize: '14px', color: '#166534' }}>
-                  We've sent a login link to <strong>{email}</strong>. Click the link in the email to access your portal.
+                <p style={{ margin: '0 0 6px 0', fontWeight: 700, color: '#166534', fontSize: '15px' }}>Login link sent!</p>
+                <p style={{ margin: 0, fontSize: '13px', color: '#15803D', lineHeight: '1.5' }}>
+                  Click the link in the email to access your portal. It expires in 1 hour.
                 </p>
               </div>
-              <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
-                The link expires in 1 hour. Didn't get it?
-              </p>
               <button
                 type="button"
                 onClick={() => { setSent(false); setError('') }}
                 style={{
                   background: 'none',
-                  border: '1px solid var(--color-border)',
+                  border: '1.5px solid var(--color-border)',
                   borderRadius: 'var(--radius)',
                   padding: '10px 20px',
                   fontSize: '14px',
                   cursor: 'pointer',
-                  color: 'var(--color-text)',
+                  color: 'var(--color-text-muted)',
+                  fontWeight: 500,
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
                 }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-text-muted)'; e.currentTarget.style.color = 'var(--color-text)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
               >
                 Try a different email
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '7px', color: 'var(--color-text)' }}>
                   Email Address
                 </label>
                 <input
@@ -104,12 +108,18 @@ export default function LoginPage() {
                   required
                   style={{
                     width: '100%',
-                    border: '1px solid var(--color-border)',
+                    border: '1.5px solid var(--color-border)',
                     borderRadius: 'var(--radius)',
                     padding: '12px 14px',
                     fontSize: '14px',
                     outline: 'none',
+                    background: 'var(--color-surface)',
+                    color: 'var(--color-text)',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 0.15s',
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = 'var(--color-primary)'}
+                  onBlur={e => e.currentTarget.style.borderColor = 'var(--color-border)'}
                 />
               </div>
 
@@ -118,15 +128,16 @@ export default function LoginPage() {
                   background: '#FEF2F2',
                   border: '1px solid #FECACA',
                   borderRadius: 'var(--radius)',
-                  padding: '10px 14px',
-                  fontSize: '14px',
+                  padding: '11px 14px',
+                  fontSize: '13px',
                   color: '#B91C1C',
+                  lineHeight: '1.5',
                 }}>
                   {error}
                   {error.toLowerCase().includes('no account') && (
-                    <p style={{ margin: '6px 0 0 0', fontSize: '13px' }}>
+                    <p style={{ margin: '6px 0 0 0' }}>
                       Haven't submitted a trip yet?{' '}
-                      <Link to="/intake" style={{ color: '#B91C1C', fontWeight: 600 }}>
+                      <Link to="/intake" style={{ color: '#B91C1C', fontWeight: 700 }}>
                         Submit an enquiry →
                       </Link>
                     </p>
@@ -150,7 +161,11 @@ export default function LoginPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
+                  fontFamily: 'inherit',
+                  marginTop: '4px',
                 }}
+                onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--color-primary-dark)' }}
+                onMouseLeave={e => { if (!loading) e.currentTarget.style.background = loading ? 'var(--color-border)' : 'var(--color-primary)' }}
               >
                 {loading ? <LoadingSpinner size={18} color="white" label="" /> : null}
                 {loading ? 'Sending...' : 'Send Login Link'}
@@ -158,11 +173,11 @@ export default function LoginPage() {
             </form>
           )}
 
-          <div style={{ textAlign: 'center', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--color-border)' }}>
-            <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
-              Don't have a trip yet?{' '}
-              <Link to="/intake" style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
-                Submit an enquiry →
+          <div style={{ textAlign: 'center', marginTop: '28px', paddingTop: '24px', borderTop: '1px solid var(--color-border)' }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+              New to Travel Papaya?{' '}
+              <Link to="/intake" style={{ color: 'var(--color-primary)', fontWeight: 700, textDecoration: 'none' }}>
+                Plan a trip →
               </Link>
             </p>
           </div>

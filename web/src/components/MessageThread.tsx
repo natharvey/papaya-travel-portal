@@ -46,7 +46,7 @@ export default function MessageThread({ messages, currentRole, onSend, loading }
         flex: 1,
         overflowY: 'auto',
         padding: '20px',
-        background: '#F8FAFC',
+        background: 'var(--color-bg)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',

@@ -12,11 +12,11 @@ import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClie
 import type { TripDetail, Message } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  INTAKE: { bg: '#EEF2FF', text: '#4F46E5' },
-  DRAFT: { bg: '#FFF7ED', text: '#C2410C' },
-  REVIEW: { bg: '#FEF9C3', text: '#A16207' },
-  CONFIRMED: { bg: '#DCFCE7', text: '#15803D' },
-  ARCHIVED: { bg: '#F3F4F6', text: '#6B7280' },
+  INTAKE:    { bg: '#EEF2FF', text: '#4338CA' },
+  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)' },
+  REVIEW:    { bg: '#FFFBEB', text: '#B45309' },
+  CONFIRMED: { bg: '#F0FDF6', text: '#166534' },
+  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280' },
 }
 
 function formatDate(d: string): string {
@@ -210,7 +210,7 @@ export default function TripDetailPage() {
 
         {/* Trip header */}
         <div style={{
-          background: 'linear-gradient(135deg, var(--color-secondary), #1a2639)',
+          background: 'linear-gradient(135deg, var(--color-secondary) 0%, #1A3344 100%)',
           color: 'white',
           borderRadius: 'var(--radius-lg)',
           padding: '28px 32px',
@@ -227,8 +227,8 @@ export default function TripDetailPage() {
                   { Icon: Wallet, label: trip.budget_range },
                   { Icon: Gauge, label: trip.pace },
                 ].map(({ Icon, label }) => (
-                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#94A3B8' }}>
-                    <Icon size={13} color="#64748B" strokeWidth={2} />
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>
+                    <Icon size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
                     {label}
                   </span>
                 ))}
@@ -318,16 +318,16 @@ export default function TripDetailPage() {
                     {/* Review / approval banner */}
                     {trip.status === 'REVIEW' && (
                       <div style={{
-                        background: 'linear-gradient(135deg, #FEF9C3, #FFF)',
-                        border: '1px solid #FDE68A',
+                        background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-surface) 100%)',
+                        border: '1px solid #FCD9B8',
                         borderRadius: 'var(--radius)',
                         padding: '20px',
                         marginBottom: '24px',
                       }}>
-                        <div style={{ fontWeight: 700, fontSize: '16px', color: '#92400E', marginBottom: '6px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--color-primary-dark)', marginBottom: '6px' }}>
                           Your itinerary is ready for approval
                         </div>
-                        <p style={{ fontSize: '14px', color: '#78350F', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+                        <p style={{ fontSize: '14px', color: 'var(--color-primary-dark)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
                           Review the itinerary below. If you're happy with it, click confirm to lock it in. If you'd like changes, send us a message.
                         </p>
                         {confirmError && (
@@ -355,8 +355,8 @@ export default function TripDetailPage() {
                               onClick={() => setChangesOpen(true)}
                               style={{
                                 background: 'white',
-                                color: '#92400E',
-                                border: '1px solid #FDE68A',
+                                color: 'var(--color-primary-dark)',
+                                border: '1px solid #FCD9B8',
                                 borderRadius: 'var(--radius)',
                                 padding: '10px 22px',
                                 fontSize: '14px',
@@ -369,7 +369,7 @@ export default function TripDetailPage() {
                           </div>
                         ) : (
                           <div>
-                            <p style={{ fontSize: '13px', color: '#78350F', marginBottom: '8px', fontWeight: 600 }}>
+                            <p style={{ fontSize: '13px', color: 'var(--color-primary-dark)', marginBottom: '8px', fontWeight: 600 }}>
                               What would you like us to change?
                             </p>
                             <textarea
@@ -382,7 +382,7 @@ export default function TripDetailPage() {
                                 boxSizing: 'border-box',
                                 padding: '10px 12px',
                                 borderRadius: 'var(--radius)',
-                                border: '1px solid #FDE68A',
+                                border: '1px solid #FCD9B8',
                                 fontSize: '14px',
                                 resize: 'vertical',
                                 fontFamily: 'inherit',
@@ -414,8 +414,8 @@ export default function TripDetailPage() {
                                 onClick={() => { setChangesOpen(false); setChangesBody(''); setChangesError('') }}
                                 style={{
                                   background: 'white',
-                                  color: '#92400E',
-                                  border: '1px solid #FDE68A',
+                                  color: 'var(--color-primary-dark)',
+                                  border: '1px solid #FCD9B8',
                                   borderRadius: 'var(--radius)',
                                   padding: '10px 16px',
                                   fontSize: '14px',
@@ -547,7 +547,7 @@ export default function TripDetailPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {trip.flights.map(flight => (
                         <div key={flight.id} style={{
-                          background: '#F8FAFC', border: '1px solid var(--color-border)',
+                          background: 'var(--color-bg)', border: '1px solid var(--color-border)',
                           borderRadius: 'var(--radius)', padding: '16px 20px',
                           display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
                         }}>
@@ -596,7 +596,7 @@ export default function TripDetailPage() {
                         const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
                         return (
                           <div key={stay.id} style={{
-                            background: '#F8FAFC', border: '1px solid var(--color-border)',
+                            background: 'var(--color-bg)', border: '1px solid var(--color-border)',
                             borderRadius: 'var(--radius)', padding: '16px 20px',
                             display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
                           }}>
@@ -647,7 +647,7 @@ export default function TripDetailPage() {
                       ['Notes', trip.intake_response.notes || '—'],
                     ].map(([label, value]) => (
                       <div key={label} style={{
-                        background: '#F8FAFC',
+                        background: 'var(--color-bg)',
                         borderRadius: 'var(--radius)',
                         padding: '14px 16px',
                       }}>
@@ -692,7 +692,7 @@ export default function TripDetailPage() {
                     {documents.map(doc => (
                       <div key={doc.key} style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        background: '#F8FAFC', border: '1px solid var(--color-border)',
+                        background: 'var(--color-bg)', border: '1px solid var(--color-border)',
                         borderRadius: 'var(--radius)', padding: '12px 16px', gap: '12px',
                       }}>
                         <div style={{ flex: 1, minWidth: 0 }}>

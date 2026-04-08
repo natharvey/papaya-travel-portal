@@ -124,11 +124,11 @@ function StayFormFields({ stayForm, setStayForm }: {
 const VALID_STATUSES = ['INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  INTAKE: { bg: '#EEF2FF', text: '#4F46E5' },
-  DRAFT: { bg: '#FFF7ED', text: '#C2410C' },
-  REVIEW: { bg: '#FEF9C3', text: '#A16207' },
-  CONFIRMED: { bg: '#DCFCE7', text: '#15803D' },
-  ARCHIVED: { bg: '#F3F4F6', text: '#6B7280' },
+  INTAKE:    { bg: '#EEF2FF', text: '#4338CA' },
+  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)' },
+  REVIEW:    { bg: '#FFFBEB', text: '#B45309' },
+  CONFIRMED: { bg: '#F0FDF6', text: '#166534' },
+  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280' },
 }
 
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -658,7 +658,7 @@ export default function AdminTripPage() {
 
         {/* Trip header */}
         <div style={{
-          background: 'linear-gradient(135deg, var(--color-secondary), #1a2639)',
+          background: 'linear-gradient(135deg, var(--color-secondary) 0%, #1A3344 100%)',
           color: 'white',
           borderRadius: 'var(--radius-lg)',
           padding: '24px 28px',
@@ -669,7 +669,7 @@ export default function AdminTripPage() {
               <h1 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '12px' }}>{trip.title}</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
                 <User size={13} color="#64748B" strokeWidth={2} />
-                <span style={{ fontSize: '13px', color: '#94A3B8' }}>{trip.client.name} · {trip.client.email}</span>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{trip.client.name} · {trip.client.email}</span>
               </div>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {[
@@ -679,8 +679,8 @@ export default function AdminTripPage() {
                   { Icon: Wallet, label: trip.budget_range },
                   { Icon: Gauge, label: trip.pace },
                 ].map(({ Icon, label }) => (
-                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: '#94A3B8' }}>
-                    <Icon size={13} color="#64748B" strokeWidth={2} />
+                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
+                    <Icon size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
                     {label}
                   </span>
                 ))}
@@ -785,7 +785,7 @@ export default function AdminTripPage() {
               <div>
                 {/* Generate / Version controls */}
                 <div style={{
-                  background: '#F8FAFC',
+                  background: 'var(--color-bg)',
                   borderRadius: 'var(--radius)',
                   padding: '16px',
                   marginBottom: '24px',
@@ -856,8 +856,8 @@ export default function AdminTripPage() {
                 {/* Send for Review */}
                 {trip.itineraries.length > 0 && trip.status === 'DRAFT' && (
                   <div style={{
-                    background: '#FFF7ED',
-                    border: '1px solid #FED7AA',
+                    background: 'var(--color-accent)',
+                    border: '1px solid #FCD9B8',
                     borderRadius: 'var(--radius)',
                     padding: '16px',
                     marginBottom: '16px',
@@ -868,8 +868,8 @@ export default function AdminTripPage() {
                     gap: '12px',
                   }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#C2410C' }}>Ready to send to client?</div>
-                      <div style={{ fontSize: '13px', color: '#9A3412', marginTop: '2px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-primary-dark)' }}>Ready to send to client?</div>
+                      <div style={{ fontSize: '13px', color: 'var(--color-primary-dark)', marginTop: '2px' }}>
                         This will email {trip.client.name} and ask them to review and approve the itinerary.
                       </div>
                     </div>
@@ -877,7 +877,7 @@ export default function AdminTripPage() {
                       onClick={handleSendForReview}
                       disabled={sendingForReview}
                       style={{
-                        background: sendingForReview ? 'var(--color-border)' : '#C2410C',
+                        background: sendingForReview ? 'var(--color-border)' : 'var(--color-primary)',
                         color: 'white',
                         border: 'none',
                         borderRadius: 'var(--radius)',
@@ -1028,7 +1028,7 @@ export default function AdminTripPage() {
                 {/* Flight form */}
                 {flightFormOpen && (
                   <div style={{
-                    background: '#F8FAFC', border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg)', border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1171,7 +1171,7 @@ export default function AdminTripPage() {
                             onClick={() => openEditFlightForm(flight)}
                             title="Edit"
                             style={{
-                              background: '#F1F5F9', border: 'none', borderRadius: '6px',
+                              background: 'var(--color-bg)', border: 'none', borderRadius: '6px',
                               padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center',
                             }}
                           >
@@ -1219,7 +1219,7 @@ export default function AdminTripPage() {
 
                 {stayFormOpen && (
                   <div style={{
-                    background: '#F8FAFC', border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg)', border: '1px solid var(--color-border)',
                     borderRadius: 'var(--radius)', padding: '20px', marginBottom: '20px',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1308,7 +1308,7 @@ export default function AdminTripPage() {
                             <button
                               onClick={() => openEditStayForm(stay)}
                               title="Edit"
-                              style={{ background: '#F1F5F9', border: 'none', borderRadius: '6px', padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                              style={{ background: 'var(--color-bg)', border: 'none', borderRadius: '6px', padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                             >
                               <Pencil size={13} strokeWidth={2} color="#475569" />
                             </button>
@@ -1346,7 +1346,7 @@ export default function AdminTripPage() {
                       ['Notes', trip.intake_response.notes || '—'],
                     ].map(([label, value]) => (
                       <div key={label} style={{
-                        background: '#F8FAFC',
+                        background: 'var(--color-bg)',
                         borderRadius: 'var(--radius)',
                         padding: '14px 16px',
                         border: '1px solid var(--color-border)',

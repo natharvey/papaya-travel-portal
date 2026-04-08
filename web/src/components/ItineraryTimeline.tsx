@@ -23,7 +23,7 @@ const LOCATION_PALETTE = [
   { circle: '#F0EAF0', text: '#725A72' }, // pale mauve
 ]
 
-const SELECTED = { bg: '#FF6B35', text: 'white', shadow: '#FF6B3544' }
+const SELECTED = { bg: '#F07332', text: 'white', shadow: 'rgba(240,115,50,0.28)' }
 
 function buildLocationMap(dayPlans: DayPlan[]) {
   const locations = [...new Set(dayPlans.map(d => d.location_base))]
@@ -69,9 +69,9 @@ function buildCalendarWeeks(dayPlans: DayPlan[]): (DayPlan | null)[][] {
 // ─── Time block ───────────────────────────────────────────────────────────────
 
 const PERIOD_CONFIG = {
-  Morning:   { Icon: Sunrise,  border: '#F97316', label: 'Morning',   textColor: '#1C1917', mutedColor: '#6B6860' },
-  Afternoon: { Icon: Sun,      border: '#94A3B8', label: 'Afternoon', textColor: '#1C1917', mutedColor: '#6B7280' },
-  Evening:   { Icon: Moon,     border: '#2D3A4A', label: 'Evening',   textColor: '#1C1917', mutedColor: '#6B7280' },
+  Morning:   { Icon: Sunrise,  border: '#F07332', label: 'Morning',   textColor: '#2D4A5A', mutedColor: '#7A9099' },
+  Afternoon: { Icon: Sun,      border: '#7A9099', label: 'Afternoon', textColor: '#2D4A5A', mutedColor: '#7A9099' },
+  Evening:   { Icon: Moon,     border: '#2D4A5A', label: 'Evening',   textColor: '#2D4A5A', mutedColor: '#7A9099' },
 }
 
 function TimeBlock({ period, block }: { period: keyof typeof PERIOD_CONFIG; block: DayBlock }) {
@@ -80,7 +80,7 @@ function TimeBlock({ period, block }: { period: keyof typeof PERIOD_CONFIG; bloc
   return (
     <div style={{
       background: 'white',
-      border: '1px solid #F1F5F9',
+      border: '1px solid var(--color-border)',
       borderLeft: `3px solid ${border}`,
       borderRadius: '0 8px 8px 0',
       padding: '14px 16px',
@@ -99,7 +99,7 @@ function TimeBlock({ period, block }: { period: keyof typeof PERIOD_CONFIG; bloc
           </span>
         )}
         {block.booking_needed && (
-          <span style={{ background: '#FFFBEB', color: '#92400E', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px', border: '1px solid #FDE68A' }}>
+          <span style={{ background: 'var(--color-accent)', color: 'var(--color-primary-dark)', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px', border: '1px solid #FCD9B8' }}>
             Book ahead
           </span>
         )}
@@ -125,7 +125,7 @@ function CollapsibleSection({ title, icon, children }: { title: string; icon: Re
         style={{
           width: '100%',
           background: 'white',
-          border: '1px solid #E8ECF0',
+          border: '1px solid var(--color-border)',
           borderRadius: open ? '10px 10px 0 0' : '10px',
           padding: '14px 18px',
           display: 'flex',
@@ -134,7 +134,7 @@ function CollapsibleSection({ title, icon, children }: { title: string; icon: Re
           cursor: 'pointer',
           fontSize: '14px',
           fontWeight: 600,
-          color: '#2D3A4A',
+          color: 'var(--color-text)',
           transition: 'background 0.15s',
         }}
       >
@@ -146,11 +146,11 @@ function CollapsibleSection({ title, icon, children }: { title: string; icon: Re
       </button>
       {open && (
         <div style={{
-          border: '1px solid #E8ECF0',
+          border: '1px solid var(--color-border)',
           borderTop: 'none',
           borderRadius: '0 0 10px 10px',
           padding: '18px',
-          background: '#FAFBFC',
+          background: 'var(--color-bg)',
         }}>
           {children}
         </div>
@@ -184,16 +184,16 @@ export default function ItineraryTimeline({ data }: Props) {
 
       {/* ── Overview ── */}
       <div style={{ marginBottom: '28px' }}>
-        <p style={{ fontSize: '14px', color: '#64748B', lineHeight: '1.8', marginBottom: '16px' }}>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '16px' }}>
           {data.overview}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
           {data.destinations?.map((d, i) => (
             <span key={i} style={{
               display: 'flex', alignItems: 'center', gap: '5px',
-              background: '#F8FAFC',
-              border: '1px solid #E8ECF0',
-              color: '#2D3A4A',
+              background: 'var(--color-bg)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text)',
               padding: '4px 12px',
               borderRadius: '100px',
               fontSize: '12px',
@@ -206,8 +206,8 @@ export default function ItineraryTimeline({ data }: Props) {
           <button onClick={handleCopy} style={{
             display: 'flex', alignItems: 'center', gap: '5px',
             background: 'none',
-            border: '1px solid #E8ECF0',
-            color: '#94A3B8',
+            border: '1px solid var(--color-border)',
+            color: 'var(--color-text-muted)',
             padding: '4px 12px',
             borderRadius: '100px',
             fontSize: '12px',
@@ -226,13 +226,13 @@ export default function ItineraryTimeline({ data }: Props) {
       {/* ── Calendar ── */}
       {weeks.length > 0 && (
         <div style={{ marginBottom: '20px' }}>
-          <p style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
             Select a day
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '4px' }}>
             {DAY_LABELS.map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: '10px', fontWeight: 600, color: '#CBD5E1', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '4px 0' }}>
+              <div key={d} style={{ textAlign: 'center', fontSize: '10px', fontWeight: 600, color: 'var(--color-border)', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '4px 0' }}>
                 {d}
               </div>
             ))}
@@ -280,8 +280,8 @@ export default function ItineraryTimeline({ data }: Props) {
       {/* ── Selected day detail ── */}
       {selectedDay && (
         <div style={{
-          background: '#F8FAFC',
-          border: '1px solid #E8ECF0',
+          background: 'var(--color-bg)',
+          border: '1px solid var(--color-border)',
           borderRadius: '12px',
           overflow: 'hidden',
           marginBottom: '24px',
@@ -289,7 +289,7 @@ export default function ItineraryTimeline({ data }: Props) {
           {/* Day header */}
           <div style={{
             background: 'white',
-            borderBottom: '1px solid #E8ECF0',
+            borderBottom: '1px solid var(--color-border)',
             padding: '14px 20px',
             display: 'flex',
             justifyContent: 'space-between',
@@ -299,7 +299,7 @@ export default function ItineraryTimeline({ data }: Props) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{
-                background: '#FF6B35',
+                background: 'var(--color-primary)',
                 color: 'white',
                 fontWeight: 800,
                 fontSize: '13px',
@@ -308,9 +308,9 @@ export default function ItineraryTimeline({ data }: Props) {
               }}>
                 Day {selectedDay.day_number}
               </span>
-              <span style={{ color: '#94A3B8', fontSize: '13px' }}>{selectedDay.date}</span>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{selectedDay.date}</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B', fontSize: '13px', fontWeight: 500 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--color-text-muted)', fontSize: '13px', fontWeight: 500 }}>
               <MapPin size={13} strokeWidth={2} color="#FF6B35" />
               {selectedDay.location_base}
             </div>
@@ -326,10 +326,10 @@ export default function ItineraryTimeline({ data }: Props) {
                 {selectedDay.notes.map((note, i) => (
                   <div key={i} style={{
                     background: 'white',
-                    borderLeft: '3px solid #E2E8F0',
+                    borderLeft: '3px solid var(--color-border)',
                     padding: '8px 12px',
                     fontSize: '13px',
-                    color: '#64748B',
+                    color: 'var(--color-text-muted)',
                     borderRadius: '0 6px 6px 0',
                     lineHeight: '1.6',
                   }}>
@@ -346,7 +346,7 @@ export default function ItineraryTimeline({ data }: Props) {
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '10px 16px',
-            borderTop: '1px solid #E8ECF0',
+            borderTop: '1px solid var(--color-border)',
             background: 'white',
           }}>
             <button
@@ -355,19 +355,19 @@ export default function ItineraryTimeline({ data }: Props) {
               style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
                 background: 'none',
-                border: '1px solid #E8ECF0',
+                border: '1px solid var(--color-border)',
                 borderRadius: '8px',
                 padding: '6px 14px',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: selectedDayNum <= 1 ? 'default' : 'pointer',
-                color: selectedDayNum <= 1 ? '#CBD5E1' : '#2D3A4A',
+                color: selectedDayNum <= 1 ? 'var(--color-border)' : 'var(--color-text)',
               }}
             >
               <ChevronLeft size={14} />
               Prev
             </button>
-            <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+            <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
               {selectedDayNum} / {totalDays}
             </span>
             <button
@@ -376,13 +376,13 @@ export default function ItineraryTimeline({ data }: Props) {
               style={{
                 display: 'flex', alignItems: 'center', gap: '4px',
                 background: 'none',
-                border: '1px solid #E8ECF0',
+                border: '1px solid var(--color-border)',
                 borderRadius: '8px',
                 padding: '6px 14px',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: selectedDayNum >= totalDays ? 'default' : 'pointer',
-                color: selectedDayNum >= totalDays ? '#CBD5E1' : '#2D3A4A',
+                color: selectedDayNum >= totalDays ? 'var(--color-border)' : 'var(--color-text)',
               }}
             >
               Next
@@ -400,11 +400,11 @@ export default function ItineraryTimeline({ data }: Props) {
             {data.accommodation_suggestions.map((a, i) => (
               <div key={i} style={{
                 paddingBottom: i < data.accommodation_suggestions.length - 1 ? '12px' : 0,
-                borderBottom: i < data.accommodation_suggestions.length - 1 ? '1px solid #E8ECF0' : 'none',
+                borderBottom: i < data.accommodation_suggestions.length - 1 ? '1px solid var(--color-border)' : 'none',
               }}>
                 <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px' }}>{a.area}</div>
-                <div style={{ fontSize: '12px', color: '#FF6B35', fontWeight: 600, marginBottom: '4px' }}>{a.style}</div>
-                <div style={{ fontSize: '13px', color: '#64748B', lineHeight: '1.6' }}>{a.notes}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '4px' }}>{a.style}</div>
+                <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.6' }}>{a.notes}</div>
               </div>
             ))}
           </div>
@@ -415,7 +415,7 @@ export default function ItineraryTimeline({ data }: Props) {
         <CollapsibleSection title="Transport" icon={<Bus size={15} strokeWidth={2} color="#64748B" />}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {data.transport_notes.map((note, i) => (
-              <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#475569', lineHeight: '1.6' }}>
+              <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.6' }}>
                 <ChevronRight size={14} color="#FF6B35" style={{ flexShrink: 0, marginTop: '3px' }} />
                 <span>{note}</span>
               </div>
@@ -428,16 +428,16 @@ export default function ItineraryTimeline({ data }: Props) {
         <CollapsibleSection title="Budget Summary" icon={<Wallet size={15} strokeWidth={2} color="#64748B" />}>
           {data.budget_summary.estimated_total_aud && (
             <div style={{ marginBottom: '14px' }}>
-              <span style={{ fontSize: '26px', fontWeight: 800, color: '#2D3A4A' }}>
+              <span style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-text)' }}>
                 ${data.budget_summary.estimated_total_aud.toLocaleString()}
               </span>
-              <span style={{ fontSize: '13px', color: '#94A3B8', marginLeft: '8px' }}>AUD estimated total</span>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginLeft: '8px' }}>AUD estimated total</span>
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {data.budget_summary.assumptions?.map((a, i) => (
-              <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: '#64748B', lineHeight: '1.6' }}>
-                <span style={{ color: '#CBD5E1', flexShrink: 0 }}>—</span>
+              <div key={i} style={{ display: 'flex', gap: '8px', fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.6' }}>
+                <span style={{ color: 'var(--color-border)', flexShrink: 0 }}>—</span>
                 <span>{a}</span>
               </div>
             ))}
@@ -449,8 +449,8 @@ export default function ItineraryTimeline({ data }: Props) {
         <CollapsibleSection title={`Packing (${data.packing_checklist.length} items)`} icon={<Backpack size={15} strokeWidth={2} color="#64748B" />}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px' }}>
             {data.packing_checklist.map((item, i) => (
-              <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}>
-                <input type="checkbox" style={{ accentColor: '#FF6B35', width: '14px', height: '14px' }} />
+              <label key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                <input type="checkbox" style={{ accentColor: 'var(--color-primary)', width: '14px', height: '14px' }} />
                 {item}
               </label>
             ))}
@@ -463,12 +463,12 @@ export default function ItineraryTimeline({ data }: Props) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {data.risks_and_notes.map((note, i) => (
               <div key={i} style={{
-                background: '#FFFBEB',
-                border: '1px solid #FDE68A',
+                background: 'var(--color-accent)',
+                border: '1px solid #FCD9B8',
                 borderRadius: '8px',
                 padding: '10px 14px',
                 fontSize: '13px',
-                color: '#78350F',
+                color: 'var(--color-primary-dark)',
                 lineHeight: '1.6',
               }}>
                 {note}

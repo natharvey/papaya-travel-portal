@@ -17,46 +17,50 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
     navigate(userRole === 'admin' ? '/admin/login' : '/login')
   }
 
+  const isAdmin = variant === 'admin'
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg)' }}>
       <header style={{
-        background: 'var(--color-secondary)',
-        color: 'white',
+        background: isAdmin ? 'var(--color-secondary)' : 'var(--color-surface)',
+        borderBottom: isAdmin ? 'none' : '1px solid var(--color-border)',
         padding: '0 32px',
-        height: '56px',
+        height: '64px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
+        boxShadow: isAdmin ? '0 2px 12px rgba(45,74,90,0.18)' : '0 1px 4px rgba(45,74,90,0.06)',
       }}>
         <Link
-          to={variant === 'admin' ? '/admin' : isAuthenticated && userRole === 'client' ? '/portal' : '/intake'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            color: 'white',
-            textDecoration: 'none',
-          }}
+          to={isAdmin ? '/admin' : isAuthenticated && userRole === 'client' ? '/portal' : '/intake'}
+          style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}
         >
-          <PapayaLogo size={32} />
-          <span style={{ fontWeight: 700, fontSize: '17px', letterSpacing: '-0.3px' }}>Papaya</span>
-          {variant === 'admin' && (
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              color: '#F97316',
-              background: 'rgba(249,115,22,0.12)',
-              padding: '2px 8px',
-              borderRadius: '100px',
-              letterSpacing: '0.4px',
-              textTransform: 'uppercase',
-            }}>
-              Admin
-            </span>
+          {isAdmin ? (
+            <>
+              <PapayaLogo size={36} markOnly />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 700, fontSize: '16px', color: 'white', letterSpacing: '-0.2px' }}>
+                  Travel Papaya
+                </span>
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: 'var(--color-primary)',
+                  background: 'rgba(240,115,50,0.15)',
+                  padding: '2px 8px',
+                  borderRadius: '100px',
+                  letterSpacing: '0.8px',
+                  textTransform: 'uppercase',
+                }}>
+                  Admin
+                </span>
+              </div>
+            </>
+          ) : (
+            <PapayaLogo size={72} />
           )}
         </Link>
 
@@ -66,16 +70,16 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
               <Link
                 to="/portal"
                 style={{
-                  color: '#94A3B8',
+                  color: 'var(--color-text-muted)',
                   fontSize: '14px',
                   fontWeight: 500,
                   textDecoration: 'none',
-                  padding: '6px 12px',
+                  padding: '7px 14px',
                   borderRadius: 'var(--radius)',
-                  transition: 'color 0.15s',
+                  transition: 'color 0.15s, background 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)'; e.currentTarget.style.background = 'var(--color-bg)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = 'transparent' }}
               >
                 My Trips
               </Link>
@@ -83,23 +87,17 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
                 onClick={handleLogout}
                 style={{
                   background: 'transparent',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: '#94A3B8',
-                  padding: '6px 14px',
+                  border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-text-muted)',
+                  padding: '7px 16px',
                   borderRadius: 'var(--radius)',
                   fontSize: '13px',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   cursor: 'pointer',
                   transition: 'all 0.15s',
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'
-                  e.currentTarget.style.color = 'white'
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
-                  e.currentTarget.style.color = '#94A3B8'
-                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-text-muted)'; e.currentTarget.style.color = 'var(--color-text)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
               >
                 Sign out
               </button>
@@ -111,23 +109,17 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
               onClick={handleLogout}
               style={{
                 background: 'transparent',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#94A3B8',
-                padding: '6px 14px',
+                border: '1.5px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.6)',
+                padding: '7px 16px',
                 borderRadius: 'var(--radius)',
                 fontSize: '13px',
-                fontWeight: 500,
+                fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
               }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'
-                e.currentTarget.style.color = 'white'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'
-                e.currentTarget.style.color = '#94A3B8'
-              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; e.currentTarget.style.color = 'white' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
             >
               Sign out
             </button>
@@ -138,15 +130,16 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
               <Link
                 to="/login"
                 style={{
-                  color: '#94A3B8',
+                  color: 'var(--color-text-muted)',
                   fontSize: '14px',
                   fontWeight: 500,
                   textDecoration: 'none',
-                  padding: '6px 12px',
+                  padding: '7px 14px',
                   borderRadius: 'var(--radius)',
+                  transition: 'color 0.15s, background 0.15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'white')}
-                onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)'; e.currentTarget.style.background = 'var(--color-bg)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = 'transparent' }}
               >
                 Client Login
               </Link>
@@ -155,12 +148,15 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
                 style={{
                   background: 'var(--color-primary)',
                   color: 'white',
-                  padding: '7px 16px',
+                  padding: '8px 18px',
                   borderRadius: 'var(--radius)',
                   fontSize: '14px',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   textDecoration: 'none',
+                  transition: 'background 0.15s',
                 }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-dark)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
               >
                 Plan a Trip
               </Link>
@@ -169,18 +165,19 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
         </nav>
       </header>
 
-      <main style={{ flex: 1, padding: '0' }}>
+      <main style={{ flex: 1 }}>
         {children}
       </main>
 
       <footer style={{
         background: 'var(--color-secondary)',
-        color: '#94A3B8',
+        color: 'rgba(255,255,255,0.45)',
         textAlign: 'center',
-        padding: '20px',
+        padding: '24px',
         fontSize: '13px',
+        fontWeight: 400,
       }}>
-        © {new Date().getFullYear()} Papaya Travel Portal · Built with care for Australian travellers
+        © {new Date().getFullYear()} Travel Papaya · Crafting unforgettable journeys for Australian travellers
       </footer>
     </div>
   )

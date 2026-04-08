@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom'
 import { PlaneTakeoff, Calendar, Wallet, Gauge, Timer } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  INTAKE: { bg: '#EEF2FF', text: '#4F46E5' },
-  DRAFT: { bg: '#FFF7ED', text: '#C2410C' },
-  REVIEW: { bg: '#FEF9C3', text: '#A16207' },
-  CONFIRMED: { bg: '#DCFCE7', text: '#15803D' },
-  ARCHIVED: { bg: '#F3F4F6', text: '#6B7280' },
+const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  INTAKE:    { bg: '#EEF2FF', text: '#4338CA', label: 'Intake' },
+  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)', label: 'Draft' },
+  REVIEW:    { bg: '#FFFBEB', text: '#B45309', label: 'In Review' },
+  CONFIRMED: { bg: '#F0FDF6', text: '#166534', label: 'Confirmed' },
+  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280', label: 'Archived' },
 }
 
 interface TripCardProps {
@@ -33,52 +33,42 @@ function getDaysUntilTrip(startDate: string): number | null {
 
 function CountdownBadge({ startDate }: { startDate: string }) {
   const days = getDaysUntilTrip(startDate)
-
-  if (days === null) return null
+  if (days === null || days < 0) return null
 
   let label: string
   let bg: string
   let color: string
 
-  if (days < 0) {
-    // Trip is in the past — don't show the badge
-    return null
-  } else if (days === 0) {
-    label = '🎉 Trip starts today!'
-    bg = '#DCFCE7'
-    color = '#15803D'
-  } else if (days === 1) {
-    label = '✈️ 1 day until your trip'
-    bg = '#FFF7ED'
-    color = '#C2410C'
+  if (days === 0) {
+    label = 'Trip starts today!'
+    bg = '#F0FDF6'
+    color = '#166534'
   } else if (days <= 7) {
-    label = `✈️ ${days} days until your trip`
-    bg = '#FFF7ED'
-    color = '#C2410C'
+    label = `${days} day${days === 1 ? '' : 's'} until your trip`
+    bg = 'var(--color-accent)'
+    color = 'var(--color-primary-dark)'
   } else if (days <= 30) {
-    label = `🗓️ ${days} days until your trip`
-    bg = '#FEF9C3'
-    color = '#A16207'
+    label = `${days} days until your trip`
+    bg = '#FFFBEB'
+    color = '#B45309'
   } else {
-    label = `⏳ ${days} days until your trip`
+    label = `${days} days until your trip`
     bg = '#EEF2FF'
-    color = '#4F46E5'
+    color = '#4338CA'
   }
 
   return (
-    <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '5px',
-        background: bg,
-        color: color,
-        padding: '4px 10px',
-        borderRadius: '100px',
-        fontSize: '12px',
-        fontWeight: 600,
-      }}
-    >
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '5px',
+      background: bg,
+      color: color,
+      padding: '4px 10px',
+      borderRadius: '100px',
+      fontSize: '12px',
+      fontWeight: 600,
+    }}>
       <Timer size={12} strokeWidth={2.5} />
       {label}
     </div>
@@ -86,7 +76,7 @@ function CountdownBadge({ startDate }: { startDate: string }) {
 }
 
 export default function TripCard({ trip, linkTo, showClient, clientName, clientEmail }: TripCardProps) {
-  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.INTAKE
+  const config = STATUS_CONFIG[trip.status] || STATUS_CONFIG.INTAKE
   const tripWithItinerary = trip as TripWithLatestItinerary
   const hasItinerary = tripWithItinerary.latest_itinerary != null
 
@@ -97,26 +87,27 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           background: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-lg)',
-          padding: '20px',
+          padding: '22px 24px',
           cursor: 'pointer',
-          transition: 'box-shadow 0.2s, transform 0.2s',
+          transition: 'box-shadow 0.2s, transform 0.2s, border-color 0.2s',
           boxShadow: 'var(--shadow-sm)',
         }}
         onMouseEnter={e => {
           const el = e.currentTarget as HTMLDivElement
           el.style.boxShadow = 'var(--shadow-md)'
           el.style.transform = 'translateY(-2px)'
+          el.style.borderColor = 'var(--color-primary)'
         }}
         onMouseLeave={e => {
           const el = e.currentTarget as HTMLDivElement
           el.style.boxShadow = 'var(--shadow-sm)'
           el.style.transform = 'translateY(0)'
+          el.style.borderColor = 'var(--color-border)'
         }}
       >
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
           <div style={{ flex: 1, marginRight: '12px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-text)', marginBottom: '4px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px', letterSpacing: '-0.1px' }}>
               {trip.title}
             </h3>
             {showClient && (clientName || clientEmail) && (
@@ -126,43 +117,40 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
             )}
           </div>
           <span style={{
-            background: statusColors.bg,
-            color: statusColors.text,
-            padding: '3px 10px',
+            background: config.bg,
+            color: config.text,
+            padding: '4px 12px',
             borderRadius: '100px',
             fontSize: '12px',
-            fontWeight: 600,
+            fontWeight: 700,
             whiteSpace: 'nowrap',
+            letterSpacing: '0.1px',
           }}>
-            {trip.status}
+            {config.label}
           </span>
         </div>
 
-        {/* Meta */}
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <PlaneTakeoff size={13} strokeWidth={2} /> {trip.origin_city}
-          </span>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Calendar size={13} strokeWidth={2} /> {formatDate(trip.start_date)} – {formatDate(trip.end_date)}
-          </span>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Wallet size={13} strokeWidth={2} /> {trip.budget_range}
-          </span>
-          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Gauge size={13} strokeWidth={2} /> {trip.pace}
-          </span>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '14px' }}>
+          {[
+            { Icon: PlaneTakeoff, text: trip.origin_city },
+            { Icon: Calendar, text: `${formatDate(trip.start_date)} – ${formatDate(trip.end_date)}` },
+            { Icon: Wallet, text: trip.budget_range },
+            { Icon: Gauge, text: trip.pace },
+          ].map(({ Icon, text }) => (
+            <span key={text} style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Icon size={13} strokeWidth={2} />
+              {text}
+            </span>
+          ))}
         </div>
 
-        {/* Countdown Timer */}
         {trip.status !== 'ARCHIVED' && (
-          <div style={{ marginBottom: '12px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <CountdownBadge startDate={trip.start_date} />
           </div>
         )}
 
-        {/* Itinerary status */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--color-border)' }}>
           <span style={{
             fontSize: '12px',
             color: hasItinerary ? 'var(--color-success)' : 'var(--color-text-muted)',
@@ -170,13 +158,9 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           }}>
             {hasItinerary
               ? `✓ Itinerary v${tripWithItinerary.latest_itinerary!.version} ready`
-              : '⏳ Itinerary pending'}
+              : 'Itinerary pending'}
           </span>
-          <span style={{
-            fontSize: '12px',
-            color: 'var(--color-primary)',
-            fontWeight: 500,
-          }}>
+          <span style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 600 }}>
             View details →
           </span>
         </div>

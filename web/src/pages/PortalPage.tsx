@@ -21,11 +21,10 @@ export default function PortalPage() {
 
   return (
     <Layout variant="client">
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ maxWidth: '820px', margin: '0 auto', padding: '48px 24px 80px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '36px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--color-secondary)', marginBottom: '4px' }}>
+            <h1 style={{ fontSize: '30px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '6px', letterSpacing: '-0.4px' }}>
               Your Trips
             </h1>
             <p style={{ color: 'var(--color-text-muted)', fontSize: '15px' }}>
@@ -37,13 +36,16 @@ export default function PortalPage() {
             style={{
               background: 'var(--color-primary)',
               color: 'white',
-              padding: '10px 22px',
+              padding: '11px 22px',
               borderRadius: 'var(--radius)',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '14px',
               textDecoration: 'none',
               display: 'inline-block',
+              transition: 'background 0.15s',
             }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-dark)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
           >
             + Plan another trip
           </Link>
@@ -55,7 +57,7 @@ export default function PortalPage() {
           <div style={{
             background: '#FEF2F2',
             border: '1px solid #FECACA',
-            borderRadius: 'var(--radius)',
+            borderRadius: 'var(--radius-lg)',
             padding: '16px',
             color: '#B91C1C',
           }}>
@@ -66,29 +68,41 @@ export default function PortalPage() {
         {!loading && !error && trips.length === 0 && (
           <div style={{
             textAlign: 'center',
-            padding: '60px 20px',
+            padding: '72px 20px',
             background: 'var(--color-surface)',
-            borderRadius: 'var(--radius-lg)',
+            borderRadius: 'var(--radius-xl)',
             border: '2px dashed var(--color-border)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <PlaneTakeoff size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
+            <div style={{
+              width: '72px',
+              height: '72px',
+              background: 'var(--color-accent)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+            }}>
+              <PlaneTakeoff size={32} color="var(--color-primary)" strokeWidth={1.5} />
             </div>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>No trips yet</h2>
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px' }}>
-              Submit your first trip enquiry and we'll craft a personalised itinerary for you.
+            <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: 'var(--color-text)' }}>No trips yet</h2>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '28px', fontSize: '15px', lineHeight: '1.5' }}>
+              Submit your first trip enquiry and we'll craft a<br />personalised itinerary just for you.
             </p>
             <Link
               to="/intake"
               style={{
                 background: 'var(--color-primary)',
                 color: 'white',
-                padding: '12px 28px',
+                padding: '13px 32px',
                 borderRadius: 'var(--radius)',
                 fontWeight: 700,
                 textDecoration: 'none',
                 display: 'inline-block',
+                fontSize: '15px',
               }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-primary-dark)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--color-primary)'}
             >
               Plan Your First Trip →
             </Link>
@@ -98,11 +112,7 @@ export default function PortalPage() {
         {!loading && trips.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {trips.map(trip => (
-              <TripCard
-                key={trip.id}
-                trip={trip}
-                linkTo={`/portal/trips/${trip.id}`}
-              />
+              <TripCard key={trip.id} trip={trip} linkTo={`/portal/trips/${trip.id}`} />
             ))}
           </div>
         )}

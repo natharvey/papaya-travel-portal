@@ -37,13 +37,13 @@ const labelStyle: React.CSSProperties = {
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  border: '1.5px solid #E2E8F0',
+  border: '1.5px solid var(--color-border)',
   borderRadius: '10px',
   padding: '11px 14px',
   fontSize: '14px',
   outline: 'none',
   background: 'white',
-  color: '#1E293B',
+  color: 'var(--color-text)',
   boxSizing: 'border-box',
   transition: 'border-color 0.15s',
 }
@@ -52,7 +52,7 @@ function InputWithIcon({ icon: Icon, children }: { icon: LucideIcon, children: R
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <Icon size={15} strokeWidth={2} color="#94A3B8" />
+        <Icon size={15} strokeWidth={2} color="var(--color-text-muted)" />
       </div>
       {children}
     </div>
@@ -63,8 +63,8 @@ function Step1({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
   return (
     <div>
       <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>Tell us about yourself</h2>
-        <p style={{ fontSize: '14px', color: '#64748B', lineHeight: '1.5' }}>We'll use these details to create your personalised travel portal.</p>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>Tell us about yourself</h2>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.5' }}>We'll use these details to create your personalised travel portal.</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -91,7 +91,7 @@ function Step1({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
               style={{ ...inputStyle, paddingLeft: '36px' }}
             />
           </InputWithIcon>
-          <p style={{ fontSize: '12px', color: '#94A3B8', marginTop: '5px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '5px' }}>
             This will be your login email for the client portal.
           </p>
         </div>
@@ -104,8 +104,8 @@ function Step2({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
   return (
     <div>
       <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>Trip details</h2>
-        <p style={{ fontSize: '14px', color: '#64748B', lineHeight: '1.5' }}>Help us understand the shape of your journey.</p>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>Trip details</h2>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.5' }}>Help us understand the shape of your journey.</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -186,20 +186,20 @@ function Step2({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
                   type="button"
                   onClick={() => onChange('pace', value)}
                   style={{
-                    border: `2px solid ${selected ? '#F97316' : '#E2E8F0'}`,
+                    border: `2px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
                     borderRadius: '12px',
                     padding: '14px 10px',
                     cursor: 'pointer',
-                    background: selected ? '#FFF7ED' : 'white',
+                    background: selected ? 'var(--color-accent)' : 'white',
                     textAlign: 'center',
                     transition: 'all 0.15s',
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                    <Icon size={20} strokeWidth={2} color={selected ? '#F97316' : '#94A3B8'} />
+                    <Icon size={20} strokeWidth={2} color={selected ? 'var(--color-primary)' : 'var(--color-text-muted)'} />
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: '13px', color: selected ? '#C2410C' : '#1E293B', marginBottom: '3px' }}>{label}</div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', lineHeight: '1.4' }}>{desc}</div>
+                  <div style={{ fontWeight: 700, fontSize: '13px', color: selected ? 'var(--color-primary-dark)' : 'var(--color-text)', marginBottom: '3px' }}>{label}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>{desc}</div>
                 </button>
               )
             })}
@@ -222,8 +222,8 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
   return (
     <div>
       <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>Your preferences</h2>
-        <p style={{ fontSize: '14px', color: '#64748B', lineHeight: '1.5' }}>The more detail you share, the better your personalised itinerary.</p>
+        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>Your preferences</h2>
+        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.5' }}>The more detail you share, the better your personalised itinerary.</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -242,7 +242,7 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
         </div>
 
         <div>
-          <label style={labelStyle}>Interests <span style={{ fontWeight: 400, color: '#94A3B8' }}>(select all that apply)</span></label>
+          <label style={labelStyle}>Interests <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(select all that apply)</span></label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
             {INTERESTS.map(interest => {
               const selected = interests.includes(interest)
@@ -254,9 +254,9 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
                   style={{
                     padding: '6px 14px',
                     borderRadius: '100px',
-                    border: `1.5px solid ${selected ? '#F97316' : '#E2E8F0'}`,
-                    background: selected ? '#FFF7ED' : 'white',
-                    color: selected ? '#C2410C' : '#475569',
+                    border: `1.5px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    background: selected ? 'var(--color-accent)' : 'white',
+                    color: selected ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
                     fontSize: '13px',
                     fontWeight: selected ? 600 : 400,
                     cursor: 'pointer',
@@ -287,7 +287,7 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
         </div>
 
         <div>
-          <label style={labelStyle}>Must-Dos <span style={{ fontWeight: 400, color: '#94A3B8' }}>(optional)</span></label>
+          <label style={labelStyle}>Must-Dos <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
           <textarea
             value={data.must_dos || ''}
             onChange={e => onChange('must_dos', e.target.value)}
@@ -298,7 +298,7 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
         </div>
 
         <div>
-          <label style={labelStyle}>Must-Avoid <span style={{ fontWeight: 400, color: '#94A3B8' }}>(optional)</span></label>
+          <label style={labelStyle}>Must-Avoid <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
           <textarea
             value={data.must_avoid || ''}
             onChange={e => onChange('must_avoid', e.target.value)}
@@ -309,7 +309,7 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
         </div>
 
         <div>
-          <label style={labelStyle}>Constraints or Requirements <span style={{ fontWeight: 400, color: '#94A3B8' }}>(optional)</span></label>
+          <label style={labelStyle}>Constraints or Requirements <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
           <textarea
             value={data.constraints || ''}
             onChange={e => onChange('constraints', e.target.value)}
@@ -320,7 +320,7 @@ function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
         </div>
 
         <div>
-          <label style={labelStyle}>Anything Else? <span style={{ fontWeight: 400, color: '#94A3B8' }}>(optional)</span></label>
+          <label style={labelStyle}>Anything Else? <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
           <textarea
             value={data.notes || ''}
             onChange={e => onChange('notes', e.target.value)}
@@ -416,31 +416,31 @@ export default function IntakePage() {
               <CheckCircle size={36} color="#15803D" strokeWidth={1.5} />
             </div>
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#1E293B', marginBottom: '10px' }}>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '10px' }}>
             Your trip is submitted!
           </h1>
-          <p style={{ color: '#64748B', marginBottom: '32px', lineHeight: '1.6', fontSize: '15px' }}>
+          <p style={{ color: 'var(--color-text-muted)', marginBottom: '32px', lineHeight: '1.6', fontSize: '15px' }}>
             Our team will start crafting your personalised itinerary. We've sent your login details to your email — check your inbox.
           </p>
 
           <div style={{
-            background: '#1E293B',
+            background: 'var(--color-text)',
             borderRadius: '16px',
             padding: '24px',
             textAlign: 'left',
             marginBottom: '24px',
             color: 'white',
           }}>
-            <div style={{ fontSize: '11px', color: '#64748B', marginBottom: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
               Your Portal Login
             </div>
             <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '2px' }}>Email</div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Email</div>
               <div style={{ fontSize: '15px', fontWeight: 600 }}>{success.email}</div>
             </div>
             <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '2px' }}>Reference Code</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '4px', color: '#F97316' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Reference Code</div>
+              <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '4px', color: 'var(--color-primary)' }}>
                 {success.reference_code}
               </div>
             </div>
@@ -466,7 +466,7 @@ export default function IntakePage() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              background: '#F97316',
+              background: 'var(--color-primary)',
               color: 'white',
               padding: '14px 32px',
               borderRadius: '12px',
@@ -488,12 +488,12 @@ export default function IntakePage() {
         {/* Hero */}
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-            <PapayaLogo size={52} />
+            <PapayaLogo size={110} />
           </div>
-          <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1E293B', marginBottom: '10px', lineHeight: '1.2' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '10px', lineHeight: '1.2' }}>
             Plan your perfect trip
           </h1>
-          <p style={{ color: '#64748B', fontSize: '15px', lineHeight: '1.5' }}>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '15px', lineHeight: '1.5' }}>
             Tell us about your dream journey and we'll craft a personalised itinerary just for you.
           </p>
         </div>
@@ -508,7 +508,7 @@ export default function IntakePage() {
               left: '16px',
               right: '16px',
               height: '2px',
-              background: '#E2E8F0',
+              background: 'var(--color-border)',
               zIndex: 0,
             }} />
             {/* Progress line */}
@@ -518,7 +518,7 @@ export default function IntakePage() {
               left: '16px',
               width: step === 1 ? '0%' : step === 2 ? '50%' : '100%',
               height: '2px',
-              background: '#F97316',
+              background: 'var(--color-primary)',
               zIndex: 1,
               transition: 'width 0.3s ease',
             }} />
@@ -533,9 +533,9 @@ export default function IntakePage() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: done ? '#F97316' : active ? '#FFF7ED' : 'white',
-                    border: `2px solid ${done || active ? '#F97316' : '#E2E8F0'}`,
-                    color: done ? 'white' : active ? '#F97316' : '#94A3B8',
+                    background: done ? 'var(--color-primary)' : active ? 'var(--color-accent)' : 'white',
+                    border: `2px solid ${done || active ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                    color: done ? 'white' : active ? 'var(--color-primary)' : 'var(--color-text-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -549,7 +549,7 @@ export default function IntakePage() {
                   <div style={{
                     fontSize: '11px',
                     fontWeight: active ? 700 : 500,
-                    color: active ? '#F97316' : done ? '#64748B' : '#94A3B8',
+                    color: active ? 'var(--color-primary)' : done ? 'var(--color-text-muted)' : 'var(--color-text-muted)',
                     whiteSpace: 'nowrap',
                   }}>
                     {label}
@@ -563,7 +563,7 @@ export default function IntakePage() {
         {/* Form card */}
         <div style={{
           background: 'white',
-          border: '1.5px solid #E2E8F0',
+          border: '1.5px solid var(--color-border)',
           borderRadius: '16px',
           padding: '32px',
           boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
@@ -600,8 +600,8 @@ export default function IntakePage() {
                   alignItems: 'center',
                   gap: '6px',
                   background: 'white',
-                  border: '1.5px solid #E2E8F0',
-                  color: '#475569',
+                  border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-text-muted)',
                   padding: '11px 20px',
                   borderRadius: '10px',
                   fontSize: '14px',
@@ -621,7 +621,7 @@ export default function IntakePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: '#F97316',
+                  background: 'var(--color-primary)',
                   color: 'white',
                   border: 'none',
                   padding: '11px 24px',
@@ -642,7 +642,7 @@ export default function IntakePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: loading ? '#E2E8F0' : '#F97316',
+                  background: loading ? 'var(--color-border)' : 'var(--color-primary)',
                   color: 'white',
                   border: 'none',
                   padding: '11px 24px',
@@ -659,9 +659,9 @@ export default function IntakePage() {
           </div>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#94A3B8' }}>
+        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: 'var(--color-text-muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#F97316', fontWeight: 600, textDecoration: 'none' }}>
+          <Link to="/login" style={{ color: 'var(--color-primary)', fontWeight: 600, textDecoration: 'none' }}>
             Log in here
           </Link>
         </p>
