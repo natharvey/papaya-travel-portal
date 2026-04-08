@@ -317,9 +317,9 @@ export default function ItineraryTimeline({ data }: Props) {
           </div>
 
           <div style={{ padding: '16px' }}>
-            <TimeBlock period="Morning" block={selectedDay.morning} />
-            <TimeBlock period="Afternoon" block={selectedDay.afternoon} />
-            <TimeBlock period="Evening" block={selectedDay.evening} />
+            {selectedDay.morning && <TimeBlock period="Morning" block={selectedDay.morning} />}
+            {selectedDay.afternoon && <TimeBlock period="Afternoon" block={selectedDay.afternoon} />}
+            {selectedDay.evening && <TimeBlock period="Evening" block={selectedDay.evening} />}
 
             {selectedDay.notes?.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
@@ -496,9 +496,9 @@ function buildCopyText(data: ItineraryJSON): string {
     lines.push('## Itinerary')
     data.day_plans.forEach(day => {
       lines.push(`### Day ${day.day_number} — ${day.date} | ${day.location_base}`)
-      lines.push(`Morning: ${day.morning.title} — ${day.morning.details}`)
-      lines.push(`Afternoon: ${day.afternoon.title} — ${day.afternoon.details}`)
-      lines.push(`Evening: ${day.evening.title} — ${day.evening.details}`)
+      if (day.morning) lines.push(`Morning: ${day.morning.title} — ${day.morning.details}`)
+      if (day.afternoon) lines.push(`Afternoon: ${day.afternoon.title} — ${day.afternoon.details}`)
+      if (day.evening) lines.push(`Evening: ${day.evening.title} — ${day.evening.details}`)
       if (day.notes?.length) day.notes.forEach(n => lines.push(`Note: ${n}`))
       lines.push('')
     })
