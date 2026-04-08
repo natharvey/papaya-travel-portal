@@ -55,3 +55,7 @@ dist/
 .DS_Store
 Thumbs.db
 .claude/
+memory/
+
+# AWS — contains secrets, use AWS Secrets Manager in production
+task-definition.json

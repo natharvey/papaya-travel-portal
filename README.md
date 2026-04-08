@@ -2,6 +2,22 @@
 
 A production-ready travel planning portal for Australian travellers. Clients submit trip enquiries and admins generate AI-powered personalised itineraries using OpenAI GPT-4o. Clients review, request changes, and approve their itinerary through a structured workflow, communicating with the team via an in-portal messaging system.
 
+**Live:** http://papaya-alb-1789522533.us-east-1.elb.amazonaws.com
+
+## Features
+
+- **AI itinerary generation** — GPT-4o produces structured day-by-day itineraries with costs, activities, transport notes and packing lists
+- **Screenshot scanning** — upload a flight or hotel booking screenshot; GPT-4o vision extracts all details and auto-fills the form
+- **Flight management** — add flights manually, look up live data via AeroDataBox, or scan booking screenshots; multi-leg support with automatic date ordering
+- **Accommodation management** — add stays with check-in/out details; scan hotel confirmation screenshots to auto-fill
+- **S3 document storage** — admins and clients upload trip documents (PDFs, images) stored in AWS S3; clients can delete their own uploads
+- **Magic link login** — clients receive a one-click login link by email; falls back to email + reference code
+- **PDF itinerary export** — clients download a branded PDF of their itinerary
+- **Real-time messaging** — in-portal message thread between admin and client with email notifications and unread badges
+- **Countdown timer** — trip cards show days until departure
+- **Interactive flight map** — visual route map on the client portal
+- **CloudWatch dashboard** — live monitoring of request counts, response times, errors, ECS CPU/memory and RDS metrics
+
 ---
 
 ## Quick Start (One Command)
@@ -103,7 +119,8 @@ INTAKE → DRAFT → REVIEW → CONFIRMED → ARCHIVED
 - `app/services/ai.py` — GPT-4o generation with retry logic (3 attempts, exponential backoff)
 - `app/services/email.py` — Gmail SMTP with branded HTML templates for all notification types
 - `app/services/retrieval.py` — Destination card retrieval for AI context injection
-- `app/services/seed.py` — Seeds 35 destination cards on startup
+- `app/services/s3.py` — S3 upload, list, delete and presigned download URL helpers
+- `app/services/seed.py` — Seeds 35 destination cards and a polished demo trip on startup
 - `alembic/` — Database migration history
 
 **Frontend (`/web`)**
@@ -207,6 +224,15 @@ Full interactive documentation at http://localhost:8000/docs
 | GET | `/admin/trips/{id}/messages` | Admin JWT | Get messages |
 | POST | `/admin/trips/{id}/messages/read` | Admin JWT | Mark client messages as read |
 | POST | `/admin/trips/{id}/messages` | Admin JWT | Send admin message |
+| GET | `/admin/trips/{id}/documents` | Admin JWT | List trip documents from S3 |
+| POST | `/admin/trips/{id}/documents` | Admin JWT | Upload document to S3 |
+| GET | `/admin/trips/{id}/documents/download-url` | Admin JWT | Get presigned S3 download URL |
+| DELETE | `/admin/trips/{id}/documents` | Admin JWT | Delete document from S3 |
+| POST | `/admin/parse-screenshot` | Admin JWT | Parse flight/stay screenshot with GPT-4o vision |
+| GET | `/admin/flights/lookup` | Admin JWT | Look up live flight data via AeroDataBox |
+| GET | `/client/trips/{id}/documents` | Client JWT | List trip documents |
+| POST | `/client/trips/{id}/documents` | Client JWT | Upload document (client prefix) |
+| DELETE | `/client/trips/{id}/documents` | Client JWT | Delete own document only |
 | GET | `/health` | None | Health check (includes DB ping) |
 
 ---
@@ -243,9 +269,7 @@ VITE_API_URL=http://localhost:8000 npm run dev
 
 ## AWS Deployment
 
-The app is deployed on AWS using ECS Fargate, RDS, ECR, ALB, and CloudWatch.
-
-**Live URL:** http://papaya-alb-1789522533.us-east-1.elb.amazonaws.com
+The app is deployed on AWS using ECS Fargate, RDS, ECR, ALB, S3, and CloudWatch.
 
 ### Infrastructure
 
@@ -255,7 +279,8 @@ The app is deployed on AWS using ECS Fargate, RDS, ECR, ALB, and CloudWatch.
 | Container runtime | ECS Fargate (Elastic Container Service) | Runs containers without managing EC2 instances |
 | Database | RDS PostgreSQL (Relational Database Service) | Managed Postgres — `papaya-db.c230y8k047wv.us-east-1.rds.amazonaws.com` |
 | Load balancer | ALB (Application Load Balancer) | Stable public URL, routes traffic to ECS tasks |
-| Logging | CloudWatch | Container logs at `/ecs/papaya` |
+| File storage | S3 | Private bucket for trip documents; presigned URLs for secure downloads |
+| Logging & monitoring | CloudWatch | Container logs at `/ecs/papaya`; production dashboard with request counts, error rates, ECS and RDS metrics |
 
 ### Deploying a New Version
 
@@ -281,6 +306,7 @@ aws ecs update-service --cluster papaya-cluster --service papaya-service --force
 - [ ] Register a custom domain and point it at the ALB via Route 53
 - [ ] Add HTTPS via AWS Certificate Manager (ACM) — request a free SSL certificate, attach to ALB listener on port 443
 - [ ] Update `CORS_ORIGINS` and `PORTAL_URL` environment variables to the custom domain
+- [ ] Move secrets from task definition environment variables to AWS Secrets Manager
 - [ ] Enable RDS automated backups (currently set to 1 day retention — increase for production)
 - [ ] Switch to multi-AZ RDS for high availability
 
