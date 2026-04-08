@@ -22,8 +22,8 @@ aws ecr get-login-password --region $AWS_REGION \
 
 build_api() {
   echo ""
-  echo "==> Building API image..."
-  docker build -t papaya-api ./api
+  echo "==> Building API image (linux/amd64)..."
+  docker build --platform linux/amd64 -t papaya-api ./api
   docker tag papaya-api:latest $ECR_BASE/papaya-api:latest
   echo "==> Pushing API image..."
   docker push $ECR_BASE/papaya-api:latest
@@ -31,8 +31,8 @@ build_api() {
 
 build_web() {
   echo ""
-  echo "==> Building web image..."
-  docker build -t papaya-web ./web
+  echo "==> Building web image (linux/amd64)..."
+  docker build --platform linux/amd64 -t papaya-web ./web
   docker tag papaya-web:latest $ECR_BASE/papaya-web:latest
   echo "==> Pushing web image..."
   docker push $ECR_BASE/papaya-web:latest
