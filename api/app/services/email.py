@@ -38,6 +38,56 @@ def _send(to: str, subject: str, html: str, plain: str) -> None:
         logger.error("Failed to send email to %s: %s", to, e)
 
 
+def send_magic_link_email(to: str, client_name: str, magic_link: str) -> None:
+    """Send a standalone login link email (no reference code)."""
+    subject = "Your Papaya Travel login link"
+
+    plain = f"""Hi {client_name},
+
+Here is your one-click login link for the Papaya Travel portal:
+
+{magic_link}
+
+This link expires in 1 hour and can only be used once.
+
+If you didn't request this, you can safely ignore this email.
+
+The Papaya Travel Team
+"""
+
+    html = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
+  <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
+    <h1 style="color: #F97316; margin: 0;">Papaya Travel</h1>
+  </div>
+
+  <p>Hi {client_name},</p>
+
+  <p>Click the button below to log in to your Papaya Travel portal:</p>
+
+  <p>
+    <a href="{magic_link}"
+       style="background: #F97316; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 700; font-size: 15px;">
+      Log in to your portal
+    </a>
+  </p>
+
+  <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;">This link expires in 1 hour and can only be used once.</p>
+
+  <p style="font-size: 13px; color: #94A3B8; margin-top: 32px;">
+    If you didn't request this, you can safely ignore this email.
+  </p>
+
+  <p>The Papaya Travel Team</p>
+</body>
+</html>
+"""
+
+    _send(to, subject, html, plain)
+
+
 def send_intake_confirmation(
     to: str,
     client_name: str,

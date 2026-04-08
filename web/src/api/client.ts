@@ -84,6 +84,11 @@ export async function resendReferenceCode(email: string): Promise<{ message: str
   return res.data
 }
 
+export async function requestMagicLink(email: string): Promise<{ message: string }> {
+  const res = await api.post<{ message: string }>('/auth/request-magic-link', { email })
+  return res.data
+}
+
 // ─── Intake ──────────────────────────────────────────────────────────────────
 
 export async function submitIntake(payload: IntakeCreatePayload): Promise<IntakeSubmitResponse> {

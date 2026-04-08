@@ -62,7 +62,7 @@ export default function MagicLoginPage() {
               fontWeight: 600,
             }}
           >
-            Log in with your reference code instead →
+            Request a new login link →
           </a>
         </div>
       ) : (

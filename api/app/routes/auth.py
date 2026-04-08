@@ -10,14 +10,14 @@ from app.limiter import limiter
 from app.db import get_db
 from app.models import Client, LoginToken
 from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse, ResendReferenceRequest
-from app.services.email import send_intake_confirmation
+from app.services.email import send_intake_confirmation, send_magic_link_email
 from app.security import verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
 ALGORITHM = "HS256"
-CLIENT_TOKEN_EXPIRE_HOURS = 24
+CLIENT_TOKEN_EXPIRE_HOURS = 168  # 7 days
 ADMIN_TOKEN_EXPIRE_HOURS = 8
 
 # Set at startup by main.py lifespan — never holds plain text
@@ -86,6 +86,22 @@ def resend_reference(request: Request, payload: ResendReferenceRequest, db: Sess
     return {"message": f"Your reference code has been sent to {client.email}. Please check your inbox."}
 
 
+@router.post("/request-magic-link")
+@limiter.limit("5/minute")
+def request_magic_link(request: Request, payload: ResendReferenceRequest, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.email == payload.email).first()
+    if not client:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with that email address. Please check the address or submit a new trip enquiry.",
+        )
+    magic_token = create_magic_token(db, client.id)
+    portal_url = os.getenv("PORTAL_URL", "http://localhost:5173")
+    magic_link = f"{portal_url}/magic/{magic_token}"
+    send_magic_link_email(to=client.email, client_name=client.name, magic_link=magic_link)
+    return {"message": f"A login link has been sent to {client.email}. Please check your inbox."}
+
+
 @router.post("/admin-login", response_model=TokenResponse)
 @limiter.limit("5/minute")
 def admin_login(request: Request, payload: AdminLoginRequest):
@@ -117,7 +133,7 @@ def magic_login(request: Request, token: str, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This login link has expired or has already been used. Please log in with your email and reference code.",
+            detail="This login link has expired or has already been used. Please request a new one from the login page.",
         )
     record.used = True
     db.commit()
