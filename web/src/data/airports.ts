@@ -15,6 +15,17 @@ const AIRPORTS: Record<string, [number, number]> = {
   HBA: [147.510, -42.8361],
   TSV: [146.765, -19.2525],
   MCY: [153.091, -26.6033],
+  PPP: [148.552, -20.4950],  // Proserpine / Whitsunday Coast
+  HTI: [148.952, -20.3581],  // Hamilton Island
+  MKY: [149.180, -21.1717],  // Mackay
+  ROK: [150.475, -23.3819],  // Rockhampton
+  BME: [122.232, -17.9450],  // Broome
+  KTA: [116.773, -20.7122],  // Karratha
+  PHE: [118.626, -20.3778],  // Port Hedland
+  LST: [147.214, -41.5451],  // Launceston
+  MQL: [142.086, -34.2292],  // Mildura
+  NTL: [151.834, -32.7950],  // Newcastle
+  AVV: [144.470, -38.0394],  // Avalon (Geelong)
   // New Zealand
   AKL: [174.792, -37.0082],
   CHC: [172.532, -43.4894],
@@ -75,40 +86,84 @@ const AIRPORTS: Record<string, [number, number]> = {
   // Europe
   LHR: [-0.4543, 51.4775],
   LGW: [-0.1821, 51.1537],
+  LCY: [-0.0553, 51.5053],  // London City
+  STN: [0.2350, 51.8850],   // London Stansted
+  EDI: [-3.3725, 55.9500],  // Edinburgh
+  GLA: [-4.4331, 55.8642],  // Glasgow
+  ABZ: [-2.1978, 57.2019],  // Aberdeen
+  BHD: [-5.8725, 54.6181],  // Belfast City
+  MAN: [-2.2750, 53.3537],  // Manchester
+  BHX: [-1.7480, 52.4539],  // Birmingham
+  BRS: [-2.7191, 51.3827],  // Bristol
+  NCL: [-1.6917, 54.8425],  // Newcastle
   CDG: [2.5479, 49.0097],
+  ORY: [2.3597, 48.7233],   // Paris Orly
   AMS: [4.7641, 52.3086],
   FRA: [8.5706, 50.0333],
+  DUS: [6.7668, 51.2895],   // Düsseldorf
+  HAM: [10.0069, 53.6304],  // Hamburg
+  TXL: [13.2877, 52.5597],  // Berlin Tegel (legacy)
+  BER: [13.5107, 52.3667],  // Berlin Brandenburg
   MUC: [11.7861, 48.3538],
   ZRH: [8.5492, 47.4647],
+  GVA: [6.1092, 46.2381],   // Geneva
   VIE: [16.5697, 48.1103],
   MAD: [-3.5673, 40.4936],
   BCN: [2.0785, 41.2971],
+  AGP: [-4.4991, 36.6749],  // Malaga
+  PMI: [2.7388, 39.5517],   // Palma de Mallorca
   FCO: [12.2389, 41.8003],
   MXP: [8.7231, 45.6306],
+  VCE: [12.3519, 45.5053],  // Venice
+  NAP: [14.2908, 40.8860],  // Naples
+  FLR: [11.2051, 43.8100],  // Florence
   ATH: [23.9445, 37.9364],
+  SKG: [22.9709, 40.5197],  // Thessaloniki
   IST: [28.8141, 40.9769],
+  SAW: [29.3092, 40.8986],  // Istanbul Sabiha
   CPH: [12.6561, 55.6180],
   ARN: [17.9186, 59.6519],
   OSL: [11.1004, 60.1939],
+  BGO: [5.2181, 60.2934],   // Bergen
+  TRD: [10.9260, 63.4578],  // Trondheim
   HEL: [24.9633, 60.3172],
   DUB: [-6.2700, 53.4213],
   BRU: [4.4844, 50.9014],
   LIS: [-9.1354, 38.7813],
   OPO: [-8.6814, 41.2481],
+  FAO: [-7.9659, 37.0144],  // Faro
   PRG: [14.2600, 50.1008],
   BUD: [19.2556, 47.4298],
   WAW: [20.9671, 52.1657],
+  KRK: [19.7848, 50.0778],  // Kraków
+  SOF: [23.4114, 42.6953],  // Sofia
+  OTP: [26.1022, 44.5711],  // Bucharest
+  RIX: [23.9711, 56.9236],  // Riga
+  TLL: [24.8328, 59.4133],  // Tallinn
+  VNO: [25.2858, 54.6341],  // Vilnius
+  REK: [-22.6056, 63.9850], // Reykjavik
   // North America
   LAX: [-118.408, 33.9425],
   SFO: [-122.375, 37.6189],
   JFK: [-73.7789, 40.6413],
   EWR: [-74.1745, 40.6895],
   ORD: [-87.9048, 41.9742],
+  ATL: [-84.4277, 33.6367],  // Atlanta
+  DFW: [-97.0403, 32.8998],  // Dallas/Fort Worth
+  DEN: [-104.673, 39.8561],  // Denver
+  PHX: [-112.012, 33.4373],  // Phoenix
+  MSP: [-93.2218, 44.8848],  // Minneapolis
+  BOS: [-71.0052, 42.3656],  // Boston
+  IAD: [-77.4558, 38.9531],  // Washington Dulles
+  DCA: [-77.0377, 38.8521],  // Washington Reagan
   MIA: [-80.2870, 25.7959],
   LAS: [-115.152, 36.0840],
   SEA: [-122.311, 47.4502],
   YVR: [-123.184, 49.1967],
   YYZ: [-79.6248, 43.6777],
+  YUL: [-73.7408, 45.4706],  // Montreal
+  YYC: [-114.021, 51.1314],  // Calgary
+  HNL: [-157.922, 21.3187],  // Honolulu
   // South America
   GRU: [-46.4731, -23.4356],
   EZE: [-58.5358, -34.8222],
