@@ -12,7 +12,7 @@ import sentry_sdk
 from pathlib import Path
 from app.db import engine, Base, SessionLocal, DATABASE_URL
 from app.routes import auth, intake, client, admin
-from app.services.seed import seed_destinations, seed_demo_trip
+from app.services.seed import seed_destinations, seed_demo_trip, seed_sarah_trips
 from app.security import hash_password
 
 sentry_dsn = os.getenv("SENTRY_DSN", "")
@@ -62,6 +62,7 @@ async def lifespan(app: FastAPI):
         try:
             seed_destinations(db)
             seed_demo_trip(db)
+            seed_sarah_trips(db)
         finally:
             db.close()
     yield
