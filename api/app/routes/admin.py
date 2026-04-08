@@ -18,6 +18,7 @@ from app.schemas import (
     ItineraryOut, RegenerateRequest, FlightCreate, FlightOut, StayCreate, StayOut,
 )
 from app.services.ai import generate_itinerary
+from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
 from app.services.email import send_itinerary_for_review, send_new_message_to_client
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -488,3 +489,64 @@ def delete_stay(
         raise HTTPException(status_code=404, detail="Stay not found")
     db.delete(stay)
     db.commit()
+
+
+# ─── Documents ───────────────────────────────────────────────────────────────
+
+@router.get("/trips/{trip_id}/documents")
+def admin_list_documents(
+    trip_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return list_documents(str(trip_id))
+
+
+@router.post("/trips/{trip_id}/documents", status_code=201)
+async def admin_upload_document(
+    trip_id: uuid.UUID,
+    file: UploadFile = File(...),
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large — maximum 10MB")
+    key = upload_document(str(trip_id), file.filename or "upload", contents, file.content_type or "application/octet-stream", "admin")
+    return {"key": key}
+
+
+@router.get("/trips/{trip_id}/documents/download-url")
+def admin_download_url(
+    trip_id: uuid.UUID,
+    key: str = Query(...),
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if not key.startswith(f"trips/{trip_id}/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    return {"url": get_download_url(key)}
+
+
+@router.delete("/trips/{trip_id}/documents", status_code=204)
+def admin_delete_document(
+    trip_id: uuid.UUID,
+    key: str = Query(...),
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if not key.startswith(f"trips/{trip_id}/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    delete_document(key)

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import Layout from '../components/Layout'
@@ -8,7 +8,7 @@ import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download } from 'lucide-react'
 import FlightMap from '../components/FlightMap'
-import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, getApiError } from '../api/client'
+import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, type TripDocument } from '../api/client'
 import type { TripDetail, Message } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -50,9 +50,12 @@ export default function TripDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'messages' | 'details'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'messages' | 'details' | 'documents'>('itinerary')
+  const [documents, setDocuments] = useState<TripDocument[]>([])
+  const [docUploading, setDocUploading] = useState(false)
+  const [docError, setDocError] = useState('')
 
-  function switchTab(next: 'itinerary' | 'messages' | 'details') {
+  function switchTab(next: 'itinerary' | 'messages' | 'details' | 'documents') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markClientMessagesRead(tripId)
@@ -76,6 +79,7 @@ export default function TripDetailPage() {
       })
       .catch(e => setError(getApiError(e)))
       .finally(() => setLoading(false))
+    listClientDocuments(tripId).then(setDocuments).catch(() => {})
   }, [tripId])
 
   async function handleConfirm() {
@@ -106,6 +110,43 @@ export default function TripDetailPage() {
       setChangesError(getApiError(e))
     } finally {
       setRequestingChanges(false)
+    }
+  }
+
+  async function handleClientUploadDocument(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !tripId) return
+    e.target.value = ''
+    setDocUploading(true)
+    setDocError('')
+    try {
+      await uploadClientDocument(tripId, file)
+      const updated = await listClientDocuments(tripId)
+      setDocuments(updated)
+    } catch (e) {
+      setDocError(getApiError(e))
+    } finally {
+      setDocUploading(false)
+    }
+  }
+
+  async function handleClientDownloadDocument(key: string) {
+    if (!tripId) return
+    try {
+      const url = await getClientDocumentUrl(tripId, key)
+      window.open(url, '_blank')
+    } catch (e) {
+      setDocError(getApiError(e))
+    }
+  }
+
+  async function handleClientDeleteDocument(key: string) {
+    if (!tripId || !window.confirm('Delete this document?')) return
+    try {
+      await deleteClientDocument(tripId, key)
+      setDocuments(prev => prev.filter(d => d.key !== key))
+    } catch (e) {
+      setDocError(getApiError(e))
     }
   }
 
@@ -250,6 +291,7 @@ export default function TripDetailPage() {
               })()}
             </div>
             <TabButton label="Trip Details" active={tab === 'details'} onClick={() => switchTab('details')} />
+            <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
           </div>
 
           <div style={{ padding: '28px' }}>
@@ -618,6 +660,68 @@ export default function TripDetailPage() {
                   </div>
                 ) : (
                   <p style={{ color: 'var(--color-text-muted)' }}>No intake details found.</p>
+                )}
+              </div>
+            )}
+
+            {tab === 'documents' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>Documents</h3>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: 'var(--color-primary)', color: 'white',
+                    padding: '8px 16px', borderRadius: 'var(--radius)',
+                    fontSize: '13px', fontWeight: 600, cursor: docUploading ? 'default' : 'pointer',
+                    opacity: docUploading ? 0.7 : 1,
+                  }}>
+                    <input type="file" onChange={handleClientUploadDocument} style={{ display: 'none' }} disabled={docUploading} />
+                    {docUploading ? '⏳ Uploading...' : '+ Upload Document'}
+                  </label>
+                </div>
+                {docError && (
+                  <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '12px' }}>{docError}</p>
+                )}
+                {documents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                    <p style={{ fontSize: '14px' }}>No documents yet.</p>
+                    <p style={{ fontSize: '13px', marginTop: '4px' }}>Upload your passport, insurance certificate, visa approval or any other trip documents.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {documents.map(doc => (
+                      <div key={doc.key} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: '#F8FAFC', border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius)', padding: '12px 16px', gap: '12px',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {doc.filename}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                            {doc.uploaded_by === 'admin' ? 'Uploaded by Papaya Team' : 'Uploaded by you'} · {(doc.size / 1024).toFixed(0)} KB · {new Date(doc.uploaded_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleClientDownloadDocument(doc.key)}
+                            style={{ background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: 'var(--radius)', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Download
+                          </button>
+                          {doc.uploaded_by === 'client' && (
+                            <button
+                              onClick={() => handleClientDeleteDocument(doc.key)}
+                              style={{ background: 'white', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 'var(--radius)', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

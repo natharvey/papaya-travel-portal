@@ -21,9 +21,14 @@ import {
   updateStay,
   deleteStay,
   parseScreenshot,
+  listAdminDocuments,
+  uploadAdminDocument,
+  getAdminDocumentUrl,
+  deleteAdminDocument,
   getApiError,
   type FlightPayload,
   type StayPayload,
+  type TripDocument,
 } from '../api/client'
 import type { TripDetail, Itinerary, Message, Flight, Stay } from '../types'
 
@@ -152,9 +157,9 @@ export default function AdminTripPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents'>('itinerary')
 
-  function switchTab(next: 'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays') {
+  function switchTab(next: 'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markAdminMessagesRead(tripId)
@@ -200,6 +205,11 @@ export default function AdminTripPage() {
   const [stayError, setStayError] = useState('')
   const [stayScanning, setStayScanning] = useState(false)
 
+  // Documents
+  const [documents, setDocuments] = useState<TripDocument[]>([])
+  const [docUploading, setDocUploading] = useState(false)
+  const [docError, setDocError] = useState('')
+
   // Itinerary generation
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState('')
@@ -214,6 +224,7 @@ export default function AdminTripPage() {
         setMessages(data.messages)
         setFlights((data.flights || []).slice().sort((a, b) => (a.departure_time || '').localeCompare(b.departure_time || '')))
         setStays((data.stays || []).slice().sort((a, b) => (a.check_in || '').localeCompare(b.check_in || '')))
+        listAdminDocuments(tripId).then(setDocuments).catch(() => {})
         setNotes(data.admin_notes || '')
         if (data.itineraries.length > 0) {
           const latest = Math.max(...data.itineraries.map(i => i.version))
@@ -553,6 +564,43 @@ export default function AdminTripPage() {
     }
   }
 
+  async function handleUploadDocument(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !tripId) return
+    e.target.value = ''
+    setDocUploading(true)
+    setDocError('')
+    try {
+      await uploadAdminDocument(tripId, file)
+      const updated = await listAdminDocuments(tripId)
+      setDocuments(updated)
+    } catch (e) {
+      setDocError(getApiError(e))
+    } finally {
+      setDocUploading(false)
+    }
+  }
+
+  async function handleDownloadDocument(key: string) {
+    if (!tripId) return
+    try {
+      const url = await getAdminDocumentUrl(tripId, key)
+      window.open(url, '_blank')
+    } catch (e) {
+      setDocError(getApiError(e))
+    }
+  }
+
+  async function handleDeleteDocument(key: string) {
+    if (!tripId || !window.confirm('Delete this document?')) return
+    try {
+      await deleteAdminDocument(tripId, key)
+      setDocuments(prev => prev.filter(d => d.key !== key))
+    } catch (e) {
+      setDocError(getApiError(e))
+    }
+  }
+
   async function handleSendMessage(body: string) {
     if (!tripId) return
     setSendMessageError('')
@@ -704,6 +752,7 @@ export default function AdminTripPage() {
             <TabButton label="Accommodation" active={tab === 'stays'} onClick={() => switchTab('stays')} />
             <TabButton label="Intake" active={tab === 'intake'} onClick={() => switchTab('intake')} />
             <TabButton label="Notes" active={tab === 'notes'} onClick={() => switchTab('notes')} />
+            <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <TabButton
                 label={`Messages (${messages.length})`}
@@ -1401,6 +1450,67 @@ export default function AdminTripPage() {
                     {notesSaving ? 'Saving...' : 'Save Notes'}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {tab === 'documents' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>Documents</h3>
+                  <label style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: 'var(--color-primary)', color: 'white',
+                    padding: '8px 16px', borderRadius: 'var(--radius)',
+                    fontSize: '13px', fontWeight: 600, cursor: docUploading ? 'default' : 'pointer',
+                    opacity: docUploading ? 0.7 : 1,
+                  }}>
+                    <input type="file" onChange={handleUploadDocument} style={{ display: 'none' }} disabled={docUploading} />
+                    {docUploading ? <LoadingSpinner size={13} color="white" label="" /> : <Plus size={13} strokeWidth={2.5} />}
+                    {docUploading ? 'Uploading...' : 'Upload Document'}
+                  </label>
+                </div>
+                {docError && (
+                  <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '12px' }}>{docError}</p>
+                )}
+                {documents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
+                    <p style={{ fontSize: '14px' }}>No documents uploaded yet.</p>
+                    <p style={{ fontSize: '13px', marginTop: '4px' }}>Upload booking confirmations, visas, insurance certificates and more.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {documents.map(doc => (
+                      <div key={doc.key} style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: 'white', border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius)', padding: '12px 16px', gap: '12px',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {doc.filename}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                            Uploaded by {doc.uploaded_by === 'admin' ? 'Admin' : 'Client'} · {(doc.size / 1024).toFixed(0)} KB · {new Date(doc.uploaded_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleDownloadDocument(doc.key)}
+                            style={{ background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: 'var(--radius)', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Download
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDocument(doc.key)}
+                            style={{ background: 'white', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 'var(--radius)', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={13} strokeWidth={2} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

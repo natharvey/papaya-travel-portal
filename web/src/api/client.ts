@@ -257,6 +257,62 @@ export async function deleteStay(tripId: string, stayId: string): Promise<void> 
   await api.delete(`/admin/trips/${tripId}/stays/${stayId}`)
 }
 
+// ─── Documents ───────────────────────────────────────────────────────────────
+
+export interface TripDocument {
+  key: string
+  filename: string
+  size: number
+  uploaded_at: string
+  uploaded_by: 'admin' | 'client'
+}
+
+export async function listAdminDocuments(tripId: string): Promise<TripDocument[]> {
+  const res = await api.get<TripDocument[]>(`/admin/trips/${tripId}/documents`)
+  return res.data
+}
+
+export async function uploadAdminDocument(tripId: string, file: File): Promise<{ key: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await api.post<{ key: string }>(`/admin/trips/${tripId}/documents`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
+}
+
+export async function getAdminDocumentUrl(tripId: string, key: string): Promise<string> {
+  const res = await api.get<{ url: string }>(`/admin/trips/${tripId}/documents/download-url`, { params: { key } })
+  return res.data.url
+}
+
+export async function deleteAdminDocument(tripId: string, key: string): Promise<void> {
+  await api.delete(`/admin/trips/${tripId}/documents`, { params: { key } })
+}
+
+export async function listClientDocuments(tripId: string): Promise<TripDocument[]> {
+  const res = await api.get<TripDocument[]>(`/client/trips/${tripId}/documents`)
+  return res.data
+}
+
+export async function uploadClientDocument(tripId: string, file: File): Promise<{ key: string }> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await api.post<{ key: string }>(`/client/trips/${tripId}/documents`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data
+}
+
+export async function getClientDocumentUrl(tripId: string, key: string): Promise<string> {
+  const res = await api.get<{ url: string }>(`/client/trips/${tripId}/documents/download-url`, { params: { key } })
+  return res.data.url
+}
+
+export async function deleteClientDocument(tripId: string, key: string): Promise<void> {
+  await api.delete(`/client/trips/${tripId}/documents`, { params: { key } })
+}
+
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 export function getApiError(error: unknown): string {

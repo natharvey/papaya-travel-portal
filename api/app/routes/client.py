@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from jose import jwt, JWTError
@@ -13,6 +13,7 @@ from app.schemas import (
     TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut, FlightOut
 )
 from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
+from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
 
 router = APIRouter(prefix="/client", tags=["client"])
 security = HTTPBearer()
@@ -213,3 +214,64 @@ def send_message(
         message_body=payload.body,
     )
     return MessageOut.model_validate(msg)
+
+
+# ─── Documents ───────────────────────────────────────────────────────────────
+
+@router.get("/trips/{trip_id}/documents")
+def client_list_documents(
+    trip_id: uuid.UUID,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return list_documents(str(trip_id))
+
+
+@router.post("/trips/{trip_id}/documents", status_code=201)
+async def client_upload_document(
+    trip_id: uuid.UUID,
+    file: UploadFile = File(...),
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large — maximum 10MB")
+    key = upload_document(str(trip_id), file.filename or "upload", contents, file.content_type or "application/octet-stream", "client")
+    return {"key": key}
+
+
+@router.get("/trips/{trip_id}/documents/download-url")
+def client_download_url(
+    trip_id: uuid.UUID,
+    key: str = Query(...),
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if not key.startswith(f"trips/{trip_id}/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    return {"url": get_download_url(key)}
+
+
+@router.delete("/trips/{trip_id}/documents", status_code=204)
+def client_delete_document(
+    trip_id: uuid.UUID,
+    key: str = Query(...),
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if not key.startswith(f"trips/{trip_id}/client/"):
+        raise HTTPException(status_code=403, detail="You can only delete your own documents")
+    delete_document(key)
