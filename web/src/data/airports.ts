@@ -1,4 +1,3 @@
-Total IATA airports: 7914
 // Auto-generated from mwgg/Airports dataset — all IATA airports with coordinates
 // [longitude, latitude]
 const AIRPORTS: Record<string, [number, number]> = {
