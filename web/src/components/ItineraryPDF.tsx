@@ -190,9 +190,9 @@ interface DayPlan {
   day_number: number
   date: string
   location_base: string
-  morning: TimeBlock
-  afternoon: TimeBlock
-  evening: TimeBlock
+  morning: TimeBlock | null
+  afternoon: TimeBlock | null
+  evening: TimeBlock | null
   notes: string[]
 }
 
@@ -294,9 +294,9 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
               <Text style={styles.dayTitle}>Day {day.day_number} — {day.date}</Text>
               <Text style={styles.dayLocation}>{day.location_base}</Text>
             </View>
-            <TimeBlockView period="Morning" block={day.morning} />
-            <TimeBlockView period="Afternoon" block={day.afternoon} />
-            <TimeBlockView period="Evening" block={day.evening} />
+            {day.morning && <TimeBlockView period="Morning" block={day.morning} />}
+            {day.afternoon && <TimeBlockView period="Afternoon" block={day.afternoon} />}
+            {day.evening && <TimeBlockView period="Evening" block={day.evening} />}
             {day.notes.map((note, i) => (
               <Text key={i} style={styles.noteText}>• {note}</Text>
             ))}
