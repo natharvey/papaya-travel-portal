@@ -61,9 +61,9 @@ export interface DayPlan {
   day_number: number
   date: string
   location_base: string
-  morning: DayBlock
-  afternoon: DayBlock
-  evening: DayBlock
+  morning: DayBlock | null
+  afternoon: DayBlock | null
+  evening: DayBlock | null
   notes: string[]
 }
 

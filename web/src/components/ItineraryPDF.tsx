@@ -297,7 +297,7 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
             {day.morning && <TimeBlockView period="Morning" block={day.morning} />}
             {day.afternoon && <TimeBlockView period="Afternoon" block={day.afternoon} />}
             {day.evening && <TimeBlockView period="Evening" block={day.evening} />}
-            {day.notes.map((note, i) => (
+            {(day.notes ?? []).map((note, i) => (
               <Text key={i} style={styles.noteText}>• {note}</Text>
             ))}
           </View>
