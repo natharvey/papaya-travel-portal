@@ -173,10 +173,26 @@ export default function ItineraryTimeline({ data }: Props) {
   const totalDays = data.day_plans?.length ?? 0
 
   function handleCopy() {
-    navigator.clipboard.writeText(buildCopyText(data)).then(() => {
+    const text = buildCopyText(data)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+    } else {
+      // Fallback for HTTP (non-secure context)
+      const el = document.createElement('textarea')
+      el.value = text
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.focus()
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    })
+    }
   }
 
   return (
