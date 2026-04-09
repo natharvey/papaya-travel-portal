@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   Sunrise, Sun, Moon, MapPin, Copy, Check,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
-  Hotel, Bus, Wallet, Backpack, AlertTriangle,
+  Bus, Wallet, Backpack, AlertTriangle,
   LayoutList, AlignJustify, Pencil, X, Send, Loader2,
 } from 'lucide-react'
 import type { ItineraryJSON, DayPlan, DayBlock } from '../types'
@@ -510,20 +510,6 @@ export default function ItineraryTimeline({ data, onBlockEdit }: Props) {
       )}
 
       {/* ── Collapsible summary sections ── */}
-
-      {data.accommodation_suggestions?.length > 0 && (
-        <CollapsibleSection title="Accommodation" icon={<Hotel size={15} strokeWidth={2} color="#64748B" />}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {data.accommodation_suggestions.map((a, i) => (
-              <div key={i} style={{ paddingBottom: i < data.accommodation_suggestions.length - 1 ? '12px' : 0, borderBottom: i < data.accommodation_suggestions.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '2px' }}>{a.area}</div>
-                <div style={{ fontSize: '12px', color: 'var(--color-primary)', fontWeight: 600, marginBottom: '4px' }}>{a.style}</div>
-                <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', lineHeight: '1.6' }}>{a.notes}</div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleSection>
-      )}
 
       {data.transport_notes?.length > 0 && (
         <CollapsibleSection title="Transport" icon={<Bus size={15} strokeWidth={2} color="#64748B" />}>

@@ -52,7 +52,6 @@ The JSON must match this exact schema — no extra fields, no missing fields:
     "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null} | null,
     "notes": ["string"]
   }],
-  "accommodation_suggestions": [{"area": "string", "style": "string", "notes": "string"}],
   "transport_notes": ["string"],
   "budget_summary": {"estimated_total_aud": number|null, "assumptions": ["string"]},
   "packing_checklist": ["string"],
