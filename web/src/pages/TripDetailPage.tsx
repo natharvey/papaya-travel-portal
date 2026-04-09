@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { PDFDownloadLink } from '@react-pdf/renderer'
 import Layout from '../components/Layout'
@@ -6,10 +6,10 @@ import ItineraryTimeline from '../components/ItineraryTimeline'
 import ItineraryPDF from '../components/ItineraryPDF'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2 } from 'lucide-react'
 import FlightMap from '../components/FlightMap'
-import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, type TripDocument } from '../api/client'
-import type { TripDetail, Message } from '../types'
+import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, getAccommodationSuggestions, getFlightSuggestions, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
+import type { TripDetail, Message, Itinerary } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   INTAKE:      { bg: '#EEF2FF', text: '#4338CA' },
@@ -51,18 +51,32 @@ export default function TripDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'messages' | 'details' | 'documents'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'details' | 'documents'>('itinerary')
   const [documents, setDocuments] = useState<TripDocument[]>([])
   const [docUploading, setDocUploading] = useState(false)
   const [docError, setDocError] = useState('')
 
-  function switchTab(next: 'itinerary' | 'messages' | 'details' | 'documents') {
+  function switchTab(next: 'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'details' | 'documents') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markClientMessagesRead(tripId)
       setMessages(prev => prev.map(m => m.sender_type === 'ADMIN' ? { ...m, is_read: true } : m))
     }
   }
+  // Chat refinement
+  const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [chatLoading, setChatLoading] = useState(false)
+  const chatBottomRef = useRef<HTMLDivElement>(null)
+
+  // Accommodation suggestions
+  const [accommodation, setAccommodation] = useState<AccommodationSuggestion[] | null>(null)
+  const [accommodationLoading, setAccommodationLoading] = useState(false)
+
+  // Flight suggestions
+  const [flightSuggestions, setFlightSuggestions] = useState<FlightSuggestion[] | null>(null)
+  const [flightSuggestionsLoading, setFlightSuggestionsLoading] = useState(false)
+
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState('')
   const [requestingChanges, setRequestingChanges] = useState(false)
@@ -279,8 +293,11 @@ export default function TripDetailPage() {
           boxShadow: 'var(--shadow-sm)',
           overflow: 'hidden',
         }}>
-          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
+          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', overflowX: 'auto' }}>
             <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
+            <TabButton label="Refine with AI" active={tab === 'chat'} onClick={() => switchTab('chat')} />
+            <TabButton label="Accommodation" active={tab === 'accommodation'} onClick={() => switchTab('accommodation')} />
+            <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <TabButton
                 label={`Messages (${messages.length})`}
@@ -291,17 +308,10 @@ export default function TripDetailPage() {
                 const unread = messages.filter(m => m.sender_type === 'ADMIN' && !m.is_read).length
                 return unread > 0 ? (
                   <span style={{
-                    background: '#EF4444',
-                    color: 'white',
-                    borderRadius: '100px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '1px 7px',
-                    marginLeft: '-8px',
-                    marginTop: '-10px',
-                  }}>
-                    {unread}
-                  </span>
+                    background: '#EF4444', color: 'white', borderRadius: '100px',
+                    fontSize: '11px', fontWeight: 700, padding: '1px 7px',
+                    marginLeft: '-8px', marginTop: '-10px',
+                  }}>{unread}</span>
                 ) : null
               })()}
             </div>
@@ -538,6 +548,212 @@ export default function TripDetailPage() {
                   </>
                 )}
               </>
+            )}
+
+            {/* Chat Refinement Tab */}
+            {tab === 'chat' && (
+              <div>
+                <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
+                  Chat with Maya to refine your itinerary — "swap day 3 morning for a spa", "add a day trip to Ubud", "make it more budget-friendly".
+                </p>
+                <div style={{
+                  height: '420px', overflowY: 'auto', border: '1.5px solid var(--color-border)',
+                  borderRadius: '12px', padding: '16px', background: '#F8FAFC',
+                  display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px',
+                }}>
+                  {chatMessages.length === 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-muted)', fontSize: '14px' }}>
+                      Ask Maya to change anything about your itinerary...
+                    </div>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                      {msg.role === 'assistant' && (
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, marginRight: 8, marginTop: 2 }}>🌴</div>
+                      )}
+                      <div style={{
+                        maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.5,
+                        borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                        background: msg.role === 'user' ? 'var(--color-primary)' : 'white',
+                        color: msg.role === 'user' ? 'white' : 'var(--color-text)',
+                        border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                      }}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🌴</div>
+                      <div style={{ padding: '10px 14px', borderRadius: '16px 16px 16px 4px', background: 'white', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: 13 }}>Thinking...</div>
+                    </div>
+                  )}
+                  <div ref={chatBottomRef} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey && chatInput.trim() && !chatLoading) {
+                        e.preventDefault()
+                        const newMessages = [...chatMessages, { role: 'user', content: chatInput.trim() }]
+                        setChatMessages(newMessages)
+                        setChatInput('')
+                        setChatLoading(true)
+                        tripChat(tripId!, newMessages).then(res => {
+                          setChatMessages(prev => [...prev, { role: 'assistant', content: res.message }])
+                          if (res.itinerary_updated && res.new_itinerary) {
+                            setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
+                          }
+                          setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+                        }).catch(() => {
+                          setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong. Please try again." }])
+                        }).finally(() => setChatLoading(false))
+                      }
+                    }}
+                    placeholder="Ask Maya to change your itinerary..."
+                    disabled={chatLoading}
+                    style={{ flex: 1, border: '1.5px solid var(--color-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    disabled={chatLoading || !chatInput.trim()}
+                    onClick={() => {
+                      if (!chatInput.trim() || chatLoading) return
+                      const newMessages = [...chatMessages, { role: 'user', content: chatInput.trim() }]
+                      setChatMessages(newMessages)
+                      setChatInput('')
+                      setChatLoading(true)
+                      tripChat(tripId!, newMessages).then(res => {
+                        setChatMessages(prev => [...prev, { role: 'assistant', content: res.message }])
+                        if (res.itinerary_updated && res.new_itinerary) {
+                          setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
+                        }
+                        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+                      }).catch(() => {
+                        setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong. Please try again." }])
+                      }).finally(() => setChatLoading(false))
+                    }}
+                    style={{ padding: '0 16px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 10, cursor: chatLoading || !chatInput.trim() ? 'default' : 'pointer', opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Accommodation Tab */}
+            {tab === 'accommodation' && (
+              <div>
+                <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
+                  AI-researched accommodation options tailored to your style and budget. Click through to see live prices and availability.
+                </p>
+                {!accommodation && !accommodationLoading && (
+                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <Hotel size={48} color="var(--color-text-muted)" strokeWidth={1.2} style={{ marginBottom: 16 }} />
+                    <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: 10 }}>Find the perfect places to stay</h3>
+                    <p style={{ color: 'var(--color-text-muted)', marginBottom: 24, fontSize: 14 }}>Our AI will search for real hotels and properties that match your profile.</p>
+                    <button onClick={() => { setAccommodationLoading(true); getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false)) }}
+                      style={{ background: 'var(--color-primary)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                      Search Accommodation
+                    </button>
+                  </div>
+                )}
+                {accommodationLoading && (
+                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <LoadingSpinner size={36} label="" />
+                    <p style={{ color: 'var(--color-text-muted)', marginTop: 16 }}>Searching for the best options for you...</p>
+                  </div>
+                )}
+                {accommodation && accommodation.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {accommodation.map((a, i) => (
+                      <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16 }}>{a.name}</div>
+                            <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{a.area} · {a.style}</div>
+                          </div>
+                          {a.price_per_night_aud && (
+                            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-primary)', whiteSpace: 'nowrap' }}>
+                              ~${a.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 12 }}>/night AUD</span>
+                            </div>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 13, color: '#374151', marginBottom: 10 }}>{a.why_suits}</p>
+                        {a.notes && <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 12 }}>{a.notes}</p>}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <a href={a.booking_com_search} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>
+                            <ExternalLink size={13} /> Booking.com
+                          </a>
+                          <a href={a.google_maps_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}>
+                            <ExternalLink size={13} /> Maps
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => { setAccommodation(null); setAccommodationLoading(true); getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false)) }}
+                      style={{ background: 'white', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                      Refresh suggestions
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Flights Tab */}
+            {tab === 'flights' && (
+              <div>
+                <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
+                  Suggested flight routes for your trip. Click through to see live prices on Google Flights or Skyscanner.
+                </p>
+                {!flightSuggestions && !flightSuggestionsLoading && (
+                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <Plane size={48} color="var(--color-text-muted)" strokeWidth={1.2} style={{ marginBottom: 16 }} />
+                    <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: 10 }}>Find your flights</h3>
+                    <p style={{ color: 'var(--color-text-muted)', marginBottom: 24, fontSize: 14 }}>Our AI will suggest the best routes and link you to live prices.</p>
+                    <button onClick={() => { setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
+                      style={{ background: 'var(--color-primary)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                      Search Flights
+                    </button>
+                  </div>
+                )}
+                {flightSuggestionsLoading && (
+                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <LoadingSpinner size={36} label="" />
+                    <p style={{ color: 'var(--color-text-muted)', marginTop: 16 }}>Finding the best routes for your trip...</p>
+                  </div>
+                )}
+                {flightSuggestions && flightSuggestions.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {flightSuggestions.map((f, i) => (
+                      <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div style={{ fontWeight: 700, fontSize: 16 }}>{f.route}</div>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap', marginLeft: 12 }}>{f.typical_price_aud}</div>
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 6 }}>{f.airlines.join(' · ')} · {f.flight_time}</div>
+                        <p style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>{f.tips}</p>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                          <a href={f.google_flights_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-primary)', padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}>
+                            <ExternalLink size={13} /> Google Flights
+                          </a>
+                          <a href={f.skyscanner_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', border: '1.5px solid var(--color-primary)', padding: '8px 16px', borderRadius: 8 }}>
+                            <ExternalLink size={13} /> Skyscanner
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => { setFlightSuggestions(null); setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
+                      style={{ background: 'white', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                      Refresh suggestions
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Messages Tab */}
