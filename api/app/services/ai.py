@@ -2,300 +2,285 @@ import os
 import json
 import uuid
 import time
+import re
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
-from openai import OpenAI, RateLimitError, APITimeoutError, APIStatusError, APIConnectionError
+import anthropic
 
 from app.models import Trip, Itinerary, IntakeResponse, Client
-from app.services.retrieval import retrieve_destination_cards
 
 logger = logging.getLogger(__name__)
 
+MAX_TURNS = 12       # max web-search rounds before we give up
 MAX_RETRIES = 3
-RETRY_DELAYS = [5, 15, 30]  # seconds between attempts
+RETRY_DELAYS = [5, 15, 30]
+
+# ─── System prompts ───────────────────────────────────────────────────────────
+
+ITINERARY_SYSTEM = """You are an expert travel consultant for Papaya Travel, a boutique Australian travel agency.
+You create detailed, highly personalised itineraries for Australian travellers.
+
+CRITICAL RULES:
+- Always use REAL, SPECIFIC place names — actual restaurants, hotels, attractions, temples, beaches.
+  Never say "a local restaurant" or "a beachside café". Name the actual place.
+- Search the web for current, accurate information before writing recommendations.
+- Quote all costs in AUD (Australian Dollars).
+- Consider real opening hours, booking requirements, and seasonal factors.
+- For each activity, include WHY it suits this particular traveller based on their profile.
+- Day plans should feel human and flow logically — consider travel time between locations.
+- Departure and arrival days should have partial plans (not full morning/afternoon/evening).
+  Use null for time slots that don't apply (e.g. no "morning" on a day when they fly at 2pm).
+
+OUTPUT FORMAT:
+After your research, output the itinerary as a single JSON block wrapped in ```json ... ```.
+The JSON must match this exact schema — no extra fields, no missing fields:
+
+{
+  "trip_title": "string",
+  "overview": "string (2-3 sentences describing the trip character)",
+  "destinations": [{"name": "string", "nights": integer}],
+  "day_plans": [{
+    "day_number": integer,
+    "date": "YYYY-MM-DD",
+    "location_base": "string",
+    "morning": {"title": "string", "details": "string (2-3 sentences)", "booking_needed": boolean, "est_cost_aud": number|null} | null,
+    "afternoon": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null} | null,
+    "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null} | null,
+    "notes": ["string"]
+  }],
+  "accommodation_suggestions": [{"area": "string", "style": "string", "notes": "string"}],
+  "transport_notes": ["string"],
+  "budget_summary": {"estimated_total_aud": number|null, "assumptions": ["string"]},
+  "packing_checklist": ["string"],
+  "risks_and_notes": ["string"]
+}"""
+
+INTAKE_CHAT_SYSTEM = """You are Maya, a friendly and knowledgeable travel consultant at Papaya Travel.
+Your job is to have a warm, natural conversation to understand a client's travel needs.
+
+You must collect the following information — but do it conversationally, not like a form.
+Ask 1-2 things at a time maximum. Use yes/no and multiple-choice questions where possible.
+
+REQUIRED information to collect:
+1. Travel companions — who's coming? (solo, couple, family with kids ages, friends group)
+2. Purpose/vibe — honeymoon, adventure, relaxation, culture, family holiday, bucket list?
+3. Pace — packed schedule vs slow travel?
+4. Accommodation style — luxury resort, boutique local, mid-range hotel, budget/backpacker, unique stays (treehouses, ryokans)?
+5. Food — any dietary restrictions? Adventurous or prefer familiar? Street food or fine dining?
+6. Activity profile — outdoors/hiking, beaches, cultural sites, nightlife, markets, cooking classes, wildlife?
+7. Fitness/mobility — will they do strenuous hikes? Long walks OK?
+8. Experience level — first time in this region or well-travelled there?
+9. Non-negotiables — anything already booked, or absolute must-includes?
+10. Must-avoids — tourist traps, certain foods, party areas?
+11. Budget split — prefer to spend on accommodation or experiences?
+
+Start with a warm greeting. You already know their destination, dates, origin city, and budget from the booking form.
+
+When you have collected all required information, end your FINAL message with exactly this marker on its own line:
+[INTAKE_COMPLETE]
+
+Keep responses concise — 2-4 sentences max per message. Be warm, not robotic."""
 
 
-def _is_retryable(exc: Exception) -> bool:
-    if isinstance(exc, RateLimitError):
-        return True
-    if isinstance(exc, APITimeoutError):
-        return True
-    if isinstance(exc, APIConnectionError):
-        return True
-    if isinstance(exc, APIStatusError) and exc.status_code >= 500:
-        return True
-    return False
+# ─── Intake chat ─────────────────────────────────────────────────────────────
 
-ITINERARY_SCHEMA = {
-    "name": "itinerary",
-    "strict": True,
-    "schema": {
-        "type": "object",
-        "properties": {
-            "trip_title": {"type": "string"},
-            "overview": {"type": "string"},
-            "destinations": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "nights": {"type": "integer"},
-                    },
-                    "required": ["name", "nights"],
-                    "additionalProperties": False,
-                },
-            },
-            "day_plans": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "day_number": {"type": "integer"},
-                        "date": {"type": "string"},
-                        "location_base": {"type": "string"},
-                        "morning": {
-                            "type": "object",
-                            "properties": {
-                                "title": {"type": "string"},
-                                "details": {"type": "string"},
-                                "booking_needed": {"type": "boolean"},
-                                "est_cost_aud": {"type": ["number", "null"]},
-                            },
-                            "required": ["title", "details", "booking_needed", "est_cost_aud"],
-                            "additionalProperties": False,
-                        },
-                        "afternoon": {
-                            "type": "object",
-                            "properties": {
-                                "title": {"type": "string"},
-                                "details": {"type": "string"},
-                                "booking_needed": {"type": "boolean"},
-                                "est_cost_aud": {"type": ["number", "null"]},
-                            },
-                            "required": ["title", "details", "booking_needed", "est_cost_aud"],
-                            "additionalProperties": False,
-                        },
-                        "evening": {
-                            "type": "object",
-                            "properties": {
-                                "title": {"type": "string"},
-                                "details": {"type": "string"},
-                                "booking_needed": {"type": "boolean"},
-                                "est_cost_aud": {"type": ["number", "null"]},
-                            },
-                            "required": ["title", "details", "booking_needed", "est_cost_aud"],
-                            "additionalProperties": False,
-                        },
-                        "notes": {"type": "array", "items": {"type": "string"}},
-                    },
-                    "required": ["day_number", "date", "location_base", "morning", "afternoon", "evening", "notes"],
-                    "additionalProperties": False,
-                },
-            },
-            "accommodation_suggestions": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "area": {"type": "string"},
-                        "style": {"type": "string"},
-                        "notes": {"type": "string"},
-                    },
-                    "required": ["area", "style", "notes"],
-                    "additionalProperties": False,
-                },
-            },
-            "transport_notes": {"type": "array", "items": {"type": "string"}},
-            "budget_summary": {
-                "type": "object",
-                "properties": {
-                    "estimated_total_aud": {"type": ["number", "null"]},
-                    "assumptions": {"type": "array", "items": {"type": "string"}},
-                },
-                "required": ["estimated_total_aud", "assumptions"],
-                "additionalProperties": False,
-            },
-            "packing_checklist": {"type": "array", "items": {"type": "string"}},
-            "risks_and_notes": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": [
-            "trip_title",
-            "overview",
-            "destinations",
-            "day_plans",
-            "accommodation_suggestions",
-            "transport_notes",
-            "budget_summary",
-            "packing_checklist",
-            "risks_and_notes",
-        ],
-        "additionalProperties": False,
-    },
-}
+def intake_chat_turn(
+    messages: list[dict],
+    seed_data: dict,
+) -> tuple[str, bool]:
+    """
+    Run one turn of the intake conversation.
+    Returns (assistant_message, is_complete).
+    seed_data: {destination, origin_city, start_date, end_date, budget_range, travellers_count}
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
 
-SYSTEM_PROMPT = """You are a professional travel consultant for Papaya Travel Portal, a boutique Australian travel agency.
-You specialise in creating detailed, personalised itineraries for Australian travellers.
-You are warm, knowledgeable, and attentive to client preferences.
-Always quote costs in AUD (Australian Dollars).
-Provide practical, actionable day-by-day plans based on the client's preferences, budget, and travel style.
-Consider local seasons, practical logistics, and booking requirements.
-Be specific about activities, restaurants, and experiences rather than generic suggestions."""
+    client = anthropic.Anthropic(api_key=api_key)
+
+    context = (
+        f"CLIENT DETAILS FROM BOOKING FORM:\n"
+        f"- Destination: {seed_data.get('destination', 'Not specified')}\n"
+        f"- Departing from: {seed_data.get('origin_city', 'Not specified')}\n"
+        f"- Dates: {seed_data.get('start_date')} to {seed_data.get('end_date')}\n"
+        f"- Budget: {seed_data.get('budget_range', 'Not specified')}\n"
+        f"- Number of travellers: {seed_data.get('travellers_count', 1)}\n\n"
+        "Now have a natural conversation to collect all remaining required information."
+    )
+
+    system = f"{INTAKE_CHAT_SYSTEM}\n\n{context}"
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        system=system,
+        messages=messages,
+    )
+
+    text = response.content[0].text
+    is_complete = "[INTAKE_COMPLETE]" in text
+    # Strip the marker from displayed text
+    display_text = text.replace("[INTAKE_COMPLETE]", "").strip()
+
+    return display_text, is_complete
 
 
-def build_user_prompt(trip: Trip, intake: IntakeResponse, client: Client, destination_context: str, additional_instructions: str = "") -> str:
-    prompt_parts = [
-        f"Please create a detailed itinerary for the following trip:\n",
-        f"**Client:** {client.name} ({client.email})",
-        f"**Trip Title:** {trip.title}",
-        f"**Origin City:** {trip.origin_city}",
-        f"**Travel Dates:** {trip.start_date.isoformat()} to {trip.end_date.isoformat()}",
-        f"**Duration:** {(trip.end_date - trip.start_date).days} days",
-        f"**Budget Range:** {trip.budget_range}",
-        f"**Pace:** {trip.pace}",
-        f"\n**Traveller Details:**",
-        f"- Number of travellers: {intake.travellers_count}",
-        f"- Accommodation style: {intake.accommodation_style}",
-        f"- Interests: {', '.join(intake.interests) if intake.interests else 'General sightseeing'}",
+# ─── Itinerary generation ─────────────────────────────────────────────────────
+
+def build_generation_prompt(
+    trip: Trip,
+    intake: IntakeResponse,
+    client: Client,
+    conversation_transcript: str = "",
+) -> str:
+    days = (trip.end_date - trip.start_date).days
+    parts = [
+        f"Create a detailed {days}-day travel itinerary for the following client.\n",
+        f"CLIENT: {client.name}",
+        f"ORIGIN: {trip.origin_city}",
+        f"DESTINATION: {trip.title}",
+        f"DATES: {trip.start_date.isoformat()} to {trip.end_date.isoformat()} ({days} days)",
+        f"BUDGET: {trip.budget_range}",
+        f"PACE: {trip.pace}",
+        f"TRAVELLERS: {intake.travellers_count}",
+        f"ACCOMMODATION STYLE: {intake.accommodation_style}",
+        f"INTERESTS: {', '.join(intake.interests) if intake.interests else 'General'}",
     ]
 
     if intake.must_dos:
-        prompt_parts.append(f"- Must-dos: {intake.must_dos}")
+        parts.append(f"MUST INCLUDE: {intake.must_dos}")
     if intake.must_avoid:
-        prompt_parts.append(f"- Must avoid: {intake.must_avoid}")
+        parts.append(f"MUST AVOID: {intake.must_avoid}")
     if intake.constraints:
-        prompt_parts.append(f"- Constraints/requirements: {intake.constraints}")
-    if intake.notes:
-        prompt_parts.append(f"- Additional notes: {intake.notes}")
+        parts.append(f"CONSTRAINTS: {intake.constraints}")
 
-    if destination_context:
-        prompt_parts.append(f"\n**Destination Research Cards:**\n{destination_context}")
+    if conversation_transcript:
+        parts.append(
+            f"\nDETAILED CLIENT PROFILE (from intake conversation):\n{conversation_transcript}"
+        )
+    elif intake.notes:
+        parts.append(f"ADDITIONAL NOTES: {intake.notes}")
 
-    if additional_instructions:
-        prompt_parts.append(f"\n**Special Instructions for this version:**\n{additional_instructions}")
-
-    prompt_parts.append(
-        "\nPlease create a comprehensive day-by-day itinerary covering the entire trip duration. "
-        "Include specific activities, estimated costs in AUD, practical tips, accommodation suggestions, "
-        "transport notes, a packing checklist, and any important risks or notes."
+    parts.append(
+        "\nSearch the web for real, specific, currently-operating places "
+        "(hotels, restaurants, attractions) that match this profile. "
+        "Use actual names throughout. Output the complete itinerary JSON."
     )
 
-    return "\n".join(prompt_parts)
+    return "\n".join(parts)
+
+
+def _parse_json_from_text(text: str) -> dict:
+    """Extract JSON from a ```json ... ``` block or raw JSON."""
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if match:
+        return json.loads(match.group(1))
+    # Fallback: try to find raw JSON object
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if match:
+        return json.loads(match.group(0))
+    raise ValueError("No JSON found in Claude response")
+
+
+def _call_claude_with_search(system: str, user_prompt: str) -> str:
+    """
+    Call Claude with web_search enabled. Handles multi-turn tool use
+    automatically until we get a final text response.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    messages = [{"role": "user", "content": user_prompt}]
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 8}]
+
+    for turn in range(MAX_TURNS):
+        response = client.beta.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=8000,
+            system=system,
+            messages=messages,
+            tools=tools,
+            betas=["web-search-2025-03-05"],
+        )
+
+        logger.info("Claude turn %d: stop_reason=%s", turn + 1, response.stop_reason)
+
+        # Collect text from this response
+        text_parts = []
+        has_tool_use = False
+
+        for block in response.content:
+            if hasattr(block, "text"):
+                text_parts.append(block.text)
+            elif block.type == "tool_use":
+                has_tool_use = True
+
+        if response.stop_reason == "end_turn" or not has_tool_use:
+            return "\n".join(text_parts)
+
+        # Continue the conversation — add assistant turn and tool results
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = [
+            {
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": "Search completed.",
+            }
+            for block in response.content
+            if block.type == "tool_use"
+        ]
+        messages.append({"role": "user", "content": tool_results})
+
+    raise ValueError(f"Claude did not finish after {MAX_TURNS} turns")
 
 
 def generate_itinerary(
     db: Session,
     trip_id: uuid.UUID,
     additional_instructions: str = "",
+    conversation_transcript: str = "",
 ) -> Itinerary:
-    # Fetch trip and related data
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise ValueError(f"Trip {trip_id} not found")
 
     intake = db.query(IntakeResponse).filter(IntakeResponse.trip_id == trip_id).first()
     if not intake:
-        raise ValueError(f"Intake response for trip {trip_id} not found")
+        raise ValueError(f"Intake for trip {trip_id} not found")
 
-    client = db.query(Client).filter(Client.id == trip.client_id).first()
-    if not client:
+    client_obj = db.query(Client).filter(Client.id == trip.client_id).first()
+    if not client_obj:
         raise ValueError(f"Client for trip {trip_id} not found")
 
-    # Retrieve relevant destination cards
-    destination_keywords = [trip.title, trip.origin_city]
-    if intake.interests:
-        destination_keywords.extend(intake.interests)
+    user_prompt = build_generation_prompt(trip, intake, client_obj, conversation_transcript)
+    if additional_instructions:
+        user_prompt += f"\n\nSPECIAL INSTRUCTIONS FOR THIS VERSION:\n{additional_instructions}"
 
-    dest_cards = retrieve_destination_cards(
-        db,
-        destinations=destination_keywords,
-        interests=intake.interests or [],
-        limit=5,
-    )
-
-    destination_context = ""
-    if dest_cards:
-        context_parts = []
-        for card in dest_cards:
-            context_parts.append(
-                f"### {card.destination} ({card.region})\n"
-                f"**Summary:** {card.summary}\n"
-                f"**Best Season:** {card.best_season}\n"
-                f"**Must-Do:** {card.must_do}\n"
-                f"**Transport Tips:** {card.transport_tips}\n"
-                f"**Budget Notes:** {card.budget_notes}\n"
-                f"**Safety:** {card.safety_notes}\n"
-                f"**Neighbourhoods:** {card.neighbourhoods}"
-            )
-        destination_context = "\n\n".join(context_parts)
-
-    # Build prompts
-    user_prompt = build_user_prompt(trip, intake, client, destination_context, additional_instructions)
-
-    # Call OpenAI with retry logic
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY is not configured")
-
-    openai_client = OpenAI(api_key=api_key)
-
-    last_exc: Exception | None = None
+    last_exc = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": ITINERARY_SCHEMA,
-                },
-                temperature=0.7,
-                max_tokens=16000,
-                timeout=120,
-            )
-            raw_content = response.choices[0].message.content
-
-            finish_reason = response.choices[0].finish_reason
-            if finish_reason == "length":
-                raise ValueError(
-                    "The itinerary was too long to generate in one response. "
-                    "Try a shorter trip or ask the AI to be more concise."
-                )
-
-            itinerary_data = json.loads(raw_content)
-            break  # success
-
-        except (RateLimitError, APITimeoutError, APIConnectionError, APIStatusError) as e:
+            raw_text = _call_claude_with_search(ITINERARY_SYSTEM, user_prompt)
+            itinerary_data = _parse_json_from_text(raw_text)
+            break
+        except Exception as e:
             last_exc = e
-            if _is_retryable(e) and attempt < MAX_RETRIES - 1:
+            if attempt < MAX_RETRIES - 1:
                 delay = RETRY_DELAYS[attempt]
-                logger.warning("OpenAI error (attempt %d/%d), retrying in %ds: %s", attempt + 1, MAX_RETRIES, delay, e)
+                logger.warning("Generation attempt %d failed, retrying in %ds: %s", attempt + 1, delay, e)
                 time.sleep(delay)
-                continue
-            # Not retryable or out of attempts
-            if isinstance(e, RateLimitError):
-                raise ValueError("OpenAI rate limit reached. Please wait a moment and try again.") from e
-            if isinstance(e, (APITimeoutError, APIConnectionError)):
-                raise ValueError("OpenAI request timed out. Please try again.") from e
-            raise ValueError(f"OpenAI API error: {e}") from e
+            else:
+                raise ValueError(f"Itinerary generation failed after {MAX_RETRIES} attempts: {last_exc}") from e
 
-        except json.JSONDecodeError as e:
-            raise ValueError("The AI returned an invalid response. Please try generating again.") from e
-    else:
-        raise ValueError(f"Generation failed after {MAX_RETRIES} attempts. Last error: {last_exc}")
-
-    # Determine version number
     existing = db.query(Itinerary).filter(Itinerary.trip_id == trip_id).all()
     next_version = max((i.version for i in existing), default=0) + 1
 
-    # Render basic markdown
     rendered_md = render_itinerary_markdown(itinerary_data)
 
-    # Persist
     itinerary = Itinerary(
         trip_id=trip_id,
         itinerary_json=itinerary_data,
@@ -305,61 +290,50 @@ def generate_itinerary(
     )
     db.add(itinerary)
 
-    # Update trip status to DRAFT if still INTAKE
-    if trip.status == "INTAKE":
-        trip.status = "DRAFT"
-        from datetime import datetime as dt
-        trip.updated_at = dt.utcnow()
+    if trip.status in ("INTAKE", "GENERATING"):
+        trip.status = "REVIEW"
+        trip.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(itinerary)
     return itinerary
 
 
+# ─── Markdown renderer ────────────────────────────────────────────────────────
+
 def render_itinerary_markdown(data: dict) -> str:
     lines = []
-    lines.append(f"# {data.get('trip_title', 'Travel Itinerary')}")
-    lines.append("")
+    lines.append(f"# {data.get('trip_title', 'Travel Itinerary')}\n")
     lines.append("## Overview")
-    lines.append(data.get("overview", ""))
-    lines.append("")
+    lines.append(data.get("overview", "") + "\n")
 
-    destinations = data.get("destinations", [])
-    if destinations:
-        lines.append("## Destinations")
-        for d in destinations:
-            lines.append(f"- **{d['name']}** — {d['nights']} nights")
+    for d in data.get("destinations", []):
+        lines.append(f"- **{d['name']}** — {d['nights']} nights")
+    if data.get("destinations"):
         lines.append("")
 
-    day_plans = data.get("day_plans", [])
-    if day_plans:
-        lines.append("## Day-by-Day Itinerary")
-        for day in day_plans:
-            lines.append(f"### Day {day['day_number']} — {day['date']} | {day['location_base']}")
-            for period in ["morning", "afternoon", "evening"]:
-                block = day.get(period, {})
-                if block:
-                    cost_str = f" (~${block['est_cost_aud']} AUD)" if block.get('est_cost_aud') else ""
-                    booking_str = " *(booking required)*" if block.get('booking_needed') else ""
-                    lines.append(f"**{period.capitalize()}:** {block['title']}{cost_str}{booking_str}")
-                    lines.append(f"{block['details']}")
-            notes = day.get("notes", [])
-            if notes:
-                for note in notes:
-                    lines.append(f"> {note}")
-            lines.append("")
+    for day in data.get("day_plans", []):
+        lines.append(f"### Day {day['day_number']} — {day['date']} | {day['location_base']}")
+        for period in ["morning", "afternoon", "evening"]:
+            block = day.get(period)
+            if block:
+                cost = f" (~${block['est_cost_aud']} AUD)" if block.get("est_cost_aud") else ""
+                booking = " *(booking required)*" if block.get("booking_needed") else ""
+                lines.append(f"**{period.capitalize()}:** {block['title']}{cost}{booking}")
+                lines.append(block["details"])
+        for note in day.get("notes", []):
+            lines.append(f"> {note}")
+        lines.append("")
 
-    accomm = data.get("accommodation_suggestions", [])
-    if accomm:
+    if data.get("accommodation_suggestions"):
         lines.append("## Accommodation Suggestions")
-        for a in accomm:
+        for a in data["accommodation_suggestions"]:
             lines.append(f"- **{a['area']}** ({a['style']}): {a['notes']}")
         lines.append("")
 
-    transport = data.get("transport_notes", [])
-    if transport:
+    if data.get("transport_notes"):
         lines.append("## Transport Notes")
-        for t in transport:
+        for t in data["transport_notes"]:
             lines.append(f"- {t}")
         lines.append("")
 
@@ -368,21 +342,19 @@ def render_itinerary_markdown(data: dict) -> str:
         lines.append("## Budget Summary")
         if budget.get("estimated_total_aud"):
             lines.append(f"**Estimated Total:** ${budget['estimated_total_aud']:,.0f} AUD")
-        for assumption in budget.get("assumptions", []):
-            lines.append(f"- {assumption}")
+        for a in budget.get("assumptions", []):
+            lines.append(f"- {a}")
         lines.append("")
 
-    packing = data.get("packing_checklist", [])
-    if packing:
+    if data.get("packing_checklist"):
         lines.append("## Packing Checklist")
-        for item in packing:
+        for item in data["packing_checklist"]:
             lines.append(f"- [ ] {item}")
         lines.append("")
 
-    risks = data.get("risks_and_notes", [])
-    if risks:
+    if data.get("risks_and_notes"):
         lines.append("## Risks & Important Notes")
-        for r in risks:
+        for r in data["risks_and_notes"]:
             lines.append(f"- {r}")
         lines.append("")
 

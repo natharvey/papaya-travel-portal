@@ -1,30 +1,13 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { User, Mail, MapPin, Calendar, Wallet, Zap, Coffee, Wind, Users, Bed, Star, AlertCircle, FileText, CheckCircle, ArrowRight, ArrowLeft } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { User, Mail, MapPin, Calendar, Wallet, Users, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { submitIntake, getApiError } from '../api/client'
-import type { IntakeCreatePayload, IntakeSubmitResponse } from '../types'
+import { submitIntake, intakeChat, clientLogin, getApiError } from '../api/client'
+import { storeToken } from '../api/client'
 
-const INTERESTS = [
-  'Beach & Swimming', 'Culture & History', 'Food & Dining', 'Adventure Sports',
-  'Wildlife & Nature', 'Art & Museums', 'Nightlife', 'Shopping', 'Hiking & Trekking',
-  'Spiritual & Wellness', 'Photography', 'Family Activities', 'Diving & Snorkelling',
-  'Local Markets', 'Architecture', 'Wine & Gastronomy',
-]
-
-const PACE_OPTIONS = [
-  { value: 'relaxed', label: 'Relaxed', desc: 'Few activities per day, plenty of downtime', Icon: Coffee },
-  { value: 'moderate', label: 'Moderate', desc: 'A healthy mix of activities and rest', Icon: Wind },
-  { value: 'packed', label: 'Packed', desc: 'Maximum sights and experiences each day', Icon: Zap },
-]
-
-const ACCOMMODATION_STYLES = [
-  'Budget / Hostel', 'Guesthouse / B&B', 'Mid-range Hotel', 'Boutique Hotel',
-  'Luxury Hotel / Resort', 'Serviced Apartment', 'Villa / Private House', 'Eco-lodge',
-]
+// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
@@ -45,54 +28,51 @@ const inputStyle: React.CSSProperties = {
   background: 'white',
   color: 'var(--color-text)',
   boxSizing: 'border-box',
-  transition: 'border-color 0.15s',
 }
 
-function InputWithIcon({ icon: Icon, children }: { icon: LucideIcon, children: React.ReactNode }) {
-  return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-        <Icon size={15} strokeWidth={2} color="var(--color-text-muted)" />
-      </div>
-      {children}
-    </div>
-  )
+// ─── Step 1: Personal details ─────────────────────────────────────────────────
+
+interface Step1Data {
+  client_name: string
+  client_email: string
 }
 
-function Step1({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChange: (k: string, v: unknown) => void }) {
+function Step1({ data, onChange }: { data: Step1Data; onChange: (k: keyof Step1Data, v: string) => void }) {
   return (
     <div>
-      <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>Tell us about yourself</h2>
-        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.5' }}>We'll use these details to create your personalised travel portal.</p>
-      </div>
-
+      <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Let's get started</h2>
+      <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '28px', lineHeight: '1.5' }}>
+        We'll create your personal travel portal and send you a login link.
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <div>
-          <label style={labelStyle}>Full Name</label>
-          <InputWithIcon icon={User}>
+          <label style={labelStyle}>Your name</label>
+          <div style={{ position: 'relative' }}>
+            <User size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
-              value={data.client_name || ''}
+              value={data.client_name}
               onChange={e => onChange('client_name', e.target.value)}
               placeholder="Jane Smith"
               style={{ ...inputStyle, paddingLeft: '36px' }}
+              autoFocus
             />
-          </InputWithIcon>
+          </div>
         </div>
         <div>
-          <label style={labelStyle}>Email Address</label>
-          <InputWithIcon icon={Mail}>
+          <label style={labelStyle}>Email address</label>
+          <div style={{ position: 'relative' }}>
+            <Mail size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
             <input
               type="email"
-              value={data.client_email || ''}
+              value={data.client_email}
               onChange={e => onChange('client_email', e.target.value)}
               placeholder="jane@example.com"
               style={{ ...inputStyle, paddingLeft: '36px' }}
             />
-          </InputWithIcon>
+          </div>
           <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '5px' }}>
-            This will be your login email for the client portal.
+            This is your login email — we'll send your portal access here.
           </p>
         </div>
       </div>
@@ -100,109 +80,108 @@ function Step1({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
   )
 }
 
-function Step2({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChange: (k: string, v: unknown) => void }) {
+// ─── Step 2: Trip basics ──────────────────────────────────────────────────────
+
+interface Step2Data {
+  trip_title: string
+  origin_city: string
+  start_date: string
+  end_date: string
+  budget_range: string
+  travellers_count: number
+}
+
+function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2Data, v: string | number) => void }) {
   return (
     <div>
-      <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>Trip details</h2>
-        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.5' }}>Help us understand the shape of your journey.</p>
-      </div>
-
+      <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>Where are you headed?</h2>
+      <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '28px', lineHeight: '1.5' }}>
+        Just the basics — our AI travel consultant will handle the details.
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <div>
-          <label style={labelStyle}>Trip Title</label>
-          <InputWithIcon icon={Star}>
+          <label style={labelStyle}>Destination</label>
+          <div style={{ position: 'relative' }}>
+            <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
-              value={data.trip_title || ''}
+              value={data.trip_title}
               onChange={e => onChange('trip_title', e.target.value)}
-              placeholder="e.g. Honeymoon in Bali & Lombok"
+              placeholder="e.g. Bali & Lombok, Japan, Italy"
               style={{ ...inputStyle, paddingLeft: '36px' }}
+              autoFocus
             />
-          </InputWithIcon>
+          </div>
         </div>
 
         <div>
-          <label style={labelStyle}>Departing From</label>
-          <InputWithIcon icon={MapPin}>
+          <label style={labelStyle}>Departing from</label>
+          <div style={{ position: 'relative' }}>
+            <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
-              value={data.origin_city || ''}
+              value={data.origin_city}
               onChange={e => onChange('origin_city', e.target.value)}
-              placeholder="e.g. Sydney"
+              placeholder="e.g. Sydney, Melbourne, Brisbane"
               style={{ ...inputStyle, paddingLeft: '36px' }}
             />
-          </InputWithIcon>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div>
-            <label style={labelStyle}>Departure Date</label>
-            <InputWithIcon icon={Calendar}>
+            <label style={labelStyle}>Departure date</label>
+            <div style={{ position: 'relative' }}>
+              <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
               <input
                 type="date"
-                value={data.start_date || ''}
+                value={data.start_date}
                 onChange={e => onChange('start_date', e.target.value)}
                 style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
-                className="hide-date-icon"
               />
-            </InputWithIcon>
+            </div>
           </div>
           <div>
-            <label style={labelStyle}>Return Date</label>
-            <InputWithIcon icon={Calendar}>
+            <label style={labelStyle}>Return date</label>
+            <div style={{ position: 'relative' }}>
+              <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
               <input
                 type="date"
-                value={data.end_date || ''}
+                value={data.end_date}
                 onChange={e => onChange('end_date', e.target.value)}
                 style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
-                className="hide-date-icon"
               />
-            </InputWithIcon>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label style={labelStyle}>Budget Range (AUD)</label>
-          <InputWithIcon icon={Wallet}>
-            <input
-              type="text"
-              value={data.budget_range || ''}
-              onChange={e => onChange('budget_range', e.target.value)}
-              placeholder="e.g. $5,000 – $8,000 AUD per person"
-              style={{ ...inputStyle, paddingLeft: '36px' }}
-            />
-          </InputWithIcon>
-        </div>
-
-        <div>
-          <label style={labelStyle}>Travel Pace</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '4px' }}>
-            {PACE_OPTIONS.map(({ value, label, desc, Icon }) => {
-              const selected = data.pace === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => onChange('pace', value)}
-                  style={{
-                    border: `2px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    borderRadius: '12px',
-                    padding: '14px 10px',
-                    cursor: 'pointer',
-                    background: selected ? 'var(--color-accent)' : 'white',
-                    textAlign: 'center',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-                    <Icon size={20} strokeWidth={2} color={selected ? 'var(--color-primary)' : 'var(--color-text-muted)'} />
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: '13px', color: selected ? 'var(--color-primary-dark)' : 'var(--color-text)', marginBottom: '3px' }}>{label}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: '1.4' }}>{desc}</div>
-                </button>
-              )
-            })}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div>
+            <label style={labelStyle}>Budget (AUD)</label>
+            <div style={{ position: 'relative' }}>
+              <Wallet size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={data.budget_range}
+                onChange={e => onChange('budget_range', e.target.value)}
+                placeholder="e.g. $5,000–$8,000"
+                style={{ ...inputStyle, paddingLeft: '36px' }}
+              />
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Travellers</label>
+            <div style={{ position: 'relative' }}>
+              <Users size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={data.travellers_count}
+                onChange={e => onChange('travellers_count', parseInt(e.target.value) || 1)}
+                style={{ ...inputStyle, paddingLeft: '36px' }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -210,276 +189,378 @@ function Step2({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChang
   )
 }
 
-function Step3({ data, onChange }: { data: Partial<IntakeCreatePayload>; onChange: (k: string, v: unknown) => void }) {
-  const interests = data.interests || []
+// ─── Step 3: AI chat intake ───────────────────────────────────────────────────
 
-  function toggleInterest(interest: string) {
-    const current = [...interests]
-    const idx = current.indexOf(interest)
-    onChange('interests', idx === -1 ? [...current, interest] : current.filter((_, i) => i !== idx))
+interface ChatMsg {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+interface Step3Props {
+  seedData: Record<string, string | number>
+  onComplete: (transcript: string) => void
+}
+
+function Step3({ seedData, onComplete }: Step3Props) {
+  const [messages, setMessages] = useState<ChatMsg[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [complete, setComplete] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-scroll
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Kick off with Maya's greeting on mount
+  useEffect(() => {
+    startChat()
+  }, [])
+
+  async function startChat() {
+    setStarted(true)
+    setLoading(true)
+    try {
+      const { message } = await intakeChat([], seedData)
+      setMessages([{ role: 'assistant', content: message }])
+    } catch {
+      setMessages([{ role: 'assistant', content: "Hi! I'm Maya, your Papaya travel consultant. Tell me a bit about what you're hoping to get out of this trip!" }])
+    } finally {
+      setLoading(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
+  async function send() {
+    const text = input.trim()
+    if (!text || loading || complete) return
+
+    const newMessages: ChatMsg[] = [...messages, { role: 'user', content: text }]
+    setMessages(newMessages)
+    setInput('')
+    setLoading(true)
+
+    try {
+      const { message, complete: done } = await intakeChat(newMessages, seedData)
+      const updated: ChatMsg[] = [...newMessages, { role: 'assistant', content: message }]
+      setMessages(updated)
+      if (done) {
+        setComplete(true)
+        // Build transcript for the generation prompt
+        const transcript = updated
+          .map(m => `${m.role === 'user' ? 'Client' : 'Maya'}: ${m.content}`)
+          .join('\n\n')
+        onComplete(transcript)
+      }
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I had a connection issue. Could you repeat that?" }])
+    } finally {
+      setLoading(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send()
+    }
   }
 
   return (
     <div>
-      <div style={{ marginBottom: '28px' }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>Your preferences</h2>
-        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.5' }}>The more detail you share, the better your personalised itinerary.</p>
+      <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '4px' }}>Meet Maya, your travel consultant</h2>
+      <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
+        She'll ask you a few quick questions to personalise your itinerary.
+      </p>
+
+      {/* Chat window */}
+      <div style={{
+        height: '380px',
+        overflowY: 'auto',
+        border: '1.5px solid var(--color-border)',
+        borderRadius: '12px',
+        padding: '16px',
+        background: '#F8FAFC',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        marginBottom: '12px',
+      }}>
+        {!started && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+            <LoadingSpinner size={24} label="Connecting to Maya..." />
+          </div>
+        )}
+
+        {messages.map((msg, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+          }}>
+            {msg.role === 'assistant' && (
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'var(--color-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                flexShrink: 0,
+                marginRight: '8px',
+                marginTop: '2px',
+              }}>
+                🌴
+              </div>
+            )}
+            <div style={{
+              maxWidth: '80%',
+              padding: '10px 14px',
+              borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+              background: msg.role === 'user' ? 'var(--color-primary)' : 'white',
+              color: msg.role === 'user' ? 'white' : 'var(--color-text)',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
+            }}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              background: 'var(--color-primary)', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0,
+            }}>🌴</div>
+            <div style={{
+              padding: '10px 14px', borderRadius: '16px 16px 16px 4px',
+              background: 'white', border: '1px solid var(--color-border)',
+              display: 'flex', gap: '4px', alignItems: 'center',
+            }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: '6px', height: '6px', borderRadius: '50%',
+                  background: 'var(--color-text-muted)',
+                  animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                }} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {complete && (
+          <div style={{
+            textAlign: 'center',
+            padding: '12px',
+            background: '#F0FDF4',
+            border: '1px solid #BBF7D0',
+            borderRadius: '10px',
+            fontSize: '13px',
+            color: '#15803D',
+            fontWeight: 600,
+          }}>
+            ✓ All set! Click "Generate My Itinerary" below.
+          </div>
+        )}
+
+        <div ref={bottomRef} />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div>
-          <label style={labelStyle}>Number of Travellers</label>
-          <InputWithIcon icon={Users}>
-            <input
-              type="number"
-              min="1"
-              max="20"
-              value={data.travellers_count || 1}
-              onChange={e => onChange('travellers_count', parseInt(e.target.value))}
-              style={{ ...inputStyle, paddingLeft: '36px', width: '140px' }}
-            />
-          </InputWithIcon>
-        </div>
-
-        <div>
-          <label style={labelStyle}>Interests <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(select all that apply)</span></label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-            {INTERESTS.map(interest => {
-              const selected = interests.includes(interest)
-              return (
-                <button
-                  key={interest}
-                  type="button"
-                  onClick={() => toggleInterest(interest)}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '100px',
-                    border: `1.5px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    background: selected ? 'var(--color-accent)' : 'white',
-                    color: selected ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
-                    fontSize: '13px',
-                    fontWeight: selected ? 600 : 400,
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {interest}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div>
-          <label style={labelStyle}>Accommodation Style</label>
-          <InputWithIcon icon={Bed}>
-            <select
-              value={data.accommodation_style || ''}
-              onChange={e => onChange('accommodation_style', e.target.value)}
-              style={{ ...inputStyle, paddingLeft: '36px', cursor: 'pointer' }}
-            >
-              <option value="">Select a style...</option>
-              {ACCOMMODATION_STYLES.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </InputWithIcon>
-        </div>
-
-        <div>
-          <label style={labelStyle}>Must-Dos <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
-          <textarea
-            value={data.must_dos || ''}
-            onChange={e => onChange('must_dos', e.target.value)}
-            placeholder="Things you absolutely must experience, e.g. Eiffel Tower dinner, cooking class..."
-            rows={3}
-            style={{ ...inputStyle, resize: 'vertical' }}
+      {/* Input */}
+      {!complete && (
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKey}
+            placeholder="Type your reply..."
+            disabled={loading || !started}
+            style={{
+              ...inputStyle,
+              flex: 1,
+              opacity: loading ? 0.7 : 1,
+            }}
           />
+          <button
+            type="button"
+            onClick={send}
+            disabled={loading || !input.trim() || !started}
+            style={{
+              padding: '0 16px',
+              background: 'var(--color-primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: loading || !input.trim() ? 'default' : 'pointer',
+              opacity: loading || !input.trim() ? 0.5 : 1,
+              display: 'flex',
+              alignItems: 'center',
+            }}
+          >
+            {loading ? <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={18} />}
+          </button>
         </div>
+      )}
 
-        <div>
-          <label style={labelStyle}>Must-Avoid <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
-          <textarea
-            value={data.must_avoid || ''}
-            onChange={e => onChange('must_avoid', e.target.value)}
-            placeholder="Things to avoid, e.g. very touristy areas, crowded attractions..."
-            rows={2}
-            style={{ ...inputStyle, resize: 'vertical' }}
-          />
-        </div>
+      <style>{`
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+          40% { transform: scale(1.2); opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
 
-        <div>
-          <label style={labelStyle}>Constraints or Requirements <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
-          <textarea
-            value={data.constraints || ''}
-            onChange={e => onChange('constraints', e.target.value)}
-            placeholder="Dietary needs, mobility considerations, visa restrictions, health requirements..."
-            rows={2}
-            style={{ ...inputStyle, resize: 'vertical' }}
-          />
-        </div>
+// ─── Progress bar ─────────────────────────────────────────────────────────────
 
-        <div>
-          <label style={labelStyle}>Anything Else? <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>(optional)</span></label>
-          <textarea
-            value={data.notes || ''}
-            onChange={e => onChange('notes', e.target.value)}
-            placeholder="Any other details we should know about you or your trip..."
-            rows={3}
-            style={{ ...inputStyle, resize: 'vertical' }}
-          />
-        </div>
+function ProgressBar({ step }: { step: number }) {
+  const steps = ['Your Details', 'Trip Basics', 'Chat with Maya']
+  return (
+    <div style={{ marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+        <div style={{
+          position: 'absolute', top: '16px', left: '16px', right: '16px',
+          height: '2px', background: 'var(--color-border)', zIndex: 0,
+        }} />
+        <div style={{
+          position: 'absolute', top: '16px', left: '16px',
+          width: step === 1 ? '0%' : step === 2 ? '50%' : '100%',
+          height: '2px', background: 'var(--color-primary)', zIndex: 1,
+          transition: 'width 0.3s ease',
+        }} />
+        {steps.map((label, i) => {
+          const n = i + 1
+          const done = step > n
+          const active = step === n
+          return (
+            <div key={n} style={{ textAlign: 'center', zIndex: 2 }}>
+              <div style={{
+                width: '32px', height: '32px', borderRadius: '50%', margin: '0 auto 6px',
+                background: done ? 'var(--color-primary)' : active ? 'var(--color-accent)' : 'white',
+                border: `2px solid ${done || active ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                color: done ? 'white' : active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 700, fontSize: '13px', transition: 'all 0.2s',
+              }}>
+                {done ? '✓' : n}
+              </div>
+              <div style={{
+                fontSize: '11px', fontWeight: active ? 700 : 500, whiteSpace: 'nowrap',
+                color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
+              }}>{label}</div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
 
-const STEPS = ['Your Details', 'Trip Info', 'Preferences']
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function IntakePage() {
+  const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState<Partial<IntakeCreatePayload>>({
-    travellers_count: 2,
-    interests: [],
-    constraints: '',
-    must_dos: '',
-    must_avoid: '',
-    notes: '',
-  })
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState<IntakeSubmitResponse | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [chatComplete, setChatComplete] = useState(false)
+  const [transcript, setTranscript] = useState('')
 
-  function handleChange(key: string, value: unknown) {
-    setFormData(prev => ({ ...prev, [key]: value }))
-  }
+  const [step1, setStep1] = useState({ client_name: '', client_email: '' })
+  const [step2, setStep2] = useState({
+    trip_title: '',
+    origin_city: '',
+    start_date: '',
+    end_date: '',
+    budget_range: '',
+    travellers_count: 2,
+  })
 
-  function validateStep(s: number): string {
-    if (s === 1) {
-      if (!formData.client_name?.trim()) return 'Please enter your name.'
-      if (!formData.client_email?.trim()) return 'Please enter your email.'
-    }
-    if (s === 2) {
-      if (!formData.trip_title?.trim()) return 'Please enter a trip title.'
-      if (!formData.origin_city?.trim()) return 'Please enter your departure city.'
-      if (!formData.start_date) return 'Please select a departure date.'
-      if (!formData.end_date) return 'Please select a return date.'
-      if (formData.start_date && formData.end_date && formData.start_date >= formData.end_date)
-        return 'Return date must be after departure date.'
-      if (!formData.budget_range?.trim()) return 'Please enter your budget range.'
-      if (!formData.pace) return 'Please select a travel pace.'
-    }
-    if (s === 3) {
-      if (!formData.accommodation_style) return 'Please select an accommodation style.'
-    }
+  function validateStep1() {
+    if (!step1.client_name.trim()) return 'Please enter your name.'
+    if (!step1.client_email.trim() || !step1.client_email.includes('@')) return 'Please enter a valid email.'
     return ''
   }
 
-  function nextStep() {
-    const err = validateStep(step)
+  function validateStep2() {
+    if (!step2.trip_title.trim()) return 'Please enter your destination.'
+    if (!step2.origin_city.trim()) return 'Please enter your departure city.'
+    if (!step2.start_date) return 'Please select a departure date.'
+    if (!step2.end_date) return 'Please select a return date.'
+    if (step2.start_date >= step2.end_date) return 'Return date must be after departure date.'
+    if (!step2.budget_range.trim()) return 'Please enter your budget.'
+    return ''
+  }
+
+  function goNext() {
+    const err = step === 1 ? validateStep1() : validateStep2()
     if (err) { setError(err); return }
-    setError('');
-    (document.activeElement as HTMLElement)?.blur()
+    setError('')
     setStep(s => s + 1)
   }
 
   async function handleSubmit() {
-    const err = validateStep(3)
-    if (err) { setError(err); return }
-    setLoading(true)
+    if (!chatComplete) { setError('Please finish the conversation with Maya first.'); return }
+    setSubmitting(true)
     setError('')
     try {
-      const result = await submitIntake(formData as IntakeCreatePayload)
-      setSuccess(result)
+      const result = await submitIntake({
+        client_name: step1.client_name,
+        client_email: step1.client_email,
+        trip_title: step2.trip_title,
+        origin_city: step2.origin_city,
+        start_date: step2.start_date,
+        end_date: step2.end_date,
+        budget_range: step2.budget_range,
+        pace: 'moderate',
+        travellers_count: step2.travellers_count,
+        interests: [],
+        constraints: '',
+        accommodation_style: 'Mid-range Hotel',
+        must_dos: '',
+        must_avoid: '',
+        notes: '',
+        conversation_transcript: transcript,
+      })
+
+      // Auto-login and redirect to the trip
+      try {
+        const auth = await clientLogin(step1.client_email, result.reference_code)
+        storeToken(auth.access_token, auth.role)
+        navigate(`/trip/${result.trip_id}`)
+      } catch {
+        // If auto-login fails, fall back to login page
+        navigate('/login?generating=1')
+      }
     } catch (e) {
       setError(getApiError(e))
-    } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
-  if (success) {
-    return (
-      <Layout variant="public">
-        <div style={{ maxWidth: '520px', margin: '60px auto', padding: '0 24px', textAlign: 'center' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-            <div style={{
-              width: '72px',
-              height: '72px',
-              background: '#F0FDF4',
-              border: '2px solid #BBF7D0',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <CheckCircle size={36} color="#15803D" strokeWidth={1.5} />
-            </div>
-          </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '10px' }}>
-            Your trip is submitted!
-          </h1>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: '32px', lineHeight: '1.6', fontSize: '15px' }}>
-            Our team will start crafting your personalised itinerary. We've sent your login details to your email — check your inbox.
-          </p>
-
-          <div style={{
-            background: 'var(--color-text)',
-            borderRadius: '16px',
-            padding: '24px',
-            textAlign: 'left',
-            marginBottom: '24px',
-            color: 'white',
-          }}>
-            <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '16px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Your Portal Login
-            </div>
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Email</div>
-              <div style={{ fontSize: '15px', fontWeight: 600 }}>{success.email}</div>
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '2px' }}>Reference Code</div>
-              <div style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '4px', color: 'var(--color-primary)' }}>
-                {success.reference_code}
-              </div>
-            </div>
-            <div style={{
-              background: 'rgba(249,115,22,0.1)',
-              border: '1px solid rgba(249,115,22,0.2)',
-              borderRadius: '8px',
-              padding: '10px 12px',
-              fontSize: '12px',
-              color: '#FB923C',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}>
-              <AlertCircle size={14} strokeWidth={2} />
-              Save your reference code — you will need it to log in.
-            </div>
-          </div>
-
-          <Link
-            to="/login"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'var(--color-primary)',
-              color: 'white',
-              padding: '14px 32px',
-              borderRadius: '12px',
-              fontWeight: 700,
-              fontSize: '15px',
-              textDecoration: 'none',
-            }}
-          >
-            Log in to Your Portal <ArrowRight size={16} strokeWidth={2.5} />
-          </Link>
-        </div>
-      </Layout>
-    )
+  const seedData = {
+    destination: step2.trip_title,
+    origin_city: step2.origin_city,
+    start_date: step2.start_date,
+    end_date: step2.end_date,
+    budget_range: step2.budget_range,
+    travellers_count: step2.travellers_count,
   }
 
   return (
@@ -494,73 +575,13 @@ export default function IntakePage() {
             Plan your perfect trip
           </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '15px', lineHeight: '1.5' }}>
-            Tell us about your dream journey and we'll craft a personalised itinerary just for you.
+            Tell us about your dream journey — our AI will craft a personalised itinerary just for you.
           </p>
         </div>
 
-        {/* Progress bar */}
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-            {/* Background line */}
-            <div style={{
-              position: 'absolute',
-              top: '16px',
-              left: '16px',
-              right: '16px',
-              height: '2px',
-              background: 'var(--color-border)',
-              zIndex: 0,
-            }} />
-            {/* Progress line */}
-            <div style={{
-              position: 'absolute',
-              top: '16px',
-              left: '16px',
-              width: step === 1 ? '0%' : step === 2 ? '50%' : '100%',
-              height: '2px',
-              background: 'var(--color-primary)',
-              zIndex: 1,
-              transition: 'width 0.3s ease',
-            }} />
+        <ProgressBar step={step} />
 
-            {STEPS.map((label, i) => {
-              const stepNum = i + 1
-              const done = step > stepNum
-              const active = step === stepNum
-              return (
-                <div key={stepNum} style={{ textAlign: 'center', zIndex: 2 }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: done ? 'var(--color-primary)' : active ? 'var(--color-accent)' : 'white',
-                    border: `2px solid ${done || active ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    color: done ? 'white' : active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    margin: '0 auto 6px',
-                    transition: 'all 0.2s',
-                  }}>
-                    {done ? <CheckCircle size={16} strokeWidth={2.5} /> : stepNum}
-                  </div>
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: active ? 700 : 500,
-                    color: active ? 'var(--color-primary)' : done ? 'var(--color-text-muted)' : 'var(--color-text-muted)',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {label}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Form card */}
+        {/* Card */}
         <div style={{
           background: 'white',
           border: '1.5px solid var(--color-border)',
@@ -568,92 +589,85 @@ export default function IntakePage() {
           padding: '32px',
           boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
         }}>
-          {step === 1 && <Step1 data={formData} onChange={handleChange} />}
-          {step === 2 && <Step2 data={formData} onChange={handleChange} />}
-          {step === 3 && <Step3 data={formData} onChange={handleChange} />}
+          {step === 1 && (
+            <Step1
+              data={step1}
+              onChange={(k, v) => setStep1(prev => ({ ...prev, [k]: v }))}
+            />
+          )}
+          {step === 2 && (
+            <Step2
+              data={step2}
+              onChange={(k, v) => setStep2(prev => ({ ...prev, [k]: v } as typeof step2))}
+            />
+          )}
+          {step === 3 && (
+            <Step3
+              seedData={seedData}
+              onComplete={(t) => { setTranscript(t); setChatComplete(true) }}
+            />
+          )}
 
           {error && (
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: '#FEF2F2',
-              border: '1px solid #FECACA',
-              borderRadius: '10px',
-              padding: '12px 14px',
-              fontSize: '13px',
-              color: '#B91C1C',
-              marginTop: '20px',
+              background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px',
+              padding: '12px 14px', fontSize: '13px', color: '#B91C1C', marginTop: '20px',
             }}>
-              <AlertCircle size={15} strokeWidth={2} style={{ flexShrink: 0 }} />
               {error}
             </div>
           )}
 
+          {/* Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '28px', gap: '12px' }}>
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => { setError(''); setStep(s => s - 1) }}
+                disabled={step === 3}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'white',
-                  border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-text-muted)',
-                  padding: '11px 20px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'white', border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-text-muted)', padding: '11px 20px',
+                  borderRadius: '10px', fontSize: '14px', fontWeight: 600,
+                  cursor: step === 3 ? 'default' : 'pointer',
+                  opacity: step === 3 ? 0.4 : 1,
                 }}
               >
-                <ArrowLeft size={15} strokeWidth={2.5} /> Back
+                <ArrowLeft size={15} /> Back
               </button>
             ) : <div />}
 
             {step < 3 ? (
               <button
                 type="button"
-                onClick={nextStep}
+                onClick={goNext}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: 'var(--color-primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '11px 24px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: 'var(--color-primary)', color: 'white',
+                  border: 'none', padding: '11px 24px',
+                  borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
                 }}
               >
-                Continue <ArrowRight size={15} strokeWidth={2.5} />
+                Continue <ArrowRight size={15} />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={!chatComplete || submitting}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: loading ? 'var(--color-border)' : 'var(--color-primary)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '11px 24px',
-                  borderRadius: '10px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: loading ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  background: !chatComplete || submitting ? 'var(--color-border)' : 'var(--color-primary)',
+                  color: 'white', border: 'none', padding: '11px 24px',
+                  borderRadius: '10px', fontSize: '14px', fontWeight: 700,
+                  cursor: !chatComplete || submitting ? 'default' : 'pointer',
                 }}
               >
-                {loading ? <LoadingSpinner size={16} color="white" label="" /> : <FileText size={15} strokeWidth={2.5} />}
-                {loading ? 'Submitting...' : 'Submit My Trip'}
+                {submitting ? (
+                  <><LoadingSpinner size={16} color="white" label="" /> Generating...</>
+                ) : (
+                  <>Generate My Itinerary <ArrowRight size={15} /></>
+                )}
               </button>
             )}
           </div>

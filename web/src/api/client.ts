@@ -96,6 +96,17 @@ export async function submitIntake(payload: IntakeCreatePayload): Promise<Intake
   return res.data
 }
 
+export async function intakeChat(
+  messages: { role: string; content: string }[],
+  seedData: Record<string, string | number>
+): Promise<{ message: string; complete: boolean }> {
+  const res = await api.post<{ message: string; complete: boolean }>('/intake/chat', {
+    messages,
+    seed_data: seedData,
+  })
+  return res.data
+}
+
 // ─── Client Portal ───────────────────────────────────────────────────────────
 
 export async function getClientTrips(): Promise<TripWithLatestItinerary[]> {

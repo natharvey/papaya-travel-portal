@@ -12,11 +12,12 @@ import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClie
 import type { TripDetail, Message } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  INTAKE:    { bg: '#EEF2FF', text: '#4338CA' },
-  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)' },
-  REVIEW:    { bg: '#FFFBEB', text: '#B45309' },
-  CONFIRMED: { bg: '#F0FDF6', text: '#166534' },
-  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280' },
+  INTAKE:      { bg: '#EEF2FF', text: '#4338CA' },
+  GENERATING:  { bg: '#FFF7ED', text: '#C2410C' },
+  DRAFT:       { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)' },
+  REVIEW:      { bg: '#FFFBEB', text: '#B45309' },
+  CONFIRMED:   { bg: '#F0FDF6', text: '#166534' },
+  ARCHIVED:    { bg: '#F8F8F8', text: '#6B7280' },
 }
 
 function formatDate(d: string): string {
@@ -72,14 +73,28 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     if (!tripId) return
-    getClientTrip(tripId)
-      .then(data => {
+    let pollTimer: ReturnType<typeof setTimeout> | null = null
+
+    async function load() {
+      try {
+        const data = await getClientTrip(tripId!)
         setTrip(data)
         setMessages(data.messages)
-      })
-      .catch(e => setError(getApiError(e)))
-      .finally(() => setLoading(false))
+        // Poll every 5s while still generating
+        if (data.status === 'GENERATING') {
+          pollTimer = setTimeout(load, 5000)
+        }
+      } catch (e) {
+        setError(getApiError(e))
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    load()
     listClientDocuments(tripId).then(setDocuments).catch(() => {})
+
+    return () => { if (pollTimer) clearTimeout(pollTimer) }
   }, [tripId])
 
   async function handleConfirm() {
@@ -298,18 +313,32 @@ export default function TripDetailPage() {
             {/* Itinerary Tab */}
             {tab === 'itinerary' && (
               <>
-                {(!latestItinerary || !['REVIEW', 'CONFIRMED'].includes(trip.status)) && (
+                {trip.status === 'GENERATING' && (
+                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                      <LoadingSpinner size={40} label="" />
+                    </div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>
+                      Building your itinerary...
+                    </h3>
+                    <p style={{ color: 'var(--color-text-muted)', lineHeight: '1.6', maxWidth: '420px', margin: '0 auto' }}>
+                      Our AI is researching real places, hotels, and experiences tailored just for you.
+                      This usually takes 1–2 minutes — this page updates automatically.
+                    </p>
+                  </div>
+                )}
+                {(!latestItinerary || !['REVIEW', 'CONFIRMED'].includes(trip.status)) && trip.status !== 'GENERATING' && (
                   <div style={{ textAlign: 'center', padding: '48px 20px' }}>
                     <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
                       <FileText size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
                     </div>
                     <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
-                      {trip.status === 'DRAFT' ? 'Your changes are being reviewed' : 'Your itinerary is being prepared'}
+                      {trip.status === 'DRAFT' ? 'Your changes are being processed' : 'Your itinerary is being prepared'}
                     </h3>
                     <p style={{ color: 'var(--color-text-muted)', lineHeight: '1.6' }}>
                       {trip.status === 'DRAFT'
-                        ? "Our team has received your change request and is working on an updated itinerary. We'll notify you when it's ready to review."
-                        : "Our team is working on your personalised itinerary. You'll see it here once it's ready. Feel free to send us a message in the Messages tab!"}
+                        ? "Your updated itinerary will appear here shortly."
+                        : "Your personalised itinerary will appear here once it's ready."}
                     </p>
                   </div>
                 )}

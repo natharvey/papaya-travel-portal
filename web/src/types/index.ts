@@ -20,6 +20,7 @@ export interface IntakeCreatePayload {
   must_dos: string
   must_avoid: string
   notes: string
+  conversation_transcript: string
 }
 
 export interface IntakeSubmitResponse {
@@ -113,7 +114,7 @@ export interface Message {
   created_at: string
 }
 
-export type TripStatus = 'INTAKE' | 'DRAFT' | 'REVIEW' | 'CONFIRMED' | 'ARCHIVED'
+export type TripStatus = 'INTAKE' | 'GENERATING' | 'DRAFT' | 'REVIEW' | 'CONFIRMED' | 'ARCHIVED'
 
 export interface Trip {
   id: string
