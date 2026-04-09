@@ -386,8 +386,9 @@ Search the web for real, currently-operating hotels and properties.
 Return ONLY a JSON array (no other text) matching this schema exactly:
 [
   {
+    "destination": "city or main destination name (e.g. Sydney, Hobart, Bali)",
     "name": "exact property name",
-    "area": "neighbourhood or area",
+    "area": "neighbourhood or area within that destination",
     "style": "e.g. Luxury Resort / Boutique Hotel / Mid-range / Budget",
     "price_per_night_aud": number or null,
     "why_suits": "1 sentence explaining why this suits this specific traveller",
@@ -396,7 +397,7 @@ Return ONLY a JSON array (no other text) matching this schema exactly:
     "notes": "any important details — book ahead, great breakfast, pool access, etc."
   }
 ]
-Include 4-6 options across a range of styles within the client's budget.
+Include 2-3 options per destination across a range of styles within the client's budget.
 Only include real properties you are confident exist and are currently operating."""
 
 

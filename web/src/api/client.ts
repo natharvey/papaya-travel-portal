@@ -162,6 +162,7 @@ export async function getFlightSuggestions(tripId: string): Promise<{ suggestion
 }
 
 export interface AccommodationSuggestion {
+  destination: string
   name: string
   area: string
   style: string
