@@ -12,9 +12,9 @@ from app.models import Trip, Itinerary, IntakeResponse, Client
 
 logger = logging.getLogger(__name__)
 
-MAX_TURNS = 12       # max web-search rounds before we give up
+MAX_TURNS = 8        # max web-search rounds for accommodation/flight suggestions
 MAX_RETRIES = 3
-RETRY_DELAYS = [5, 15, 30]
+RETRY_DELAYS = [70, 90, 120]  # must exceed the 60s rate-limit window
 
 # ─── System prompts ───────────────────────────────────────────────────────────
 
@@ -23,8 +23,8 @@ You create detailed, highly personalised itineraries for Australian travellers.
 
 CRITICAL RULES:
 - Always use REAL, SPECIFIC place names — actual restaurants, hotels, attractions, temples, beaches.
-  Never say "a local restaurant" or "a beachside café". Name the actual place.
-- Search the web for current, accurate information before writing recommendations.
+  Never say "a local restaurant" or "a beachside café". Name the actual place with its real name.
+- Draw on your extensive knowledge of real, operating establishments worldwide.
 - Quote all costs in AUD (Australian Dollars).
 - Consider real opening hours, booking requirements, and seasonal factors.
 - For each activity, include WHY it suits this particular traveller based on their profile.
@@ -157,16 +157,20 @@ def build_generation_prompt(
         parts.append(f"CONSTRAINTS: {intake.constraints}")
 
     if conversation_transcript:
+        # Cap transcript to ~3000 chars to avoid bloating token count
+        transcript = conversation_transcript[:3000]
+        if len(conversation_transcript) > 3000:
+            transcript += "\n[truncated]"
         parts.append(
-            f"\nDETAILED CLIENT PROFILE (from intake conversation):\n{conversation_transcript}"
+            f"\nDETAILED CLIENT PROFILE (from intake conversation):\n{transcript}"
         )
     elif intake.notes:
         parts.append(f"ADDITIONAL NOTES: {intake.notes}")
 
     parts.append(
-        "\nSearch the web for real, specific, currently-operating places "
-        "(hotels, restaurants, attractions) that match this profile. "
-        "Use actual names throughout. Output the complete itinerary JSON."
+        "\nUsing your knowledge of real, currently-operating establishments, "
+        "name specific restaurants, hotels, and attractions throughout. "
+        "Output the complete itinerary JSON."
     )
 
     return "\n".join(parts)
@@ -261,10 +265,22 @@ def generate_itinerary(
     if additional_instructions:
         user_prompt += f"\n\nSPECIAL INSTRUCTIONS FOR THIS VERSION:\n{additional_instructions}"
 
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    claude = anthropic.Anthropic(api_key=api_key)
+
     last_exc = None
     for attempt in range(MAX_RETRIES):
         try:
-            raw_text = _call_claude_with_search(ITINERARY_SYSTEM, user_prompt)
+            response = claude.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=8000,
+                system=ITINERARY_SYSTEM,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+            raw_text = response.content[0].text
             itinerary_data = _parse_json_from_text(raw_text)
             break
         except Exception as e:
@@ -406,7 +422,7 @@ def generate_accommodation_suggestions(
         f"Search for currently-available properties and return the JSON array."
     )
 
-    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}]
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
     messages = [{"role": "user", "content": prompt}]
 
     for _ in range(MAX_TURNS):
