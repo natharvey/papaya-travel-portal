@@ -139,29 +139,40 @@ export default function FlightMap({ flights }: FlightMapProps) {
         ))}
 
         {/* Airport markers */}
-        {markers.map(marker => (
-          <Marker key={marker.label} coordinates={marker.coords}>
-            <circle
-              r={marker.isOrigin ? 5 : 4}
-              fill={marker.isOrigin ? '#f97316' : '#ffffff'}
-              stroke={marker.isOrigin ? '#fff' : '#f97316'}
-              strokeWidth={1.5}
-            />
-            <text
-              textAnchor="middle"
-              y={-10}
-              style={{
-                fontSize: '9px',
-                fontFamily: 'inherit',
-                fontWeight: 700,
-                fill: '#ffffff',
-                letterSpacing: '0.5px',
-              }}
-            >
-              {marker.label}
-            </text>
-          </Marker>
-        ))}
+        {markers.map(marker => {
+          // Push label away from the centroid so nearby airports don't collide
+          const centerLon = allPoints.reduce((s, p) => s + p[0], 0) / allPoints.length
+          const centerLat = allPoints.reduce((s, p) => s + p[1], 0) / allPoints.length
+          const toRight = marker.coords[0] >= centerLon
+          const toNorth = marker.coords[1] >= centerLat
+          const dx = toRight ? 8 : -8
+          const dy = toNorth ? -10 : 16
+          const anchor = toRight ? 'start' : 'end'
+          return (
+            <Marker key={marker.label} coordinates={marker.coords}>
+              <circle
+                r={marker.isOrigin ? 5 : 4}
+                fill={marker.isOrigin ? '#f97316' : '#ffffff'}
+                stroke={marker.isOrigin ? '#fff' : '#f97316'}
+                strokeWidth={1.5}
+              />
+              <text
+                textAnchor={anchor}
+                dx={dx}
+                dy={dy}
+                style={{
+                  fontSize: '9px',
+                  fontFamily: 'inherit',
+                  fontWeight: 700,
+                  fill: '#ffffff',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {marker.label}
+              </text>
+            </Marker>
+          )
+        })}
       </ComposableMap>
 
       {/* Legend */}
