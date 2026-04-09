@@ -87,7 +87,7 @@ export default function PortalPage() {
             </div>
             <h2 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: 'var(--color-text)' }}>No trips yet</h2>
             <p style={{ color: 'var(--color-text-muted)', marginBottom: '28px', fontSize: '15px', lineHeight: '1.5' }}>
-              Submit your first trip enquiry and we'll craft a<br />personalised itinerary just for you.
+              Tell Maya about your dream trip and she'll craft a<br />personalised itinerary in minutes.
             </p>
             <Link
               to="/intake"

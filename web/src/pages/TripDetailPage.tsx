@@ -480,7 +480,7 @@ export default function TripDetailPage() {
                         color: '#C2410C',
                         fontWeight: 600,
                       }}>
-                        Your change request has been sent. Our team will be in touch with an updated itinerary.
+                        Your change request has been sent. Maya will prepare an updated itinerary shortly.
                       </div>
                     )}
 
@@ -495,7 +495,7 @@ export default function TripDetailPage() {
                         color: '#15803D',
                         fontWeight: 600,
                       }}>
-                        Your trip is confirmed! Our team will be in touch with next steps.
+                        Your trip is confirmed! Check back here for any updates or use the chat to make last-minute tweaks.
                       </div>
                     )}
 
