@@ -44,6 +44,11 @@ def get_current_client(
     return client
 
 
+@router.get("/me")
+def get_me(client: Client = Depends(get_current_client)):
+    return {"id": str(client.id), "name": client.name, "email": client.email, "reference_code": client.reference_code}
+
+
 @router.get("/trips", response_model=list[TripWithLatestItinerary])
 def list_trips(
     client: Client = Depends(get_current_client),

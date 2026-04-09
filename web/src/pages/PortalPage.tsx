@@ -32,7 +32,7 @@ export default function PortalPage() {
             </p>
           </div>
           <Link
-            to="/intake"
+            to="/portal/new-trip"
             style={{
               background: 'var(--color-primary)',
               color: 'white',
@@ -90,7 +90,7 @@ export default function PortalPage() {
               Tell Maya about your dream trip and she'll craft a<br />personalised itinerary in minutes.
             </p>
             <Link
-              to="/intake"
+              to="/portal/new-trip"
               style={{
                 background: 'var(--color-primary)',
                 color: 'white',

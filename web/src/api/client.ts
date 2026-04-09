@@ -109,6 +109,11 @@ export async function intakeChat(
 
 // ─── Client Portal ───────────────────────────────────────────────────────────
 
+export async function getClientMe(): Promise<{ id: string; name: string; email: string; reference_code: string }> {
+  const res = await api.get<{ id: string; name: string; email: string; reference_code: string }>('/client/me')
+  return res.data
+}
+
 export async function getClientTrips(): Promise<TripWithLatestItinerary[]> {
   const res = await api.get<TripWithLatestItinerary[]>('/client/trips')
   return res.data

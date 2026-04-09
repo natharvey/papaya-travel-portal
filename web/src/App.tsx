@@ -11,6 +11,7 @@ const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'))
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const AdminTripPage = lazy(() => import('./pages/AdminTripPage'))
 const MagicLoginPage = lazy(() => import('./pages/MagicLoginPage'))
+const NewTripPage = lazy(() => import('./pages/NewTripPage'))
 
 function PageLoader() {
   return (
@@ -45,6 +46,14 @@ export default function App() {
             element={
               <ProtectedRoute role="client">
                 <PortalPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/portal/new-trip"
+            element={
+              <ProtectedRoute role="client">
+                <NewTripPage />
               </ProtectedRoute>
             }
           />
