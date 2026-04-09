@@ -97,18 +97,13 @@ def send_intake_confirmation(
 ) -> None:
     subject = "Your Papaya Travel enquiry has been received"
 
-    login_line = f"\nOr log in with your code at: {PORTAL_URL}/login\n" if magic_link else f"\nLog in at: {PORTAL_URL}/login\n"
-    magic_section_plain = f"Jump straight in:\n{magic_link}\n(This link expires in 1 hour){login_line}" if magic_link else f"Log in at: {PORTAL_URL}/login"
+    magic_section_plain = f"Jump straight in:\n{magic_link}\n(This link expires in 1 hour)\n\nAfter it expires, you can request a new login link at: {PORTAL_URL}/login" if magic_link else f"Log in at: {PORTAL_URL}/login"
 
     plain = f"""Hi {client_name},
 
 Thanks for your enquiry — we've received your trip request and our team will be in touch soon.
 
 {magic_section_plain}
-
-Your portal login details (keep these safe):
-  Email:          {to}
-  Reference code: {reference_code}
 
 Trip: {trip_title}
 
@@ -146,15 +141,8 @@ The Papaya Travel Team
 
   {magic_button}
 
-  <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 24px 0;">
-    <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748B;">Your login details — keep these safe</p>
-    <p style="margin: 4px 0; font-size: 14px;">Email: <code style="background: #E2E8F0; padding: 2px 6px; border-radius: 4px;">{to}</code></p>
-    <p style="margin: 8px 0 4px 0; font-size: 14px;">Reference code: <code style="font-size: 20px; color: #F97316; font-weight: bold; background: #FFF7ED; padding: 4px 10px; border-radius: 4px;">{reference_code}</code></p>
-    <p style="margin: 12px 0 0 0; font-size: 13px; color: #64748B;">Trip: {trip_title}</p>
-  </div>
-
   <p style="font-size: 13px; color: #94A3B8; margin-top: 32px;">
-    The magic link above expires in 1 hour. After that, use your email and reference code to log in at <a href="{PORTAL_URL}/login" style="color: #F97316;">{PORTAL_URL}/login</a>.
+    The link above expires in 1 hour. To log in later, visit <a href="{PORTAL_URL}/login" style="color: #F97316;">{PORTAL_URL}/login</a> and enter your email address — we'll send you a new link.
   </p>
 
   <p>The Papaya Travel Team</p>
