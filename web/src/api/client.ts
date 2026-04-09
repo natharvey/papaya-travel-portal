@@ -143,6 +143,45 @@ export async function sendClientMessage(tripId: string, body: string): Promise<M
   return res.data
 }
 
+export async function tripChat(
+  tripId: string,
+  messages: { role: string; content: string }[]
+): Promise<{ message: string; itinerary_updated: boolean; new_itinerary: import('../types').Itinerary | null }> {
+  const res = await api.post(`/client/trips/${tripId}/chat`, { messages })
+  return res.data
+}
+
+export async function getAccommodationSuggestions(tripId: string): Promise<{ suggestions: AccommodationSuggestion[] }> {
+  const res = await api.post(`/client/trips/${tripId}/accommodation-suggestions`)
+  return res.data
+}
+
+export async function getFlightSuggestions(tripId: string): Promise<{ suggestions: FlightSuggestion[] }> {
+  const res = await api.post(`/client/trips/${tripId}/flight-suggestions`)
+  return res.data
+}
+
+export interface AccommodationSuggestion {
+  name: string
+  area: string
+  style: string
+  price_per_night_aud: number | null
+  why_suits: string
+  google_maps_url: string
+  booking_com_search: string
+  notes: string
+}
+
+export interface FlightSuggestion {
+  route: string
+  airlines: string[]
+  typical_price_aud: string
+  flight_time: string
+  tips: string
+  google_flights_url: string
+  skyscanner_url: string
+}
+
 // ─── Admin ───────────────────────────────────────────────────────────────────
 
 export async function getAdminTrips(status?: string): Promise<AdminTripListItem[]> {

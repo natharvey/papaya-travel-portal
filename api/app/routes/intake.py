@@ -76,19 +76,32 @@ class IntakeCreateExtended(IntakeCreate):
 
 
 def _run_generation(trip_id, conversation_transcript: str):
-    """Background task: generate itinerary and update trip status."""
+    """Background task: generate itinerary, then email the client when ready."""
+    from app.models import Trip, Client
+    from app.services.email import send_itinerary_ready
+    import logging
+    log = logging.getLogger(__name__)
+
     db = SessionLocal()
     try:
-        generate_itinerary(
+        itinerary = generate_itinerary(
             db,
             trip_id,
             conversation_transcript=conversation_transcript,
         )
+        # Send "ready" email
+        trip = db.query(Trip).filter(Trip.id == trip_id).first()
+        if trip:
+            client = db.query(Client).filter(Client.id == trip.client_id).first()
+            if client:
+                send_itinerary_ready(
+                    to=client.email,
+                    client_name=client.name,
+                    trip_title=trip.title,
+                    trip_id=str(trip_id),
+                )
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error("Background generation failed for trip %s: %s", trip_id, e)
-        # Mark trip back to INTAKE so admin can retry
-        from app.models import Trip
+        log.error("Background generation failed for trip %s: %s", trip_id, e)
         trip = db.query(Trip).filter(Trip.id == trip_id).first()
         if trip:
             trip.status = "INTAKE"

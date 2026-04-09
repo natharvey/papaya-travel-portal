@@ -299,6 +299,240 @@ def generate_itinerary(
     return itinerary
 
 
+# ─── Chat refinement ─────────────────────────────────────────────────────────
+
+CHAT_SYSTEM = """You are Maya, an expert travel consultant at Papaya Travel.
+You are helping a client refine their travel itinerary.
+
+The client's current itinerary is provided as JSON context.
+Respond conversationally and warmly — like a knowledgeable friend, not a chatbot.
+
+If the client asks a question (e.g. "what's the weather like in Bali in July?"), answer it conversationally.
+
+If the client wants changes to the itinerary (e.g. "make day 3 more relaxed", "swap the cooking class for snorkelling"), then:
+1. Describe the changes you're making in a friendly sentence or two
+2. Output the COMPLETE updated itinerary JSON in a ```json block at the end of your response
+
+Important: only include the ```json block when you are making actual changes to the itinerary.
+Keep all responses concise — 2-4 sentences for conversational replies."""
+
+
+def chat_with_itinerary(
+    messages: list[dict],
+    itinerary_json: dict,
+    trip_context: str,
+) -> tuple[str, dict | None]:
+    """
+    Run one turn of itinerary refinement chat.
+    Returns (assistant_message, updated_itinerary_json | None).
+    updated_itinerary_json is set only when Claude made changes.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    system = (
+        f"{CHAT_SYSTEM}\n\n"
+        f"TRIP CONTEXT:\n{trip_context}\n\n"
+        f"CURRENT ITINERARY JSON:\n```json\n{json.dumps(itinerary_json, indent=2)}\n```"
+    )
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=8000,
+        system=system,
+        messages=messages,
+    )
+
+    text = response.content[0].text
+    updated = None
+
+    # Check if Claude included an updated itinerary JSON block
+    try:
+        updated = _parse_json_from_text(text)
+        # Strip the JSON block from the displayed message
+        text = re.sub(r"```(?:json)?\s*\{.*?\}\s*```", "", text, flags=re.DOTALL).strip()
+    except (ValueError, json.JSONDecodeError):
+        pass  # No JSON block — conversational reply only
+
+    return text, updated
+
+
+# ─── Accommodation suggestions ────────────────────────────────────────────────
+
+ACCOMMODATION_SYSTEM = """You are an expert travel consultant researching accommodation options.
+Search the web for real, currently-operating hotels and properties.
+Return ONLY a JSON array (no other text) matching this schema exactly:
+[
+  {
+    "name": "exact property name",
+    "area": "neighbourhood or area",
+    "style": "e.g. Luxury Resort / Boutique Hotel / Mid-range / Budget",
+    "price_per_night_aud": number or null,
+    "why_suits": "1 sentence explaining why this suits this specific traveller",
+    "google_maps_url": "https://maps.google.com/?q=Property+Name+City",
+    "booking_com_search": "https://www.booking.com/search.html?ss=Property+Name",
+    "notes": "any important details — book ahead, great breakfast, pool access, etc."
+  }
+]
+Include 4-6 options across a range of styles within the client's budget.
+Only include real properties you are confident exist and are currently operating."""
+
+
+def generate_accommodation_suggestions(
+    trip_title: str,
+    origin_city: str,
+    budget_range: str,
+    accommodation_style: str,
+    traveller_profile: str,
+    destinations: list[str],
+) -> list[dict]:
+    """Search for real accommodation options matching the client's profile."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    dest_str = ", ".join(destinations) if destinations else trip_title
+    prompt = (
+        f"Find real accommodation options for this trip:\n"
+        f"Destination: {dest_str}\n"
+        f"Preferred style: {accommodation_style}\n"
+        f"Budget: {budget_range} AUD total trip budget\n"
+        f"Traveller profile: {traveller_profile}\n\n"
+        f"Search for currently-available properties and return the JSON array."
+    )
+
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}]
+    messages = [{"role": "user", "content": prompt}]
+
+    for _ in range(MAX_TURNS):
+        response = client.beta.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4000,
+            system=ACCOMMODATION_SYSTEM,
+            messages=messages,
+            tools=tools,
+            betas=["web-search-2025-03-05"],
+        )
+
+        text_parts = []
+        has_tool_use = False
+        for block in response.content:
+            if hasattr(block, "text"):
+                text_parts.append(block.text)
+            elif block.type == "tool_use":
+                has_tool_use = True
+
+        if response.stop_reason == "end_turn" or not has_tool_use:
+            raw = "\n".join(text_parts)
+            # Extract JSON array from response
+            match = re.search(r"\[.*\]", raw, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+            return []
+
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = [
+            {"type": "tool_result", "tool_use_id": b.id, "content": "Search completed."}
+            for b in response.content if b.type == "tool_use"
+        ]
+        messages.append({"role": "user", "content": tool_results})
+
+    return []
+
+
+# ─── Flight suggestions ───────────────────────────────────────────────────────
+
+FLIGHTS_SYSTEM = """You are a flight expert helping Australian travellers find the best routes.
+Return ONLY a JSON array (no other text) matching this schema exactly:
+[
+  {
+    "route": "e.g. Sydney → Bali (Denpasar)",
+    "airlines": ["Jetstar", "AirAsia"],
+    "typical_price_aud": "e.g. $400–$650 return",
+    "flight_time": "e.g. ~6 hours direct",
+    "tips": "best time to book, peak season warnings, layover tips",
+    "google_flights_url": "pre-filled Google Flights URL for this route and dates",
+    "skyscanner_url": "pre-filled Skyscanner URL"
+  }
+]
+Include all legs of the journey (outbound, return, any internal flights needed).
+Build Google Flights URLs in this format:
+https://www.google.com/travel/flights?q=Flights+from+ORIGIN+to+DEST+on+DATE
+Build Skyscanner URLs in this format:
+https://www.skyscanner.com.au/transport/flights/ORIG/DEST/YYMMDD/YYMMDD/"""
+
+
+def generate_flight_suggestions(
+    origin_city: str,
+    trip_title: str,
+    start_date: str,
+    end_date: str,
+    budget_range: str,
+    travellers_count: int,
+    destinations: list[str],
+) -> list[dict]:
+    """Generate flight route suggestions with booking deep links."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    dest_str = ", ".join(destinations) if destinations else trip_title
+    prompt = (
+        f"Suggest flight options for:\n"
+        f"From: {origin_city}, Australia\n"
+        f"To: {dest_str}\n"
+        f"Outbound: {start_date}\n"
+        f"Return: {end_date}\n"
+        f"Travellers: {travellers_count}\n"
+        f"Total budget: {budget_range} AUD\n\n"
+        f"Include all required flight legs. Build accurate deep links. Return the JSON array."
+    )
+
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
+    messages = [{"role": "user", "content": prompt}]
+
+    for _ in range(MAX_TURNS):
+        response = client.beta.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=3000,
+            system=FLIGHTS_SYSTEM,
+            messages=messages,
+            tools=tools,
+            betas=["web-search-2025-03-05"],
+        )
+
+        text_parts = []
+        has_tool_use = False
+        for block in response.content:
+            if hasattr(block, "text"):
+                text_parts.append(block.text)
+            elif block.type == "tool_use":
+                has_tool_use = True
+
+        if response.stop_reason == "end_turn" or not has_tool_use:
+            raw = "\n".join(text_parts)
+            match = re.search(r"\[.*\]", raw, re.DOTALL)
+            if match:
+                return json.loads(match.group(0))
+            return []
+
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = [
+            {"type": "tool_result", "tool_use_id": b.id, "content": "Search completed."}
+            for b in response.content if b.type == "tool_use"
+        ]
+        messages.append({"role": "user", "content": tool_results})
+
+    return []
+
+
 # ─── Markdown renderer ────────────────────────────────────────────────────────
 
 def render_itinerary_markdown(data: dict) -> str:

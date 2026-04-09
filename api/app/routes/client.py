@@ -14,6 +14,8 @@ from app.schemas import (
 )
 from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
 from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
+from app.services.ai import chat_with_itinerary, generate_accommodation_suggestions, generate_flight_suggestions
+from pydantic import BaseModel as PydanticBaseModel
 
 router = APIRouter(prefix="/client", tags=["client"])
 security = HTTPBearer()
@@ -214,6 +216,157 @@ def send_message(
         message_body=payload.body,
     )
     return MessageOut.model_validate(msg)
+
+
+# ─── AI Chat refinement ──────────────────────────────────────────────────────
+
+class TripChatMessage(PydanticBaseModel):
+    role: str
+    content: str
+
+class TripChatRequest(PydanticBaseModel):
+    messages: list[TripChatMessage]
+
+class TripChatResponse(PydanticBaseModel):
+    message: str
+    itinerary_updated: bool
+    new_itinerary: Optional[ItineraryOut] = None
+
+
+@router.post("/trips/{trip_id}/chat", response_model=TripChatResponse)
+def trip_chat(
+    trip_id: uuid.UUID,
+    payload: TripChatRequest,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = (
+        db.query(Trip)
+        .filter(Trip.id == trip_id, Trip.client_id == client.id)
+        .options(joinedload(Trip.itineraries), joinedload(Trip.intake_response))
+        .first()
+    )
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    latest = max(trip.itineraries, key=lambda i: i.version) if trip.itineraries else None
+    if not latest:
+        raise HTTPException(status_code=400, detail="No itinerary to chat about yet.")
+
+    intake = trip.intake_response
+    trip_context = (
+        f"Trip: {trip.title}\n"
+        f"Dates: {trip.start_date} to {trip.end_date}\n"
+        f"Origin: {trip.origin_city}\n"
+        f"Budget: {trip.budget_range}\n"
+        f"Travellers: {intake.travellers_count if intake else 'unknown'}"
+    )
+
+    msg_dicts = [{"role": m.role, "content": m.content} for m in payload.messages]
+
+    try:
+        reply, updated_json = chat_with_itinerary(msg_dicts, latest.itinerary_json, trip_context)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    new_itinerary_out = None
+    if updated_json:
+        from app.services.ai import render_itinerary_markdown
+        next_version = latest.version + 1
+        new_it = Itinerary(
+            trip_id=trip_id,
+            itinerary_json=updated_json,
+            rendered_md=render_itinerary_markdown(updated_json),
+            version=next_version,
+            created_at=datetime.utcnow(),
+        )
+        db.add(new_it)
+        db.commit()
+        db.refresh(new_it)
+        new_itinerary_out = ItineraryOut.model_validate(new_it)
+
+    return TripChatResponse(
+        message=reply,
+        itinerary_updated=updated_json is not None,
+        new_itinerary=new_itinerary_out,
+    )
+
+
+# ─── Accommodation suggestions ────────────────────────────────────────────────
+
+@router.post("/trips/{trip_id}/accommodation-suggestions")
+def get_accommodation_suggestions(
+    trip_id: uuid.UUID,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = (
+        db.query(Trip)
+        .filter(Trip.id == trip_id, Trip.client_id == client.id)
+        .options(joinedload(Trip.itineraries), joinedload(Trip.intake_response))
+        .first()
+    )
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    intake = trip.intake_response
+    latest = max(trip.itineraries, key=lambda i: i.version) if trip.itineraries else None
+    destinations = [d["name"] for d in (latest.itinerary_json.get("destinations", []) if latest else [])]
+    if not destinations:
+        destinations = [trip.title]
+
+    profile = f"{intake.travellers_count} traveller(s), {intake.accommodation_style}" if intake else "2 travellers"
+
+    try:
+        suggestions = generate_accommodation_suggestions(
+            trip_title=trip.title,
+            origin_city=trip.origin_city,
+            budget_range=trip.budget_range,
+            accommodation_style=intake.accommodation_style if intake else "Mid-range Hotel",
+            traveller_profile=profile,
+            destinations=destinations,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"suggestions": suggestions}
+
+
+# ─── Flight suggestions ───────────────────────────────────────────────────────
+
+@router.post("/trips/{trip_id}/flight-suggestions")
+def get_flight_suggestions(
+    trip_id: uuid.UUID,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = (
+        db.query(Trip)
+        .filter(Trip.id == trip_id, Trip.client_id == client.id)
+        .options(joinedload(Trip.itineraries), joinedload(Trip.intake_response))
+        .first()
+    )
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    intake = trip.intake_response
+    latest = max(trip.itineraries, key=lambda i: i.version) if trip.itineraries else None
+    destinations = [d["name"] for d in (latest.itinerary_json.get("destinations", []) if latest else [])]
+
+    try:
+        suggestions = generate_flight_suggestions(
+            origin_city=trip.origin_city,
+            trip_title=trip.title,
+            start_date=str(trip.start_date),
+            end_date=str(trip.end_date),
+            budget_range=trip.budget_range,
+            travellers_count=intake.travellers_count if intake else 2,
+            destinations=destinations,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"suggestions": suggestions}
 
 
 # ─── Documents ───────────────────────────────────────────────────────────────
