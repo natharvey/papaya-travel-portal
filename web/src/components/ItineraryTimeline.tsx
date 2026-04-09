@@ -48,16 +48,21 @@ function buildCalendarWeeks(dayPlans: DayPlan[]): (DayPlan | null)[][] {
     }
     return weeks
   }
-  parsed.sort((a, b) => a.date.getTime() - b.date.getTime())
-  const firstDate = parsed[0].date
+  const validParsed = parsed.filter(p => !isNaN(p.date.getTime()))
+  validParsed.sort((a, b) => a.date.getTime() - b.date.getTime())
+  const firstDate = validParsed[0].date
+  const lastDate = validParsed[validParsed.length - 1].date
   const firstCol = (firstDate.getDay() + 6) % 7
-  const numWeeks = Math.ceil((firstCol + dayPlans.length) / 7)
+  const spanDays = Math.round((lastDate.getTime() - firstDate.getTime()) / 86400000) + 1
+  const numWeeks = Math.ceil((firstCol + spanDays) / 7)
   const weeks: (DayPlan | null)[][] = Array.from({ length: numWeeks }, () => Array(7).fill(null))
-  parsed.forEach(({ plan, date }) => {
-    if (isNaN(date.getTime())) return
+  validParsed.forEach(({ plan, date }) => {
     const diff = Math.round((date.getTime() - firstDate.getTime()) / 86400000)
     const slot = firstCol + diff
-    weeks[Math.floor(slot / 7)][slot % 7] = plan
+    const weekIdx = Math.floor(slot / 7)
+    if (weekIdx >= 0 && weekIdx < weeks.length) {
+      weeks[weekIdx][slot % 7] = plan
+    }
   })
   return weeks
 }
