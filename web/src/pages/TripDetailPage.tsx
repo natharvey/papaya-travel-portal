@@ -518,7 +518,17 @@ export default function TripDetailPage() {
                         originCity={trip.origin_city}
                       />
                     </div>
-                    <ItineraryTimeline data={latestItinerary.itinerary_json} />
+                    <ItineraryTimeline
+                      data={latestItinerary.itinerary_json}
+                      onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
+                        if (!tripId) return
+                        const msg = `Day ${dayNum} ${period} — "${blockTitle}": ${prompt}`
+                        const res = await tripChat(tripId, [{ role: 'user', content: msg }])
+                        if (res.itinerary_updated && res.new_itinerary) {
+                          setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
+                        }
+                      }}
+                    />
                   </>
                 )}
               </>
