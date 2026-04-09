@@ -705,10 +705,11 @@ export default function TripDetailPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {flightSuggestions.map((f, i) => (
                       <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 20 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                          <div style={{ fontWeight: 700, fontSize: 16 }}>{f.route}</div>
-                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap', marginLeft: 12 }}>{f.typical_price_aud}</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                          Leg {i + 1}
                         </div>
+                        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{f.route}</div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)', marginBottom: 8 }}>{f.typical_price_aud}</div>
                         <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 6 }}>{f.airlines.join(' · ')} · {f.flight_time}</div>
                         <p style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>{f.tips}</p>
                         <div style={{ display: 'flex', gap: 12 }}>
