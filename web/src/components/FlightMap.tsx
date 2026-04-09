@@ -121,10 +121,11 @@ export default function FlightMap({ flights }: FlightMapProps) {
       // Outbound bows left (+), return bows right (-)
       if (!seen.has(leg.key) && !seen.has(leg.reverseKey)) {
         seen.add(leg.key)
-        arcs.push({ from: leg.from, to: leg.to, curve: 0.35, isReturn: false })
+        arcs.push({ from: leg.from, to: leg.to, curve: 0.3, isReturn: false })
       } else if (!seen.has(leg.key)) {
         seen.add(leg.key)
-        arcs.push({ from: leg.from, to: leg.to, curve: -0.35, isReturn: true })
+        // Same positive factor — reversed travel direction naturally bows the opposite way
+        arcs.push({ from: leg.from, to: leg.to, curve: 0.3, isReturn: true })
       }
     } else {
       arcs.push({ from: leg.from, to: leg.to, curve: 0, isReturn: false })
@@ -211,13 +212,26 @@ export default function FlightMap({ flights }: FlightMapProps) {
         })}
 
         {/* Airport markers */}
-        {markers.map(marker => {
+        {markers.map((marker, mi) => {
           const centerLon = allPoints.reduce((s, p) => s + p[0], 0) / allPoints.length
           const centerLat = allPoints.reduce((s, p) => s + p[1], 0) / allPoints.length
+
+          // Check if any other marker is close in longitude — alternate vertical offset
+          const CLOSE_DEG = 8
+          const nearbyIndex = markers.findIndex((m, i) =>
+            i !== mi && Math.abs(m.coords[0] - marker.coords[0]) < CLOSE_DEG &&
+            Math.abs(m.coords[1] - marker.coords[1]) < CLOSE_DEG
+          )
           const toRight = marker.coords[0] >= centerLon
-          const toNorth = marker.coords[1] >= centerLat
+          // If there's a nearby airport, alternate label above/below based on which has higher lat
+          let dy: number
+          if (nearbyIndex !== -1) {
+            const neighbour = markers[nearbyIndex]
+            dy = marker.coords[1] >= neighbour.coords[1] ? -10 : 18
+          } else {
+            dy = marker.coords[1] >= centerLat ? -10 : 16
+          }
           const dx = toRight ? 8 : -8
-          const dy = toNorth ? -10 : 16
           const anchor = toRight ? 'start' : 'end'
           return (
             <Marker key={marker.label} coordinates={marker.coords}>
