@@ -69,18 +69,8 @@ export const api = createApiClient()
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
 
-export async function clientLogin(email: string, reference_code: string): Promise<TokenResponse> {
-  const res = await api.post<TokenResponse>('/auth/client-login', { email, reference_code })
-  return res.data
-}
-
 export async function adminLogin(password: string): Promise<TokenResponse> {
   const res = await api.post<TokenResponse>('/auth/admin-login', { password })
-  return res.data
-}
-
-export async function resendReferenceCode(email: string): Promise<{ message: string }> {
-  const res = await api.post<{ message: string }>('/auth/resend-reference', { email })
   return res.data
 }
 

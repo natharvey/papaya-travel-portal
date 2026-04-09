@@ -4,8 +4,7 @@ import { User, Mail, MapPin, Calendar, Wallet, Users, ArrowRight, ArrowLeft, Sen
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { submitIntake, intakeChat, clientLogin, getApiError } from '../api/client'
-import { storeToken } from '../api/client'
+import { submitIntake, intakeChat, getApiError } from '../api/client'
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
@@ -520,7 +519,7 @@ export default function IntakePage() {
     setSubmitting(true)
     setError('')
     try {
-      const result = await submitIntake({
+      await submitIntake({
         client_name: step1.client_name,
         client_email: step1.client_email,
         trip_title: step2.trip_title,
@@ -539,15 +538,8 @@ export default function IntakePage() {
         conversation_transcript: transcript,
       })
 
-      // Auto-login and redirect to the trip
-      try {
-        const auth = await clientLogin(step1.client_email, result.reference_code)
-        storeToken(auth.access_token, auth.role)
-        navigate(`/trip/${result.trip_id}`)
-      } catch {
-        // If auto-login fails, fall back to login page
-        navigate('/login?generating=1')
-      }
+      // Magic link has been emailed — send them to login
+      navigate('/login?submitted=1')
     } catch (e) {
       setError(getApiError(e))
       setSubmitting(false)

@@ -167,7 +167,6 @@ def create_intake(
 
     return IntakeResponse(
         email=client.email,
-        reference_code=client.reference_code,
         trip_id=trip.id,
         message=(
             f"Your itinerary is being generated and will be ready shortly. "

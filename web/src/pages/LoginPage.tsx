@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import PapayaLogo from '../components/PapayaLogo'
 import { requestMagicLink, getApiError } from '../api/client'
 
 export default function LoginPage() {
+  const [searchParams] = useSearchParams()
+  const justSubmitted = searchParams.get('submitted') === '1'
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -45,6 +47,15 @@ export default function LoginPage() {
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--color-border)',
         }}>
+          {justSubmitted && !sent && (
+            <div style={{
+              background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px',
+              padding: '14px 16px', marginBottom: '24px', fontSize: '14px', color: '#15803D',
+            }}>
+              <strong>Enquiry received!</strong> We've emailed you a login link. Enter your email below if you need a new one.
+            </div>
+          )}
+
           <div style={{ textAlign: 'center', marginBottom: '36px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
               <PapayaLogo size={110} />

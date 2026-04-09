@@ -15,20 +15,6 @@ def test_intake_creates_client_and_trip(client: TestClient, sample_intake_data: 
     assert data["trip_id"] is not None
 
 
-def test_intake_returns_reference_code(client: TestClient, sample_intake_data: dict):
-    intake_data = sample_intake_data.copy()
-    intake_data["client_email"] = "refcodetest@example.com"
-
-    response = client.post("/intake", json=intake_data)
-    assert response.status_code == 200
-
-    data = response.json()
-    assert "reference_code" in data
-    ref = data["reference_code"]
-    assert len(ref) == 8
-    assert ref.isalnum()
-    assert ref == ref.upper()
-
 
 def test_intake_returns_message_with_credentials(client: TestClient, sample_intake_data: dict):
     intake_data = sample_intake_data.copy()
@@ -58,10 +44,8 @@ def test_duplicate_email_creates_new_trip(client: TestClient, sample_intake_data
     assert r2.status_code == 200
     d2 = r2.json()
 
-    # Same email and reference code (same client)
+    # Same client, different trip IDs
     assert d1["email"] == d2["email"]
-    assert d1["reference_code"] == d2["reference_code"]
-    # But different trip IDs
     assert d1["trip_id"] != d2["trip_id"]
 
 

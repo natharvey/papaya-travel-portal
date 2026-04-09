@@ -9,8 +9,8 @@ from app.limiter import limiter
 
 from app.db import get_db
 from app.models import Client, LoginToken
-from app.schemas import ClientLoginRequest, AdminLoginRequest, TokenResponse, ResendReferenceRequest
-from app.services.email import send_intake_confirmation, send_magic_link_email
+from app.schemas import AdminLoginRequest, TokenResponse, ResendReferenceRequest
+from app.services.email import send_magic_link_email
 from app.security import verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -43,47 +43,6 @@ def create_magic_token(db: Session, client_id) -> str:
     db.add(record)
     db.commit()
     return token_str
-
-
-@router.post("/client-login", response_model=TokenResponse)
-@limiter.limit("10/minute")
-def client_login(request: Request, payload: ClientLoginRequest, db: Session = Depends(get_db)):
-    client = db.query(Client).filter(
-        Client.email == payload.email,
-        Client.reference_code == payload.reference_code,
-    ).first()
-    if not client:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or reference code",
-        )
-    token = create_token(
-        {"sub": str(client.id), "role": "client"},
-        timedelta(hours=CLIENT_TOKEN_EXPIRE_HOURS),
-    )
-    return TokenResponse(access_token=token, role="client")
-
-
-@router.post("/resend-reference")
-@limiter.limit("5/minute")
-def resend_reference(request: Request, payload: ResendReferenceRequest, db: Session = Depends(get_db)):
-    client = db.query(Client).filter(Client.email == payload.email).first()
-    if not client:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account found with that email address. Please check the address or submit a new trip enquiry.",
-        )
-    magic_token = create_magic_token(db, client.id)
-    portal_url = os.getenv("PORTAL_URL", "http://localhost:5173")
-    magic_link = f"{portal_url}/magic/{magic_token}"
-    send_intake_confirmation(
-        to=client.email,
-        client_name=client.name,
-        reference_code=client.reference_code,
-        trip_title="your trip",
-        magic_link=magic_link,
-    )
-    return {"message": f"Your reference code has been sent to {client.email}. Please check your inbox."}
 
 
 @router.post("/request-magic-link")

@@ -7,11 +7,6 @@ from pydantic import BaseModel, EmailStr, field_validator
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
 
-class ClientLoginRequest(BaseModel):
-    email: EmailStr
-    reference_code: str
-
-
 class ResendReferenceRequest(BaseModel):
     email: EmailStr
 
@@ -51,7 +46,6 @@ class IntakeCreate(BaseModel):
 
 class IntakeResponse(BaseModel):
     email: str
-    reference_code: str
     trip_id: uuid.UUID
     message: str
 

@@ -25,7 +25,6 @@ export interface IntakeCreatePayload {
 
 export interface IntakeSubmitResponse {
   email: string
-  reference_code: string
   trip_id: string
   message: string
 }
