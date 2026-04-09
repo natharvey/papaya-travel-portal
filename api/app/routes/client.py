@@ -14,7 +14,7 @@ from app.schemas import (
 )
 from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
 from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
-from app.services.ai import chat_with_itinerary, generate_accommodation_suggestions, generate_flight_suggestions
+from app.services.ai import chat_with_itinerary, edit_block, generate_accommodation_suggestions, generate_flight_suggestions
 from pydantic import BaseModel as PydanticBaseModel
 
 router = APIRouter(prefix="/client", tags=["client"])
@@ -289,6 +289,89 @@ def trip_chat(
         message=reply,
         itinerary_updated=updated_json is not None,
         new_itinerary=new_itinerary_out,
+    )
+
+
+# ─── Block edit ──────────────────────────────────────────────────────────────
+
+class BlockEditRequest(PydanticBaseModel):
+    day_number: int
+    period: str  # Morning / Afternoon / Evening
+    block_title: str
+    instruction: str
+
+class BlockEditResponse(PydanticBaseModel):
+    message: str
+    itinerary_updated: bool
+    new_itinerary: Optional[ItineraryOut] = None
+
+
+@router.post("/trips/{trip_id}/edit-block", response_model=BlockEditResponse)
+def edit_itinerary_block(
+    trip_id: uuid.UUID,
+    payload: BlockEditRequest,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = (
+        db.query(Trip)
+        .filter(Trip.id == trip_id, Trip.client_id == client.id)
+        .options(joinedload(Trip.itineraries), joinedload(Trip.intake_response))
+        .first()
+    )
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    latest = max(trip.itineraries, key=lambda i: i.version) if trip.itineraries else None
+    if not latest:
+        raise HTTPException(status_code=400, detail="No itinerary to edit yet.")
+
+    intake = trip.intake_response
+    trip_context = (
+        f"Trip: {trip.title}, {trip.origin_city} → destination, "
+        f"{trip.start_date} to {trip.end_date}, budget {trip.budget_range}, "
+        f"{intake.travellers_count if intake else 2} travellers"
+    )
+
+    try:
+        message, updated_days = edit_block(
+            itinerary_json=latest.itinerary_json,
+            day_number=payload.day_number,
+            period=payload.period,
+            block_title=payload.block_title,
+            instruction=payload.instruction,
+            trip_context=trip_context,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if not updated_days:
+        return BlockEditResponse(message=message, itinerary_updated=False)
+
+    # Merge updated days into existing itinerary JSON
+    from app.services.ai import render_itinerary_markdown
+    updated_json = dict(latest.itinerary_json)
+    updated_map = {d["day_number"]: d for d in updated_days}
+    updated_json["day_plans"] = [
+        updated_map.get(d["day_number"], d) for d in updated_json.get("day_plans", [])
+    ]
+
+    next_version = latest.version + 1
+    new_it = Itinerary(
+        trip_id=trip_id,
+        itinerary_json=updated_json,
+        rendered_md=render_itinerary_markdown(updated_json),
+        version=next_version,
+        created_at=datetime.utcnow(),
+    )
+    db.add(new_it)
+    db.commit()
+    db.refresh(new_it)
+
+    return BlockEditResponse(
+        message=message,
+        itinerary_updated=True,
+        new_itinerary=ItineraryOut.model_validate(new_it),
     )
 
 

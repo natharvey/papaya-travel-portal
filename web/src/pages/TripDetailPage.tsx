@@ -7,7 +7,7 @@ import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2 } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
-import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, getAccommodationSuggestions, getFlightSuggestions, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
+import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -522,8 +522,12 @@ export default function TripDetailPage() {
                       data={latestItinerary.itinerary_json}
                       onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
                         if (!tripId) return
-                        const msg = `Day ${dayNum} ${period} — "${blockTitle}": ${prompt}`
-                        const res = await tripChat(tripId, [{ role: 'user', content: msg }])
+                        const res = await editItineraryBlock(tripId, {
+                          day_number: dayNum,
+                          period,
+                          block_title: blockTitle,
+                          instruction: prompt,
+                        })
                         if (res.itinerary_updated && res.new_itinerary) {
                           setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
                         }

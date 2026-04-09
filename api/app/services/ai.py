@@ -379,6 +379,84 @@ def chat_with_itinerary(
     return text, updated
 
 
+# ─── Block edit ──────────────────────────────────────────────────────────────
+
+BLOCK_EDIT_SYSTEM = """You are Maya, an expert travel consultant at Papaya Travel.
+A client wants to modify one or more activities in their itinerary.
+
+You will receive:
+- The full list of day plans (as compact JSON)
+- The specific day/period/activity they want to change
+- Their instruction
+
+Your job:
+1. Make the requested change (and any related changes needed — e.g. if swapping two activities between days, update both days)
+2. Return ONLY a JSON object with key "updated_days" containing an array of the changed day_plan objects
+3. Each day_plan must match the original schema exactly
+4. Also return a "message" key with a friendly 1-2 sentence description of what you changed
+
+Return format (ONLY this, no other text):
+{"message": "...", "updated_days": [<day_plan>, ...]}
+
+Use real, specific place names. Keep the same style as the existing itinerary."""
+
+
+def edit_block(
+    itinerary_json: dict,
+    day_number: int,
+    period: str,
+    block_title: str,
+    instruction: str,
+    trip_context: str,
+) -> tuple[str, list[dict]]:
+    """
+    Make a targeted edit to one or more blocks in the itinerary.
+    Returns (message, list_of_updated_day_plans).
+    Fast — sends only day plans, not full itinerary metadata.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    # Send compact day plans only (no metadata) to keep tokens low
+    day_plans = itinerary_json.get("day_plans", [])
+
+    prompt = (
+        f"TRIP CONTEXT: {trip_context}\n\n"
+        f"DAY PLANS:\n{json.dumps(day_plans)}\n\n"
+        f"CHANGE REQUEST:\n"
+        f"Day {day_number}, {period} — \"{block_title}\"\n"
+        f"Instruction: {instruction}"
+    )
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=3000,
+        system=BLOCK_EDIT_SYSTEM,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    raw = response.content[0].text.strip()
+
+    # Parse the JSON response
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        # Try to extract JSON object from text
+        match = re.search(r'\{.*\}', raw, re.DOTALL)
+        if match:
+            result = json.loads(match.group(0))
+        else:
+            raise ValueError("No JSON returned from block edit")
+
+    message = result.get("message", "I've updated the itinerary.")
+    updated_days = result.get("updated_days", [])
+
+    return message, updated_days
+
+
 # ─── Accommodation suggestions ────────────────────────────────────────────────
 
 ACCOMMODATION_SYSTEM = """You are an expert travel consultant researching accommodation options.

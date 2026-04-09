@@ -143,6 +143,14 @@ export async function sendClientMessage(tripId: string, body: string): Promise<M
   return res.data
 }
 
+export async function editItineraryBlock(
+  tripId: string,
+  payload: { day_number: number; period: string; block_title: string; instruction: string }
+): Promise<{ message: string; itinerary_updated: boolean; new_itinerary: import('../types').Itinerary | null }> {
+  const res = await api.post(`/client/trips/${tripId}/edit-block`, payload)
+  return res.data
+}
+
 export async function tripChat(
   tripId: string,
   messages: { role: string; content: string }[]
