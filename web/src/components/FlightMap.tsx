@@ -1,8 +1,11 @@
-import { ComposableMap, Geographies, Geography, Marker, useMap } from 'react-simple-maps'
+import { geoNaturalEarth1 } from 'd3-geo'
+import { ComposableMap, Geographies, Geography, Marker } from 'react-simple-maps'
 import AIRPORTS from '../data/airports'
 import type { Flight } from '../types'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+const MAP_WIDTH = 900
+const MAP_HEIGHT = 420
 
 interface FlightMapProps {
   flights: Flight[]
@@ -13,6 +16,7 @@ interface Arc {
   from: [number, number]
   to: [number, number]
   curve: number  // positive = curve above, negative = curve below, 0 = straight
+  isReturn: boolean
 }
 
 interface MarkerPoint {
@@ -49,44 +53,41 @@ function getBounds(points: [number, number][]): { center: [number, number]; zoom
   return { center: [centerLon, centerLat], zoom }
 }
 
-// Renders a quadratic bezier arc between two projected points.
-// curve > 0 bows upward (negative SVG y), curve < 0 bows downward.
-function CurvedArc({ from, to, curve }: { from: [number, number]; to: [number, number]; curve: number }) {
-  const { projection } = useMap()
+// Build a d3 projection that matches react-simple-maps' internal geoNaturalEarth1 setup
+function buildProjection(center: [number, number], zoom: number) {
+  return geoNaturalEarth1()
+    .rotate([-center[0], -center[1], 0])
+    .translate([MAP_WIDTH / 2, MAP_HEIGHT / 2])
+    .scale(160 * zoom)
+}
 
-  const p1 = projection(from)
-  const p2 = projection(to)
+// Compute SVG path string for a quadratic bezier arc.
+// curve > 0 bows upward (negative SVG y), curve < 0 bows downward.
+function arcPath(
+  from: [number, number],
+  to: [number, number],
+  curve: number,
+  proj: ReturnType<typeof buildProjection>
+): string | null {
+  const p1 = proj(from)
+  const p2 = proj(to)
   if (!p1 || !p2) return null
 
   const [x1, y1] = p1
   const [x2, y2] = p2
 
-  let d: string
   if (curve === 0) {
-    d = `M ${x1} ${y1} L ${x2} ${y2}`
-  } else {
-    // Perpendicular control point offset
-    const mx = (x1 + x2) / 2
-    const my = (y1 + y2) / 2
-    const dx = x2 - x1
-    const dy = y2 - y1
-    const len = Math.sqrt(dx * dx + dy * dy) || 1
-    // Perpendicular unit vector (rotated 90°), then scaled by curve amount
-    const px = (-dy / len) * curve
-    const py = (dx / len) * curve
-    d = `M ${x1} ${y1} Q ${mx + px} ${my + py} ${x2} ${y2}`
+    return `M ${x1} ${y1} L ${x2} ${y2}`
   }
 
-  return (
-    <path
-      d={d}
-      fill="none"
-      stroke="#f97316"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeDasharray="6 3"
-    />
-  )
+  const mx = (x1 + x2) / 2
+  const my = (y1 + y2) / 2
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.sqrt(dx * dx + dy * dy) || 1
+  const px = (-dy / len) * curve
+  const py = (dx / len) * curve
+  return `M ${x1} ${y1} Q ${mx + px} ${my + py} ${x2} ${y2}`
 }
 
 export default function FlightMap({ flights }: FlightMapProps) {
@@ -113,16 +114,16 @@ export default function FlightMap({ flights }: FlightMapProps) {
   legs.forEach(leg => {
     const hasReturn = legs.some(l => l.key === leg.reverseKey)
     if (hasReturn) {
-      // Curve outbound up, return down — check which direction we've seen
+      // Outbound curves up, return curves down
       if (!seen.has(leg.key) && !seen.has(leg.reverseKey)) {
         seen.set(leg.key, 40)
-        arcs.push({ from: leg.from, to: leg.to, curve: 40 })
+        arcs.push({ from: leg.from, to: leg.to, curve: 40, isReturn: false })
       } else if (!seen.has(leg.key)) {
         seen.set(leg.key, -40)
-        arcs.push({ from: leg.from, to: leg.to, curve: -40 })
+        arcs.push({ from: leg.from, to: leg.to, curve: -40, isReturn: true })
       }
     } else {
-      arcs.push({ from: leg.from, to: leg.to, curve: 0 })
+      arcs.push({ from: leg.from, to: leg.to, curve: 0, isReturn: false })
     }
   })
 
@@ -155,6 +156,7 @@ export default function FlightMap({ flights }: FlightMapProps) {
   const allPoints = Array.from(markerMap.values()).map(m => m.coords)
   const { center, zoom } = getBounds(allPoints)
   const markers = Array.from(markerMap.values())
+  const proj = buildProjection(center, zoom)
 
   return (
     <div style={{
@@ -166,8 +168,8 @@ export default function FlightMap({ flights }: FlightMapProps) {
       <ComposableMap
         projection="geoNaturalEarth1"
         projectionConfig={{ center, scale: 160 * zoom }}
-        width={900}
-        height={420}
+        width={MAP_WIDTH}
+        height={MAP_HEIGHT}
         style={{ width: '100%', height: 'auto' }}
       >
         <Geographies geography={GEO_URL}>
@@ -186,9 +188,21 @@ export default function FlightMap({ flights }: FlightMapProps) {
         </Geographies>
 
         {/* Flight arcs — curved for return pairs, straight for one-way */}
-        {arcs.map((arc, i) => (
-          <CurvedArc key={i} from={arc.from} to={arc.to} curve={arc.curve} />
-        ))}
+        {arcs.map((arc, i) => {
+          const d = arcPath(arc.from, arc.to, arc.curve, proj)
+          if (!d) return null
+          return (
+            <path
+              key={i}
+              d={d}
+              fill="none"
+              stroke={arc.isReturn ? '#60a5fa' : '#f97316'}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeDasharray={arc.isReturn ? '3 4' : '6 3'}
+            />
+          )
+        })}
 
         {/* Airport markers */}
         {markers.map(marker => {
@@ -232,8 +246,12 @@ export default function FlightMap({ flights }: FlightMapProps) {
         display: 'flex', gap: '14px', alignItems: 'center',
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
-          <svg width="18" height="4"><line x1="0" y1="2" x2="18" y2="2" stroke="#f97316" strokeWidth="2" strokeDasharray="4 2" /></svg>
-          Route
+          <svg width="18" height="4"><line x1="0" y1="2" x2="18" y2="2" stroke="#f97316" strokeWidth="2" strokeDasharray="6 3" /></svg>
+          Outbound
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+          <svg width="18" height="4"><line x1="0" y1="2" x2="18" y2="2" stroke="#60a5fa" strokeWidth="2" strokeDasharray="3 4" /></svg>
+          Return
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
           <svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="#f97316" stroke="#fff" strokeWidth="1.5" /></svg>
