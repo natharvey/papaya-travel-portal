@@ -62,11 +62,12 @@ function buildProjection(center: [number, number], zoom: number) {
 }
 
 // Compute SVG path string for a quadratic bezier arc.
-// curve > 0 bows upward (negative SVG y), curve < 0 bows downward.
+// curveFactor is a fraction of the segment length (e.g. 0.35 = bow 35% of length).
+// Positive bows "left" of travel direction, negative bows "right".
 function arcPath(
   from: [number, number],
   to: [number, number],
-  curve: number,
+  curveFactor: number,
   proj: ReturnType<typeof buildProjection>
 ): string | null {
   const p1 = proj(from)
@@ -76,15 +77,16 @@ function arcPath(
   const [x1, y1] = p1
   const [x2, y2] = p2
 
-  if (curve === 0) {
+  if (curveFactor === 0) {
     return `M ${x1} ${y1} L ${x2} ${y2}`
   }
 
-  const mx = (x1 + x2) / 2
-  const my = (y1 + y2) / 2
   const dx = x2 - x1
   const dy = y2 - y1
   const len = Math.sqrt(dx * dx + dy * dy) || 1
+  const curve = len * curveFactor   // proportional to segment length
+  const mx = (x1 + x2) / 2
+  const my = (y1 + y2) / 2
   const px = (-dy / len) * curve
   const py = (dx / len) * curve
   return `M ${x1} ${y1} Q ${mx + px} ${my + py} ${x2} ${y2}`
@@ -99,45 +101,49 @@ export default function FlightMap({ flights }: FlightMapProps) {
   const legs: { from: [number, number]; to: [number, number]; key: string; reverseKey: string }[] = []
 
   sorted.forEach(flight => {
-    const fromCoords = AIRPORTS[flight.departure_airport.toUpperCase()]
-    const toCoords = AIRPORTS[flight.arrival_airport.toUpperCase()]
+    const dep = flight.departure_airport.toUpperCase()
+    const arr = flight.arrival_airport.toUpperCase()
+    const fromCoords = AIRPORTS[dep]
+    const toCoords = AIRPORTS[arr]
     if (!fromCoords || !toCoords) return
-    const key = `${flight.departure_airport}-${flight.arrival_airport}`
-    const reverseKey = `${flight.arrival_airport}-${flight.departure_airport}`
+    const key = `${dep}-${arr}`
+    const reverseKey = `${arr}-${dep}`
     legs.push({ from: fromCoords, to: toCoords, key, reverseKey })
   })
 
-  // Second pass — assign curve direction for bidirectional pairs
-  const seen = new Map<string, number>() // key → curve assigned
+  // Second pass — assign curve factor for bidirectional pairs
+  const seen = new Set<string>()
   const arcs: Arc[] = []
 
   legs.forEach(leg => {
     const hasReturn = legs.some(l => l.key === leg.reverseKey)
     if (hasReturn) {
-      // Outbound curves up, return curves down
+      // Outbound bows left (+), return bows right (-)
       if (!seen.has(leg.key) && !seen.has(leg.reverseKey)) {
-        seen.set(leg.key, 40)
-        arcs.push({ from: leg.from, to: leg.to, curve: 40, isReturn: false })
+        seen.add(leg.key)
+        arcs.push({ from: leg.from, to: leg.to, curve: 0.35, isReturn: false })
       } else if (!seen.has(leg.key)) {
-        seen.set(leg.key, -40)
-        arcs.push({ from: leg.from, to: leg.to, curve: -40, isReturn: true })
+        seen.add(leg.key)
+        arcs.push({ from: leg.from, to: leg.to, curve: -0.35, isReturn: true })
       }
     } else {
       arcs.push({ from: leg.from, to: leg.to, curve: 0, isReturn: false })
     }
   })
 
-  // Build unique markers
+  // Build unique markers — use uppercase keys to avoid duplicates
   const markerMap = new Map<string, MarkerPoint>()
   sorted.forEach((flight, i) => {
-    const fromCoords = AIRPORTS[flight.departure_airport.toUpperCase()]
-    const toCoords = AIRPORTS[flight.arrival_airport.toUpperCase()]
+    const dep = flight.departure_airport.toUpperCase()
+    const arr = flight.arrival_airport.toUpperCase()
+    const fromCoords = AIRPORTS[dep]
+    const toCoords = AIRPORTS[arr]
     if (!fromCoords || !toCoords) return
-    if (!markerMap.has(flight.departure_airport)) {
-      markerMap.set(flight.departure_airport, { coords: fromCoords, label: flight.departure_airport, isOrigin: i === 0 })
+    if (!markerMap.has(dep)) {
+      markerMap.set(dep, { coords: fromCoords, label: dep, isOrigin: i === 0 })
     }
-    if (!markerMap.has(flight.arrival_airport)) {
-      markerMap.set(flight.arrival_airport, { coords: toCoords, label: flight.arrival_airport, isOrigin: false })
+    if (!markerMap.has(arr)) {
+      markerMap.set(arr, { coords: toCoords, label: arr, isOrigin: false })
     }
   })
 
