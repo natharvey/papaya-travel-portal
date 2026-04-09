@@ -50,12 +50,12 @@ export default function TripDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'details' | 'documents'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'documents'>('itinerary')
   const [documents, setDocuments] = useState<TripDocument[]>([])
   const [docUploading, setDocUploading] = useState(false)
   const [docError, setDocError] = useState('')
 
-  function switchTab(next: 'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'details' | 'documents') {
+  function switchTab(next: 'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'documents') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markClientMessagesRead(tripId)
@@ -316,7 +316,6 @@ export default function TripDetailPage() {
                 ) : null
               })()}
             </div>
-            <TabButton label="Trip Details" active={tab === 'details'} onClick={() => switchTab('details')} />
             <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
           </div>
 
@@ -533,6 +532,40 @@ export default function TripDetailPage() {
                         }
                       }}
                     />
+
+                    {/* Confirmed bookings (if admin has added them) */}
+                    {((trip.flights && trip.flights.length > 0) || (trip.stays && trip.stays.length > 0)) && (
+                      <div style={{ marginTop: 32, borderTop: '1px solid var(--color-border)', paddingTop: 24 }}>
+                        <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: 16, color: 'var(--color-secondary)' }}>Confirmed Bookings</h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {(trip.flights ?? []).map(flight => (
+                            <div key={flight.id} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                              <div style={{ background: 'var(--color-secondary)', color: 'white', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{flight.flight_number}</div>
+                              <div style={{ flex: 1, minWidth: 160 }}>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{flight.departure_airport} → {flight.arrival_airport} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>{flight.airline}</span></div>
+                                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                  {new Date(flight.departure_time).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })} → {new Date(flight.arrival_time).toLocaleString('en-AU', { timeStyle: 'short' })}
+                                </div>
+                              </div>
+                              {flight.booking_ref && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px' }}>Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: 1 }}>{flight.booking_ref}</strong></div>}
+                            </div>
+                          ))}
+                          {(trip.stays ?? []).map(stay => {
+                            const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
+                            return (
+                              <div key={stay.id} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                                <div style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{nights}n</div>
+                                <div style={{ flex: 1, minWidth: 160 }}>
+                                  <div style={{ fontWeight: 600, fontSize: 13 }}>{stay.name}</div>
+                                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Check-in: {new Date(stay.check_in).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                                </div>
+                                {stay.confirmation_number && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px' }}>Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: 1 }}>{stay.confirmation_number}</strong></div>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </>
@@ -787,135 +820,6 @@ export default function TripDetailPage() {
                   onSend={handleSendMessage}
                 />
               </>
-            )}
-
-            {/* Trip Details Tab */}
-            {tab === 'details' && (
-              <div>
-                {/* Flights section */}
-                {trip.flights && trip.flights.length > 0 && (
-                  <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-secondary)' }}>
-                      Flights
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {trip.flights.map(flight => (
-                        <div key={flight.id} style={{
-                          background: 'var(--color-bg)', border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius)', padding: '16px 20px',
-                          display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
-                        }}>
-                          <div style={{
-                            background: 'var(--color-secondary)', color: 'white',
-                            borderRadius: '6px', padding: '6px 12px',
-                            fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
-                          }}>
-                            {flight.flight_number}
-                          </div>
-                          <div style={{ flex: 1, minWidth: '180px' }}>
-                            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
-                              {flight.departure_airport} → {flight.arrival_airport}
-                              <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '8px', fontSize: '13px' }}>
-                                {flight.airline}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                              <span>Dep: {new Date(flight.departure_time).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}{flight.terminal_departure ? ` · Terminal ${flight.terminal_departure}` : ''}</span>
-                              <span>Arr: {new Date(flight.arrival_time).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}{flight.terminal_arrival ? ` · Terminal ${flight.terminal_arrival}` : ''}</span>
-                            </div>
-                          </div>
-                          {flight.booking_ref && (
-                            <div style={{
-                              background: 'white', border: '1px solid var(--color-border)',
-                              borderRadius: '6px', padding: '6px 12px', fontSize: '12px',
-                              color: 'var(--color-text-muted)',
-                            }}>
-                              Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: '1px' }}>{flight.booking_ref}</strong>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Accommodation section */}
-                {trip.stays && trip.stays.length > 0 && (
-                  <div style={{ marginBottom: '32px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px', color: 'var(--color-secondary)' }}>
-                      Accommodation
-                    </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {trip.stays.map(stay => {
-                        const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
-                        return (
-                          <div key={stay.id} style={{
-                            background: 'var(--color-bg)', border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius)', padding: '16px 20px',
-                            display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
-                          }}>
-                            <div style={{
-                              background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0',
-                              borderRadius: '6px', padding: '6px 12px',
-                              fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap',
-                            }}>
-                              {nights} night{nights !== 1 ? 's' : ''}
-                            </div>
-                            <div style={{ flex: 1, minWidth: '180px' }}>
-                              <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>{stay.name}</div>
-                              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                                <span>Check-in: {new Date(stay.check_in).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                                <span>Check-out: {new Date(stay.check_out).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                              </div>
-                              {stay.address && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{stay.address}</div>}
-                              {stay.notes && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px', fontStyle: 'italic' }}>{stay.notes}</div>}
-                            </div>
-                            {stay.confirmation_number && (
-                              <div style={{
-                                background: 'white', border: '1px solid var(--color-border)',
-                                borderRadius: '6px', padding: '6px 12px', fontSize: '12px',
-                                color: 'var(--color-text-muted)',
-                              }}>
-                                Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: '1px' }}>{stay.confirmation_number}</strong>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--color-secondary)' }}>
-                  Your Trip Preferences
-                </h3>
-                {trip.intake_response ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                    {[
-                      ['Travellers', trip.intake_response.travellers_count.toString()],
-                      ['Accommodation', trip.intake_response.accommodation_style],
-                      ['Interests', trip.intake_response.interests.join(', ') || '—'],
-                      ['Must-Dos', trip.intake_response.must_dos || '—'],
-                      ['Must-Avoid', trip.intake_response.must_avoid || '—'],
-                      ['Constraints', trip.intake_response.constraints || '—'],
-                      ['Notes', trip.intake_response.notes || '—'],
-                    ].map(([label, value]) => (
-                      <div key={label} style={{
-                        background: 'var(--color-bg)',
-                        borderRadius: 'var(--radius)',
-                        padding: '14px 16px',
-                      }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                          {label}
-                        </div>
-                        <div style={{ fontSize: '14px', color: 'var(--color-text)' }}>{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color: 'var(--color-text-muted)' }}>No intake details found.</p>
-                )}
-              </div>
             )}
 
             {tab === 'documents' && (

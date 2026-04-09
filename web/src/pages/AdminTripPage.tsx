@@ -157,9 +157,9 @@ export default function AdminTripPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents'>('itinerary')
 
-  function switchTab(next: 'itinerary' | 'intake' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents') {
+  function switchTab(next: 'itinerary' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markAdminMessagesRead(tripId)
@@ -750,7 +750,6 @@ export default function AdminTripPage() {
             <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
             <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
             <TabButton label="Accommodation" active={tab === 'stays'} onClick={() => switchTab('stays')} />
-            <TabButton label="Intake" active={tab === 'intake'} onClick={() => switchTab('intake')} />
             <TabButton label="Notes" active={tab === 'notes'} onClick={() => switchTab('notes')} />
             <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -1324,42 +1323,6 @@ export default function AdminTripPage() {
                       )
                     })}
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* ── INTAKE TAB ── */}
-            {tab === 'intake' && (
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--color-secondary)' }}>
-                  Client Intake Response
-                </h3>
-                {trip.intake_response ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-                    {[
-                      ['Travellers', trip.intake_response.travellers_count.toString()],
-                      ['Accommodation Style', trip.intake_response.accommodation_style],
-                      ['Interests', trip.intake_response.interests.join(', ') || '—'],
-                      ['Must-Dos', trip.intake_response.must_dos || '—'],
-                      ['Must-Avoid', trip.intake_response.must_avoid || '—'],
-                      ['Constraints', trip.intake_response.constraints || '—'],
-                      ['Notes', trip.intake_response.notes || '—'],
-                    ].map(([label, value]) => (
-                      <div key={label} style={{
-                        background: 'var(--color-bg)',
-                        borderRadius: 'var(--radius)',
-                        padding: '14px 16px',
-                        border: '1px solid var(--color-border)',
-                      }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                          {label}
-                        </div>
-                        <div style={{ fontSize: '14px', color: 'var(--color-text)', lineHeight: '1.4' }}>{value}</div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p style={{ color: 'var(--color-text-muted)' }}>No intake response found for this trip.</p>
                 )}
               </div>
             )}
