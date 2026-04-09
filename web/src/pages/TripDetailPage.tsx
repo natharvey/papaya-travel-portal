@@ -1,13 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { PDFDownloadLink } from '@react-pdf/renderer'
+import PDFDownloadButton from '../components/PDFDownloadButton'
 import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
-import ItineraryPDF from '../components/ItineraryPDF'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2 } from 'lucide-react'
-import FlightMap from '../components/FlightMap'
+const FlightMap = lazy(() => import('../components/FlightMap'))
 import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, getAccommodationSuggestions, getFlightSuggestions, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
@@ -281,7 +280,9 @@ export default function TripDetailPage() {
         {/* Flight map */}
         {trip.flights && trip.flights.length > 0 && (
           <div style={{ marginBottom: '24px' }}>
-            <FlightMap flights={trip.flights} originCity={trip.origin_city} />
+            <Suspense fallback={<div style={{ height: 260 }} />}>
+              <FlightMap flights={trip.flights} originCity={trip.origin_city} />
+            </Suspense>
           </div>
         )}
 
@@ -508,41 +509,14 @@ export default function TripDetailPage() {
                           </span>
                         )}
                       </span>
-                      <PDFDownloadLink
-                        document={
-                          <ItineraryPDF
-                            data={latestItinerary.itinerary_json}
-                            tripTitle={trip.title}
-                            clientName={trip.client.name}
-                            startDate={trip.start_date}
-                            endDate={trip.end_date}
-                            originCity={trip.origin_city}
-                          />
-                        }
-                        fileName={`${trip.title.replace(/\s+/g, '-').toLowerCase()}-itinerary.pdf`}
-                        style={{ textDecoration: 'none' }}
-                      >
-                        {({ loading }) => (
-                          <button
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              background: loading ? 'var(--color-border)' : 'var(--color-secondary)',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: 'var(--radius)',
-                              padding: '7px 14px',
-                              fontSize: '13px',
-                              fontWeight: 600,
-                              cursor: loading ? 'default' : 'pointer',
-                            }}
-                          >
-                            <Download size={13} strokeWidth={2} />
-                            {loading ? 'Preparing PDF...' : 'Download PDF'}
-                          </button>
-                        )}
-                      </PDFDownloadLink>
+                      <PDFDownloadButton
+                        data={latestItinerary.itinerary_json}
+                        tripTitle={trip.title}
+                        clientName={trip.client.name}
+                        startDate={trip.start_date}
+                        endDate={trip.end_date}
+                        originCity={trip.origin_city}
+                      />
                     </div>
                     <ItineraryTimeline data={latestItinerary.itinerary_json} />
                   </>
