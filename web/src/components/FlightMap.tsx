@@ -1,4 +1,4 @@
-import { ComposableMap, Geographies, Geography, Marker, Line } from 'react-simple-maps'
+import { ComposableMap, Geographies, Geography, Marker, useMap } from 'react-simple-maps'
 import AIRPORTS from '../data/airports'
 import type { Flight } from '../types'
 
@@ -12,6 +12,7 @@ interface FlightMapProps {
 interface Arc {
   from: [number, number]
   to: [number, number]
+  curve: number  // positive = curve above, negative = curve below, 0 = straight
 }
 
 interface MarkerPoint {
@@ -48,35 +49,94 @@ function getBounds(points: [number, number][]): { center: [number, number]; zoom
   return { center: [centerLon, centerLat], zoom }
 }
 
+// Renders a quadratic bezier arc between two projected points.
+// curve > 0 bows upward (negative SVG y), curve < 0 bows downward.
+function CurvedArc({ from, to, curve }: { from: [number, number]; to: [number, number]; curve: number }) {
+  const { projection } = useMap()
+
+  const p1 = projection(from)
+  const p2 = projection(to)
+  if (!p1 || !p2) return null
+
+  const [x1, y1] = p1
+  const [x2, y2] = p2
+
+  let d: string
+  if (curve === 0) {
+    d = `M ${x1} ${y1} L ${x2} ${y2}`
+  } else {
+    // Perpendicular control point offset
+    const mx = (x1 + x2) / 2
+    const my = (y1 + y2) / 2
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const len = Math.sqrt(dx * dx + dy * dy) || 1
+    // Perpendicular unit vector (rotated 90°), then scaled by curve amount
+    const px = (-dy / len) * curve
+    const py = (dx / len) * curve
+    d = `M ${x1} ${y1} Q ${mx + px} ${my + py} ${x2} ${y2}`
+  }
+
+  return (
+    <path
+      d={d}
+      fill="none"
+      stroke="#f97316"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeDasharray="6 3"
+    />
+  )
+}
+
 export default function FlightMap({ flights }: FlightMapProps) {
   if (!flights || flights.length === 0) return null
 
-  // Build arcs and unique markers from flight legs
-  const arcs: Arc[] = []
-  const markerMap = new Map<string, MarkerPoint>()
-
   const sorted = [...flights].sort((a, b) => a.leg_order - b.leg_order)
 
+  // First pass — collect all valid legs with a route key
+  const legs: { from: [number, number]; to: [number, number]; key: string; reverseKey: string }[] = []
+
+  sorted.forEach(flight => {
+    const fromCoords = AIRPORTS[flight.departure_airport.toUpperCase()]
+    const toCoords = AIRPORTS[flight.arrival_airport.toUpperCase()]
+    if (!fromCoords || !toCoords) return
+    const key = `${flight.departure_airport}-${flight.arrival_airport}`
+    const reverseKey = `${flight.arrival_airport}-${flight.departure_airport}`
+    legs.push({ from: fromCoords, to: toCoords, key, reverseKey })
+  })
+
+  // Second pass — assign curve direction for bidirectional pairs
+  const seen = new Map<string, number>() // key → curve assigned
+  const arcs: Arc[] = []
+
+  legs.forEach(leg => {
+    const hasReturn = legs.some(l => l.key === leg.reverseKey)
+    if (hasReturn) {
+      // Curve outbound up, return down — check which direction we've seen
+      if (!seen.has(leg.key) && !seen.has(leg.reverseKey)) {
+        seen.set(leg.key, 40)
+        arcs.push({ from: leg.from, to: leg.to, curve: 40 })
+      } else if (!seen.has(leg.key)) {
+        seen.set(leg.key, -40)
+        arcs.push({ from: leg.from, to: leg.to, curve: -40 })
+      }
+    } else {
+      arcs.push({ from: leg.from, to: leg.to, curve: 0 })
+    }
+  })
+
+  // Build unique markers
+  const markerMap = new Map<string, MarkerPoint>()
   sorted.forEach((flight, i) => {
     const fromCoords = AIRPORTS[flight.departure_airport.toUpperCase()]
     const toCoords = AIRPORTS[flight.arrival_airport.toUpperCase()]
     if (!fromCoords || !toCoords) return
-
-    arcs.push({ from: fromCoords, to: toCoords })
-
     if (!markerMap.has(flight.departure_airport)) {
-      markerMap.set(flight.departure_airport, {
-        coords: fromCoords,
-        label: flight.departure_airport,
-        isOrigin: i === 0,
-      })
+      markerMap.set(flight.departure_airport, { coords: fromCoords, label: flight.departure_airport, isOrigin: i === 0 })
     }
     if (!markerMap.has(flight.arrival_airport)) {
-      markerMap.set(flight.arrival_airport, {
-        coords: toCoords,
-        label: flight.arrival_airport,
-        isOrigin: false,
-      })
+      markerMap.set(flight.arrival_airport, { coords: toCoords, label: flight.arrival_airport, isOrigin: false })
     }
   })
 
@@ -125,22 +185,13 @@ export default function FlightMap({ flights }: FlightMapProps) {
           }
         </Geographies>
 
-        {/* Flight arcs */}
+        {/* Flight arcs — curved for return pairs, straight for one-way */}
         {arcs.map((arc, i) => (
-          <Line
-            key={i}
-            from={arc.from}
-            to={arc.to}
-            stroke="#f97316"
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeDasharray="6 3"
-          />
+          <CurvedArc key={i} from={arc.from} to={arc.to} curve={arc.curve} />
         ))}
 
         {/* Airport markers */}
         {markers.map(marker => {
-          // Push label away from the centroid so nearby airports don't collide
           const centerLon = allPoints.reduce((s, p) => s + p[0], 0) / allPoints.length
           const centerLat = allPoints.reduce((s, p) => s + p[1], 0) / allPoints.length
           const toRight = marker.coords[0] >= centerLon
