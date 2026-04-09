@@ -53,10 +53,11 @@ function getBounds(points: [number, number][]): { center: [number, number]; zoom
   return { center: [centerLon, centerLat], zoom }
 }
 
-// Build a d3 projection that matches react-simple-maps' internal geoNaturalEarth1 setup
+// Build a d3 projection that matches react-simple-maps' internal geoNaturalEarth1 setup.
+// react-simple-maps uses .center() (post-projection translation), not .rotate().
 function buildProjection(center: [number, number], zoom: number) {
   return geoNaturalEarth1()
-    .rotate([-center[0], -center[1], 0])
+    .center(center)
     .translate([MAP_WIDTH / 2, MAP_HEIGHT / 2])
     .scale(160 * zoom)
 }
@@ -203,10 +204,10 @@ export default function FlightMap({ flights }: FlightMapProps) {
               key={i}
               d={d}
               fill="none"
-              stroke={arc.isReturn ? '#60a5fa' : '#f97316'}
+              stroke="#f97316"
               strokeWidth={1.8}
               strokeLinecap="round"
-              strokeDasharray={arc.isReturn ? '3 4' : '6 3'}
+              strokeDasharray={arc.isReturn ? '3 5' : '6 3'}
             />
           )
         })}
@@ -270,7 +271,7 @@ export default function FlightMap({ flights }: FlightMapProps) {
           Outbound
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
-          <svg width="18" height="4"><line x1="0" y1="2" x2="18" y2="2" stroke="#60a5fa" strokeWidth="2" strokeDasharray="3 4" /></svg>
+          <svg width="18" height="4"><line x1="0" y1="2" x2="18" y2="2" stroke="#f97316" strokeWidth="2" strokeDasharray="3 5" /></svg>
           Return
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
