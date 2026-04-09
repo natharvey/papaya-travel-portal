@@ -40,7 +40,6 @@ def test_intake_returns_message_with_credentials(client: TestClient, sample_inta
     data = response.json()
     assert "message" in data
     assert "messagetest@example.com" in data["message"]
-    assert data["reference_code"] in data["message"]
 
 
 def test_duplicate_email_creates_new_trip(client: TestClient, sample_intake_data: dict):

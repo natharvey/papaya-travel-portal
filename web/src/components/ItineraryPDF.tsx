@@ -201,7 +201,7 @@ interface ItineraryData {
   overview: string
   destinations: { name: string; nights: number }[]
   day_plans: DayPlan[]
-  accommodation_suggestions: { area: string; style: string; notes: string }[]
+  accommodation_suggestions?: { area: string; style: string; notes: string }[]
   transport_notes: string[]
   budget_summary: { estimated_total_aud: number | null; assumptions: string[] }
   packing_checklist: string[]
@@ -312,10 +312,10 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
       {/* Practical info */}
       <Page size="A4" style={styles.page}>
         {/* Accommodation */}
-        {data.accommodation_suggestions.length > 0 && (
+        {(data.accommodation_suggestions ?? []).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Accommodation Suggestions</Text>
-            {data.accommodation_suggestions.map((a, i) => (
+            {(data.accommodation_suggestions ?? []).map((a, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={styles.bullet}>·</Text>
                 <Text style={styles.listText}>

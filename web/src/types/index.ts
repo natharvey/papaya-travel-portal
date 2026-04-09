@@ -89,7 +89,7 @@ export interface ItineraryJSON {
   overview: string
   destinations: Destination[]
   day_plans: DayPlan[]
-  accommodation_suggestions: AccommodationSuggestion[]
+  accommodation_suggestions?: AccommodationSuggestion[]
   transport_notes: string[]
   budget_summary: BudgetSummary
   packing_checklist: string[]
