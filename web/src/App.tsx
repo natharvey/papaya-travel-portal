@@ -12,6 +12,7 @@ const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'))
 const AdminTripPage = lazy(() => import('./pages/AdminTripPage'))
 const MagicLoginPage = lazy(() => import('./pages/MagicLoginPage'))
 const NewTripPage = lazy(() => import('./pages/NewTripPage'))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
 
 function PageLoader() {
   return (
@@ -35,7 +36,7 @@ export default function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public */}
-          <Route path="/" element={<Navigate to="/intake" replace />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/intake" element={<IntakePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/magic/:token" element={<MagicLoginPage />} />
@@ -96,7 +97,7 @@ export default function App() {
           />
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/intake" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
