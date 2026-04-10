@@ -108,6 +108,27 @@ export default function TripDetailPage() {
   const [changesError, setChangesError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
 
+  // Maya greeting typewriter
+  const MAYA_GREETING = "Hi! I'm Maya. I can adjust anything about your itinerary — swap activities, change the pace, add day trips, or make it more budget-friendly. What would you like to change?"
+  const [greetingText, setGreetingText] = useState('')
+  const [greetingDone, setGreetingDone] = useState(false)
+
+  useEffect(() => {
+    if (tab !== 'chat') return
+    setGreetingText('')
+    setGreetingDone(false)
+    let i = 0
+    const timer = setInterval(() => {
+      i++
+      setGreetingText(MAYA_GREETING.slice(0, i))
+      if (i >= MAYA_GREETING.length) {
+        clearInterval(timer)
+        setGreetingDone(true)
+      }
+    }, 22)
+    return () => clearInterval(timer)
+  }, [tab])
+
   // Title editing
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleInput, setTitleInput] = useState('')
@@ -689,19 +710,30 @@ export default function TripDetailPage() {
                 }}>
                   {/* Maya's greeting — always visible */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, marginTop: 2 }}>🌴</div>
+                    {/* Maya avatar */}
                     <div style={{
-                      maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.5,
+                      width: 34, height: 34, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                      background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(240,115,50,0.35)',
+                    }}>
+                      <span style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px', fontFamily: 'inherit' }}>M</span>
+                    </div>
+                    <div style={{
+                      maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.6,
                       borderRadius: '16px 16px 16px 4px', background: 'white',
                       color: 'var(--color-text)', border: '1px solid var(--color-border)',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)', minHeight: 42,
                     }}>
-                      Hi! I'm Maya. I can adjust anything about your itinerary — swap activities, change the pace, add day trips, or make it more budget-friendly. What would you like to change?
+                      {greetingText}
+                      {!greetingDone && (
+                        <span style={{ display: 'inline-block', width: 2, height: '1em', background: 'var(--color-primary)', marginLeft: 1, verticalAlign: 'text-bottom', animation: 'blink 0.8s step-end infinite' }} />
+                      )}
                     </div>
                   </div>
 
-                  {/* Suggested prompts — only show before first user message */}
-                  {chatMessages.length === 0 && (
+                  {/* Suggested prompts — only show after typing finishes and before first user message */}
+                  {greetingDone && chatMessages.length === 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 40 }}>
                       {[
                         'Make it more budget-friendly',
@@ -731,7 +763,7 @@ export default function TripDetailPage() {
                   {chatMessages.map((msg, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                       {msg.role === 'assistant' && (
-                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, marginRight: 8, marginTop: 2 }}>🌴</div>
+                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 8, marginTop: 2, boxShadow: '0 2px 8px rgba(240,115,50,0.35)' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px' }}>M</span></div>
                       )}
                       <div style={{
                         maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.5,
@@ -747,7 +779,7 @@ export default function TripDetailPage() {
                   ))}
                   {chatLoading && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🌴</div>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(240,115,50,0.35)' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px' }}>M</span></div>
                       <div style={{ padding: '10px 14px', borderRadius: '16px 16px 16px 4px', background: 'white', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: 13 }}>Thinking...</div>
                     </div>
                   )}
