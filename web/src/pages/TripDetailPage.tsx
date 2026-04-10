@@ -296,7 +296,7 @@ export default function TripDetailPage() {
         }}>
           <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', overflowX: 'auto' }}>
             <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
-            <TabButton label="Refine with AI" active={tab === 'chat'} onClick={() => switchTab('chat')} />
+            <TabButton label="Ask Maya" active={tab === 'chat'} onClick={() => switchTab('chat')} />
             <TabButton label="Accommodation" active={tab === 'accommodation'} onClick={() => switchTab('accommodation')} />
             <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -574,17 +574,50 @@ export default function TripDetailPage() {
             {/* Chat Refinement Tab */}
             {tab === 'chat' && (
               <div>
-                <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
-                  Chat with Maya to refine your itinerary — "swap day 3 morning for a spa", "add a day trip to Ubud", "make it more budget-friendly".
-                </p>
                 <div style={{
                   height: '420px', overflowY: 'auto', border: '1.5px solid var(--color-border)',
                   borderRadius: '12px', padding: '16px', background: '#F8FAFC',
                   display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px',
                 }}>
+                  {/* Maya's greeting — always visible */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0, marginTop: 2 }}>🌴</div>
+                    <div style={{
+                      maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.5,
+                      borderRadius: '16px 16px 16px 4px', background: 'white',
+                      color: 'var(--color-text)', border: '1px solid var(--color-border)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                    }}>
+                      Hi! I'm Maya. I can adjust anything about your itinerary — swap activities, change the pace, add day trips, or make it more budget-friendly. What would you like to change?
+                    </div>
+                  </div>
+
+                  {/* Suggested prompts — only show before first user message */}
                   {chatMessages.length === 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--color-text-muted)', fontSize: '14px' }}>
-                      Ask Maya to change anything about your itinerary...
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 40 }}>
+                      {[
+                        'Make it more budget-friendly',
+                        'Add more adventure activities',
+                        'Swap a destination',
+                        'Change the travel pace',
+                        'Add a free day',
+                        'More local food experiences',
+                      ].map(prompt => (
+                        <button
+                          key={prompt}
+                          onClick={() => setChatInput(prompt)}
+                          style={{
+                            background: 'white', border: '1.5px solid var(--color-border)',
+                            borderRadius: '100px', padding: '6px 14px', fontSize: '13px',
+                            color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'inherit',
+                            transition: 'all 0.15s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)' }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+                        >
+                          {prompt}
+                        </button>
+                      ))}
                     </div>
                   )}
                   {chatMessages.map((msg, i) => (
