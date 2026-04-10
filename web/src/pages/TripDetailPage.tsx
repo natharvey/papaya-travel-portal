@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
@@ -102,10 +102,6 @@ export default function TripDetailPage() {
 
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState('')
-  const [requestingChanges, setRequestingChanges] = useState(false)
-  const [changesOpen, setChangesOpen] = useState(false)
-  const [changesBody, setChangesBody] = useState('')
-  const [changesError, setChangesError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
 
   // Maya greeting typewriter
@@ -201,22 +197,6 @@ export default function TripDetailPage() {
     }
   }
 
-  async function handleRequestChanges() {
-    if (!tripId || !changesBody.trim()) return
-    setRequestingChanges(true)
-    setChangesError('')
-    try {
-      const msg = await requestChanges(tripId, changesBody.trim())
-      setMessages(prev => [...prev, msg])
-      setTrip(prev => prev ? { ...prev, status: 'DRAFT' } : prev)
-      setChangesBody('')
-      setChangesOpen(false)
-    } catch (e) {
-      setChangesError(getApiError(e))
-    } finally {
-      setRequestingChanges(false)
-    }
-  }
 
   async function handleClientUploadDocument(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -493,105 +473,57 @@ export default function TripDetailPage() {
                           Your itinerary is ready for approval
                         </div>
                         <p style={{ fontSize: '14px', color: 'var(--color-primary-dark)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
-                          Review the itinerary below. If you're happy with it, click confirm to lock it in. If you'd like changes, send us a message.
+                          Review the itinerary below and confirm when you're happy. Want changes? Ask Maya for instant AI edits, or message your planner for a personal touch.
                         </p>
                         {confirmError && (
                           <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '12px' }}>{confirmError}</p>
                         )}
-                        {!changesOpen ? (
-                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                            <button
-                              onClick={handleConfirm}
-                              disabled={confirming}
-                              style={{
-                                background: confirming ? 'var(--color-border)' : '#15803D',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: 'var(--radius)',
-                                padding: '10px 22px',
-                                fontSize: '14px',
-                                fontWeight: 700,
-                                cursor: confirming ? 'default' : 'pointer',
-                              }}
-                            >
-                              {confirming ? 'Confirming...' : 'Confirm this itinerary'}
-                            </button>
-                            <button
-                              onClick={() => setChangesOpen(true)}
-                              style={{
-                                background: 'white',
-                                color: 'var(--color-primary-dark)',
-                                border: '1px solid #FCD9B8',
-                                borderRadius: 'var(--radius)',
-                                padding: '10px 22px',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Request changes
-                            </button>
-                          </div>
-                        ) : (
-                          <div>
-                            <p style={{ fontSize: '13px', color: 'var(--color-primary-dark)', marginBottom: '8px', fontWeight: 600 }}>
-                              What would you like us to change?
-                            </p>
-                            <textarea
-                              value={changesBody}
-                              onChange={e => setChangesBody(e.target.value)}
-                              placeholder="e.g. We'd love more beach time in Bali and fewer museums..."
-                              rows={4}
-                              style={{
-                                width: '100%',
-                                boxSizing: 'border-box',
-                                padding: '10px 12px',
-                                borderRadius: 'var(--radius)',
-                                border: '1px solid #FCD9B8',
-                                fontSize: '14px',
-                                resize: 'vertical',
-                                fontFamily: 'inherit',
-                                background: 'white',
-                                marginBottom: '10px',
-                              }}
-                            />
-                            {changesError && (
-                              <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '8px' }}>{changesError}</p>
-                            )}
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                onClick={handleRequestChanges}
-                                disabled={requestingChanges || !changesBody.trim()}
-                                style={{
-                                  background: requestingChanges || !changesBody.trim() ? 'var(--color-border)' : '#C2410C',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: 'var(--radius)',
-                                  padding: '10px 22px',
-                                  fontSize: '14px',
-                                  fontWeight: 700,
-                                  cursor: requestingChanges || !changesBody.trim() ? 'default' : 'pointer',
-                                }}
-                              >
-                                {requestingChanges ? 'Sending...' : 'Send request'}
-                              </button>
-                              <button
-                                onClick={() => { setChangesOpen(false); setChangesBody(''); setChangesError('') }}
-                                style={{
-                                  background: 'white',
-                                  color: 'var(--color-primary-dark)',
-                                  border: '1px solid #FCD9B8',
-                                  borderRadius: 'var(--radius)',
-                                  padding: '10px 16px',
-                                  fontSize: '14px',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={handleConfirm}
+                            disabled={confirming}
+                            style={{
+                              background: confirming ? 'var(--color-border)' : '#15803D',
+                              color: 'white', border: 'none',
+                              borderRadius: 'var(--radius)', padding: '10px 22px',
+                              fontSize: '14px', fontWeight: 700,
+                              cursor: confirming ? 'default' : 'pointer',
+                              display: 'flex', alignItems: 'center', gap: 7,
+                            }}
+                          >
+                            {confirming ? 'Confirming...' : 'Confirm itinerary'}
+                          </button>
+                          <button
+                            onClick={() => switchTab('chat')}
+                            style={{
+                              background: 'white', color: 'var(--color-primary-dark)',
+                              border: '1px solid #FCD9B8', borderRadius: 'var(--radius)',
+                              padding: '10px 18px', fontSize: '14px', fontWeight: 600,
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+                              transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-accent)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                          >
+                            <Sparkles size={14} strokeWidth={2} />
+                            Refine with Maya
+                          </button>
+                          <button
+                            onClick={() => switchTab('messages')}
+                            style={{
+                              background: 'white', color: 'var(--color-primary-dark)',
+                              border: '1px solid #FCD9B8', borderRadius: 'var(--radius)',
+                              padding: '10px 18px', fontSize: '14px', fontWeight: 600,
+                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+                              transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-accent)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
+                          >
+                            <UserRound size={14} strokeWidth={2} />
+                            Message your planner
+                          </button>
+                        </div>
                       </div>
                     )}
 
