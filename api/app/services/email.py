@@ -22,7 +22,7 @@ def _send(to: str, subject: str, html: str, plain: str) -> None:
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"Papaya Travel <{EMAIL_ADDRESS}>"
+    msg["From"] = f"Travel Papaya <{EMAIL_ADDRESS}>"
     msg["To"] = to
     msg.attach(MIMEText(plain, "plain"))
     msg.attach(MIMEText(html, "html"))
@@ -40,11 +40,11 @@ def _send(to: str, subject: str, html: str, plain: str) -> None:
 
 def send_magic_link_email(to: str, client_name: str, magic_link: str) -> None:
     """Send a standalone login link email (no reference code)."""
-    subject = "Your Papaya Travel login link"
+    subject = "Your Travel Papaya login link"
 
     plain = f"""Hi {client_name},
 
-Here is your one-click login link for the Papaya Travel portal:
+Here is your one-click login link for the Travel Papaya portal:
 
 {magic_link}
 
@@ -52,7 +52,7 @@ This link expires in 1 hour and can only be used once.
 
 If you didn't request this, you can safely ignore this email.
 
-The Papaya Travel Team
+The Travel Papaya Team
 """
 
     html = f"""
@@ -60,12 +60,12 @@ The Papaya Travel Team
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #F97316; margin: 0;">Papaya Travel</h1>
+    <h1 style="color: #F97316; margin: 0;">Travel Papaya</h1>
   </div>
 
   <p>Hi {client_name},</p>
 
-  <p>Click the button below to log in to your Papaya Travel portal:</p>
+  <p>Click the button below to log in to your Travel Papaya portal:</p>
 
   <p>
     <a href="{magic_link}"
@@ -80,7 +80,7 @@ The Papaya Travel Team
     If you didn't request this, you can safely ignore this email.
   </p>
 
-  <p>The Papaya Travel Team</p>
+  <p>The Travel Papaya Team</p>
 </body>
 </html>
 """
@@ -95,7 +95,7 @@ def send_intake_confirmation(
     trip_title: str,
     magic_link: Optional[str] = None,
 ) -> None:
-    subject = "Your Papaya Travel enquiry has been received"
+    subject = "Your Travel Papaya enquiry has been received"
 
     magic_section_plain = f"Jump straight in:\n{magic_link}\n(This link expires in 1 hour)\n\nAfter it expires, you can request a new login link at: {PORTAL_URL}/login" if magic_link else f"Log in at: {PORTAL_URL}/login"
 
@@ -107,7 +107,7 @@ Thanks for your enquiry — we've received your trip request and our team will b
 
 Trip: {trip_title}
 
-The Papaya Travel Team
+The Travel Papaya Team
 """
 
     magic_button = f"""
@@ -132,7 +132,7 @@ The Papaya Travel Team
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #F97316; margin: 0;">Papaya Travel</h1>
+    <h1 style="color: #F97316; margin: 0;">Travel Papaya</h1>
   </div>
 
   <p>Hi {client_name},</p>
@@ -145,7 +145,7 @@ The Papaya Travel Team
     The link above expires in 1 hour. To log in later, visit <a href="{PORTAL_URL}/login" style="color: #F97316;">{PORTAL_URL}/login</a> and enter your email address — we'll send you a new link.
   </p>
 
-  <p>The Papaya Travel Team</p>
+  <p>The Travel Papaya Team</p>
 </body>
 </html>
 """
@@ -171,7 +171,7 @@ Please log in to your portal to view the full day-by-day plan and let us know if
 
 You can message our team directly from within the portal with any feedback.
 
-The Papaya Travel Team
+The Travel Papaya Team
 """
 
     html = f"""
@@ -179,7 +179,7 @@ The Papaya Travel Team
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #FF6B35; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #FF6B35; margin: 0;">Papaya Travel</h1>
+    <h1 style="color: #FF6B35; margin: 0;">Travel Papaya</h1>
   </div>
 
   <p>Hi {client_name},</p>
@@ -197,7 +197,7 @@ The Papaya Travel Team
 
   <p>You can message our team directly from within the portal with any feedback.</p>
 
-  <p>The Papaya Travel Team</p>
+  <p>The Travel Papaya Team</p>
 </body>
 </html>
 """
@@ -221,7 +221,7 @@ Your trip "{trip_title}" is now confirmed. We're excited to help make it happen!
 Our team will be in touch with next steps. You can log in to your portal any time to view your itinerary and send us a message:
 {trip_url}
 
-The Papaya Travel Team
+The Travel Papaya Team
 """
 
     html = f"""
@@ -229,7 +229,7 @@ The Papaya Travel Team
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #FF6B35; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #FF6B35; margin: 0;">Papaya Travel</h1>
+    <h1 style="color: #FF6B35; margin: 0;">Travel Papaya</h1>
   </div>
 
   <p>Hi {client_name},</p>
@@ -245,7 +245,7 @@ The Papaya Travel Team
     </a>
   </p>
 
-  <p>The Papaya Travel Team</p>
+  <p>The Travel Papaya Team</p>
 </body>
 </html>
 """
@@ -279,7 +279,7 @@ View in admin portal: {trip_url}
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #FF6B35; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #FF6B35; margin: 0;">Papaya Travel — Admin Notification</h1>
+    <h1 style="color: #FF6B35; margin: 0;">Travel Papaya — Admin Notification</h1>
   </div>
 
   <p>A client has confirmed their trip and is ready to proceed.</p>
@@ -332,7 +332,7 @@ View in admin portal: {trip_url}
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #F97316; margin: 0;">Papaya Travel — Changes Requested</h1>
+    <h1 style="color: #F97316; margin: 0;">Travel Papaya — Changes Requested</h1>
   </div>
 
   <p>A client has reviewed their itinerary and requested changes. The trip has been moved back to <strong>Draft</strong>.</p>
@@ -378,7 +378,7 @@ Log in to your portal to see the full day-by-day plan:
 
 If you have any questions or want changes, you can message our team directly from within the portal.
 
-The Papaya Travel Team
+The Travel Papaya Team
 """
 
     html = f"""
@@ -386,7 +386,7 @@ The Papaya Travel Team
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #FF6B35; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #FF6B35; margin: 0;">Papaya Travel</h1>
+    <h1 style="color: #FF6B35; margin: 0;">Travel Papaya</h1>
   </div>
 
   <p>Hi {client_name},</p>
@@ -402,7 +402,7 @@ The Papaya Travel Team
 
   <p>If you have any questions or want changes, you can message our team directly from within the portal.</p>
 
-  <p>The Papaya Travel Team</p>
+  <p>The Travel Papaya Team</p>
 </body>
 </html>
 """
@@ -417,12 +417,12 @@ def send_new_message_to_client(
     trip_id: str,
     message_body: str,
 ) -> None:
-    subject = f"New message from Papaya Travel — {trip_title}"
+    subject = f"New message from Travel Papaya — {trip_title}"
     trip_url = f"{PORTAL_URL}/portal/trips/{trip_id}"
 
     plain = f"""Hi {client_name},
 
-You have a new message from the Papaya Travel team regarding your trip "{trip_title}".
+You have a new message from the Travel Papaya team regarding your trip "{trip_title}".
 
 ---
 {message_body}
@@ -430,7 +430,7 @@ You have a new message from the Papaya Travel team regarding your trip "{trip_ti
 
 Reply and view your full conversation here: {trip_url}
 
-The Papaya Travel Team
+The Travel Papaya Team
 """
 
     html = f"""
@@ -438,7 +438,7 @@ The Papaya Travel Team
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #F97316; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #F97316; margin: 0;">Papaya Travel</h1>
+    <h1 style="color: #F97316; margin: 0;">Travel Papaya</h1>
   </div>
 
   <p>Hi {client_name},</p>
@@ -455,7 +455,7 @@ The Papaya Travel Team
     </a>
   </p>
 
-  <p style="color: #94A3B8; font-size: 13px;">The Papaya Travel Team</p>
+  <p style="color: #94A3B8; font-size: 13px;">The Travel Papaya Team</p>
 </body>
 </html>
 """
@@ -494,7 +494,7 @@ View conversation: {trip_url}
 <html>
 <body style="font-family: Arial, sans-serif; color: #2D3A4A; max-width: 600px; margin: 0 auto; padding: 24px;">
   <div style="border-top: 4px solid #2D3A4A; padding-top: 24px; margin-bottom: 32px;">
-    <h1 style="color: #2D3A4A; margin: 0;">Papaya Travel — Admin Notification</h1>
+    <h1 style="color: #2D3A4A; margin: 0;">Travel Papaya — Admin Notification</h1>
   </div>
 
   <p>New message from a client.</p>
