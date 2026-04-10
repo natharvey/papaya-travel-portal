@@ -503,6 +503,37 @@ def client_download_url(
     return {"url": get_download_url(key)}
 
 
+@router.patch("/trips/{trip_id}/title", status_code=200)
+def client_update_trip_title(
+    trip_id: uuid.UUID,
+    payload: dict,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    title = (payload.get("title") or "").strip()
+    if not title:
+        raise HTTPException(status_code=422, detail="Title cannot be empty")
+    trip.title = title
+    db.commit()
+    return {"title": trip.title}
+
+
+@router.delete("/trips/{trip_id}", status_code=204)
+def client_delete_trip(
+    trip_id: uuid.UUID,
+    client: Client = Depends(get_current_client),
+    db: Session = Depends(get_db),
+):
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    db.delete(trip)
+    db.commit()
+
+
 @router.delete("/trips/{trip_id}/documents", status_code=204)
 def client_delete_document(
     trip_id: uuid.UUID,

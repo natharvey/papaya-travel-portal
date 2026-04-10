@@ -7,7 +7,7 @@ import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2 } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
-import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
+import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -84,6 +84,15 @@ export default function TripDetailPage() {
   const [changesError, setChangesError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
 
+  // Title editing
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleInput, setTitleInput] = useState('')
+  const [titleSaving, setTitleSaving] = useState(false)
+
+  // Delete trip
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
     if (!tripId) return
     let pollTimer: ReturnType<typeof setTimeout> | null = null
@@ -109,6 +118,29 @@ export default function TripDetailPage() {
 
     return () => { if (pollTimer) clearTimeout(pollTimer) }
   }, [tripId])
+
+  async function handleSaveTitle() {
+    if (!tripId || !titleInput.trim()) return
+    setTitleSaving(true)
+    try {
+      await updateTripTitle(tripId, titleInput.trim())
+      setTrip(prev => prev ? { ...prev, title: titleInput.trim() } : prev)
+      setEditingTitle(false)
+    } finally {
+      setTitleSaving(false)
+    }
+  }
+
+  async function handleDeleteTrip() {
+    if (!tripId) return
+    setDeleting(true)
+    try {
+      await deleteTrip(tripId)
+      window.location.href = '/portal'
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   async function handleConfirm() {
     if (!tripId || !trip) return
@@ -245,8 +277,42 @@ export default function TripDetailPage() {
           marginBottom: '24px',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <h1 style={{ fontSize: '26px', fontWeight: 800, marginBottom: '8px' }}>{trip.title}</h1>
+            <div style={{ flex: 1 }}>
+              {/* Editable title */}
+              {editingTitle ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <input
+                    autoFocus
+                    value={titleInput}
+                    onChange={e => setTitleInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
+                    style={{
+                      fontSize: '22px', fontWeight: 800, background: 'rgba(255,255,255,0.15)',
+                      border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 8,
+                      padding: '4px 10px', color: 'white', outline: 'none', fontFamily: 'inherit', width: '100%', maxWidth: 400,
+                    }}
+                  />
+                  <button onClick={handleSaveTitle} disabled={titleSaving} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, padding: '5px 12px', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {titleSaving ? '...' : 'Save'}
+                  </button>
+                  <button onClick={() => setEditingTitle(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <h1 style={{ fontSize: '26px', fontWeight: 800, margin: 0 }}>{trip.title}</h1>
+                  <button
+                    onClick={() => { setTitleInput(trip.title); setEditingTitle(true) }}
+                    title="Edit title"
+                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, padding: '4px 8px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'white'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                  >
+                    ✏️ Edit
+                  </button>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                 {[
                   { Icon: PlaneTakeoff, label: `From ${trip.origin_city}` },
@@ -262,18 +328,34 @@ export default function TripDetailPage() {
                 ))}
               </div>
             </div>
-            <span style={{
-              background: statusColors.bg,
-              color: statusColors.text,
-              padding: '6px 16px',
-              borderRadius: '100px',
-              fontSize: '13px',
-              fontWeight: 700,
-              whiteSpace: 'nowrap',
-              alignSelf: 'flex-start',
-            }}>
-              {trip.status}
-            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <span style={{
+                background: statusColors.bg, color: statusColors.text,
+                padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
+              }}>
+                {trip.status}
+              </span>
+              {confirmDelete ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Delete trip?</span>
+                  <button onClick={handleDeleteTrip} disabled={deleting} style={{ background: '#EF4444', border: 'none', borderRadius: 6, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {deleting ? '...' : 'Yes, delete'}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, padding: '4px 10px', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#FCA5A5' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+                >
+                  Delete trip
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

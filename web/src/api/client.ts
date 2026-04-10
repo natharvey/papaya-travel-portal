@@ -372,6 +372,14 @@ export async function deleteClientDocument(tripId: string, key: string): Promise
   await api.delete(`/client/trips/${tripId}/documents`, { params: { key } })
 }
 
+export async function updateTripTitle(tripId: string, title: string): Promise<void> {
+  await api.patch(`/client/trips/${tripId}/title`, { title })
+}
+
+export async function deleteTrip(tripId: string): Promise<void> {
+  await api.delete(`/client/trips/${tripId}`)
+}
+
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 export function getApiError(error: unknown): string {
