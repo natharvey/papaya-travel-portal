@@ -334,12 +334,9 @@ export default function ItineraryTimeline({ data, onBlockEdit }: Props) {
           {data.destinations?.map((d, i) => (
             <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
               <MapPin size={11} strokeWidth={2.5} color="#FF6B35" />
-              {d.name} · {d.nights}n
+              {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
             </span>
           ))}
-          <button onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', marginLeft: 'auto', fontFamily: 'inherit' }}>
-            {copied ? <><Check size={12} strokeWidth={2.5} /> Copied</> : <><Copy size={12} strokeWidth={2.5} /> Copy summary</>}
-          </button>
         </div>
       </div>
 
@@ -576,7 +573,7 @@ export default function ItineraryTimeline({ data, onBlockEdit }: Props) {
 
 // ─── Copy helper ──────────────────────────────────────────────────────────────
 
-function buildCopyText(data: ItineraryJSON): string {
+export function buildCopyText(data: ItineraryJSON): string {
   const lines: string[] = []
   lines.push(`# ${data.trip_title}`, '', '## Overview', data.overview, '')
   if (data.destinations?.length) {

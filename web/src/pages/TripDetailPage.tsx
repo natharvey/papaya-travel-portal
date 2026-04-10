@@ -2,10 +2,10 @@ import React, { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import PDFDownloadButton from '../components/PDFDownloadButton'
 import Layout from '../components/Layout'
-import ItineraryTimeline from '../components/ItineraryTimeline'
+import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, Gauge, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2 } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
@@ -40,6 +40,30 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
       }}
     >
       {label}
+    </button>
+  )
+}
+
+function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON }) {
+  const [copied, setCopied] = useState(false)
+  function handleCopy() {
+    const text = buildCopyText(data)
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+    } else {
+      const el = document.createElement('textarea')
+      el.value = text; el.style.cssText = 'position:fixed;opacity:0'
+      document.body.appendChild(el); el.focus(); el.select()
+      document.execCommand('copy'); document.body.removeChild(el)
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
+    }
+  }
+  return (
+    <button onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-text-muted)'; e.currentTarget.style.color = 'var(--color-text)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+    >
+      {copied ? '✓ Copied' : 'Copy summary'}
     </button>
   )
 }
@@ -305,11 +329,11 @@ export default function TripDetailPage() {
                   <button
                     onClick={() => { setTitleInput(trip.title); setEditingTitle(true) }}
                     title="Edit title"
-                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 6, padding: '4px 8px', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
-                    onMouseEnter={e => e.currentTarget.style.color = 'white'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '5px 7px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', lineHeight: 1 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'white' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
                   >
-                    ✏️ Edit
+                    <Pencil size={13} strokeWidth={2} />
                   </button>
                 </div>
               )}
@@ -318,8 +342,7 @@ export default function TripDetailPage() {
                   { Icon: PlaneTakeoff, label: `From ${trip.origin_city}` },
                   { Icon: Calendar, label: `${formatDate(trip.start_date)} — ${formatDate(trip.end_date)}` },
                   { Icon: Clock, label: `${tripDays} days` },
-                  { Icon: Wallet, label: trip.budget_range },
-                  { Icon: Gauge, label: trip.pace },
+                  { Icon: Wallet, label: `$${trip.budget_range}` },
                 ].map(({ Icon, label }) => (
                   <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>
                     <Icon size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
@@ -583,21 +606,24 @@ export default function TripDetailPage() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-                        Version {latestItinerary.version} · Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU')}
+                        Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                         {trip.itineraries.length > 1 && (
-                          <span style={{ marginLeft: '10px', color: 'var(--color-primary)' }}>
-                            · {trip.itineraries.length} versions
+                          <span style={{ marginLeft: '8px', color: 'var(--color-primary)' }}>
+                            · {trip.itineraries.length} revisions
                           </span>
                         )}
                       </span>
-                      <PDFDownloadButton
-                        data={latestItinerary.itinerary_json}
-                        tripTitle={trip.title}
-                        clientName={trip.client.name}
-                        startDate={trip.start_date}
-                        endDate={trip.end_date}
-                        originCity={trip.origin_city}
-                      />
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <ItineraryCopySummary data={latestItinerary.itinerary_json} />
+                        <PDFDownloadButton
+                          data={latestItinerary.itinerary_json}
+                          tripTitle={trip.title}
+                          clientName={trip.client.name}
+                          startDate={trip.start_date}
+                          endDate={trip.end_date}
+                          originCity={trip.origin_city}
+                        />
+                      </div>
                     </div>
                     <ItineraryTimeline
                       data={latestItinerary.itinerary_json}
