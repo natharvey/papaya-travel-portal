@@ -108,8 +108,9 @@ docker-compose up --build
                     └─────────────────────────────────────────────┘
                          │              │              │
                    OpenAI GPT-4o   Anthropic       Gmail SMTP
-                   Itinerary gen   Ask Maya        Transactional
-                   + vision        AI chat         email
+                   Screenshot      Claude 4.6      Transactional
+                   scanning +      All AI features email
+                   fallback
 ```
 
 See the live interactive version at [travel-papaya.com/architecture](https://www.travel-papaya.com/architecture).

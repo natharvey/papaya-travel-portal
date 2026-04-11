@@ -281,10 +281,10 @@ const initialNodes = [
     position: { x: 1150, y: 100 },
     data: {
       label: 'OpenAI',
-      sublabel: 'GPT-4o',
+      sublabel: 'GPT-4o · Fallback',
       icon: '🤖',
       color: EXT_COLOR,
-      detail: ['Day-by-day itinerary generation', 'Screenshot scanning (vision)', 'Structured JSON output', 'Retry logic with backoff'],
+      detail: ['Screenshot scanning (vision)', 'Parses flight & hotel booking confirmations', 'Retained as AI fallback if needed'],
     },
   },
   {
@@ -293,10 +293,10 @@ const initialNodes = [
     position: { x: 1150, y: 270 },
     data: {
       label: 'Anthropic',
-      sublabel: 'Claude — Ask Maya',
+      sublabel: 'Claude Sonnet 4.6',
       icon: '✨',
       color: EXT_COLOR,
-      detail: ['Powers the Ask Maya chat tab', 'Clients refine itineraries via AI', 'Conversational interface'],
+      detail: ['Itinerary generation', 'Ask Maya — client refinement chat', 'Intake conversational chat', 'Accommodation & flight suggestions'],
     },
   },
   {
