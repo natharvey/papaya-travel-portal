@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import {
   Sunrise, Sun, Moon, MapPin, Copy, Check,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
@@ -6,8 +6,10 @@ import {
   LayoutList, AlignJustify, Pencil, X, Send, Loader2,
   Plane, Car, Ship, Train, Utensils, Hotel, Shield, Ticket,
   Thermometer, Calendar, Heart, Info, DollarSign, Shirt, Footprints, Camera,
+  Map as MapIcon,
 } from 'lucide-react'
 import type { ItineraryJSON, DayPlan, DayBlock } from '../types'
+const DayMap = lazy(() => import('./DayMap'))
 
 interface Props {
   data: ItineraryJSON
@@ -284,7 +286,7 @@ const PERIOD_KEYS: Record<Period, 'morning' | 'afternoon' | 'evening'> = {
 export default function ItineraryTimeline({ data, onBlockEdit, hideOverview }: Props) {
   const [selectedDayNum, setSelectedDayNum] = useState(1)
   const [copied, setCopied] = useState(false)
-  const [view, setView] = useState<'detail' | 'overview'>('detail')
+  const [view, setView] = useState<'detail' | 'overview' | 'map'>('detail')
   const [editState, setEditState] = useState<EditState | null>(null)
   const [editLoading, setEditLoading] = useState(false)
 
@@ -348,7 +350,7 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview }: P
       {/* ── View toggle ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', margin: 0 }}>
-          {view === 'detail' ? 'Select a day' : 'All days'}
+          {view === 'detail' ? 'Select a day' : view === 'overview' ? 'All days' : 'Day locations'}
         </p>
         <div style={{ display: 'flex', background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 8, padding: 3, gap: 2 }}>
           <button
@@ -364,6 +366,13 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview }: P
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, background: view === 'overview' ? 'white' : 'transparent', color: view === 'overview' ? 'var(--color-text)' : 'var(--color-text-muted)', boxShadow: view === 'overview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}
           >
             <LayoutList size={13} /> Overview
+          </button>
+          <button
+            onClick={() => setView('map')}
+            title="Map"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 600, background: view === 'map' ? 'white' : 'transparent', color: view === 'map' ? 'var(--color-text)' : 'var(--color-text-muted)', boxShadow: view === 'map' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}
+          >
+            <MapIcon size={13} /> Map
           </button>
         </div>
       </div>
@@ -514,6 +523,13 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview }: P
             )
           })}
         </div>
+      )}
+
+      {/* ── MAP VIEW ── */}
+      {view === 'map' && data.day_plans && data.day_plans.length > 0 && (
+        <Suspense fallback={<div style={{ height: 380, background: '#e8f0f5', borderRadius: 12, marginBottom: 20 }} />}>
+          <DayMap dayPlans={data.day_plans} />
+        </Suspense>
       )}
 
       {/* ── Collapsible summary sections ── */}
