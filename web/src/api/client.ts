@@ -199,6 +199,10 @@ export async function getAdminTrip(tripId: string): Promise<TripDetail> {
   return res.data
 }
 
+export async function adminDeleteTrip(tripId: string): Promise<void> {
+  await api.delete(`/admin/trips/${tripId}`)
+}
+
 export async function updateAdminTrip(
   tripId: string,
   data: { status?: string; title?: string; admin_notes?: string }

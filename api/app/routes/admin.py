@@ -537,6 +537,20 @@ def admin_download_url(
     return {"url": get_download_url(key)}
 
 
+@router.delete("/trips/{trip_id}", status_code=204)
+def admin_delete_trip(
+    trip_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Delete a trip and all its associated data."""
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    db.delete(trip)
+    db.commit()
+
+
 @router.delete("/trips/{trip_id}/documents", status_code=204)
 def admin_delete_document(
     trip_id: uuid.UUID,

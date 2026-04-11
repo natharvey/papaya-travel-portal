@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send, StickyNote, Save, Plus, Trash2, Pencil, X, Check, Search } from 'lucide-react'
 import Layout from '../components/Layout'
 import ItineraryTimeline from '../components/ItineraryTimeline'
@@ -9,6 +9,7 @@ import FlightMap from '../components/FlightMap'
 import {
   getAdminTrip,
   updateAdminTrip,
+  adminDeleteTrip,
   generateItinerary,
   regenerateItinerary,
   sendAdminMessage,
@@ -153,6 +154,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 
 export default function AdminTripPage() {
   const { tripId } = useParams<{ tripId: string }>()
+  const navigate = useNavigate()
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
@@ -172,6 +174,23 @@ export default function AdminTripPage() {
   const [sendingForReview, setSendingForReview] = useState(false)
   const [actionError, setActionError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
+
+  // Delete trip
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDeleteTrip() {
+    if (!tripId) return
+    setDeleting(true)
+    try {
+      await adminDeleteTrip(tripId)
+      navigate('/admin')
+    } catch {
+      setActionError('Failed to delete trip')
+      setDeleting(false)
+      setConfirmDelete(false)
+    }
+  }
 
   // Admin notes
   const [notes, setNotes] = useState('')
@@ -687,28 +706,50 @@ export default function AdminTripPage() {
               </div>
             </div>
 
-            {/* Status */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <select
-                value={trip.status}
-                onChange={e => handleStatusChange(e.target.value)}
-                disabled={statusUpdating}
-                style={{
-                  background: statusColors.bg,
-                  border: 'none',
-                  color: statusColors.text,
-                  borderRadius: 'var(--radius)',
-                  padding: '6px 12px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                {VALID_STATUSES.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              {statusUpdating && <LoadingSpinner size={16} label="" />}
+            {/* Status + delete */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <select
+                  value={trip.status}
+                  onChange={e => handleStatusChange(e.target.value)}
+                  disabled={statusUpdating}
+                  style={{
+                    background: statusColors.bg,
+                    border: 'none',
+                    color: statusColors.text,
+                    borderRadius: 'var(--radius)',
+                    padding: '6px 12px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {VALID_STATUSES.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                {statusUpdating && <LoadingSpinner size={16} label="" />}
+              </div>
+              {confirmDelete ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Delete this trip?</span>
+                  <button onClick={handleDeleteTrip} disabled={deleting} style={{ background: '#EF4444', border: 'none', borderRadius: 6, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    {deleting ? '...' : 'Yes, delete'}
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, padding: '4px 10px', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#FCA5A5' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
+                >
+                  Delete trip
+                </button>
+              )}
             </div>
           </div>
         </div>
