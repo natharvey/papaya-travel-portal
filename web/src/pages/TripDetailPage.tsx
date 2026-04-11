@@ -3,12 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import PDFDownloadButton from '../components/PDFDownloadButton'
 import Layout from '../components/Layout'
 import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
-import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound, MapPin } from 'lucide-react'
+import MayaChatPanel from '../components/MayaChatPanel'
+import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, ExternalLink, Hotel, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const ItineraryMap = lazy(() => import('../components/ItineraryMap'))
-import { getClientTrip, sendClientMessage, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
+import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -72,23 +72,14 @@ export default function TripDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'documents'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'accommodation' | 'flights' | 'documents'>('itinerary')
   const [documents, setDocuments] = useState<TripDocument[]>([])
   const [docUploading, setDocUploading] = useState(false)
   const [docError, setDocError] = useState('')
 
-  function switchTab(next: 'itinerary' | 'chat' | 'accommodation' | 'flights' | 'messages' | 'documents') {
+  function switchTab(next: 'itinerary' | 'accommodation' | 'flights' | 'documents') {
     setTab(next)
-    if (next === 'messages' && tripId) {
-      markClientMessagesRead(tripId)
-      setMessages(prev => prev.map(m => m.sender_type === 'ADMIN' ? { ...m, is_read: true } : m))
-    }
   }
-  // Chat refinement
-  const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([])
-  const [chatInput, setChatInput] = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
-  const chatBottomRef = useRef<HTMLDivElement>(null)
 
   // Accommodation suggestions
   const [accommodation, setAccommodation] = useState<AccommodationSuggestion[] | null>(null)
@@ -120,28 +111,6 @@ export default function TripDetailPage() {
     }
   }
 
-  const [sendMessageError, setSendMessageError] = useState('')
-
-  // Maya greeting typewriter
-  const MAYA_GREETING = "Hi! I'm Maya. I can adjust anything about your itinerary — swap activities, change the pace, add day trips, or make it more budget-friendly. What would you like to change?"
-  const [greetingText, setGreetingText] = useState('')
-  const [greetingDone, setGreetingDone] = useState(false)
-
-  useEffect(() => {
-    if (tab !== 'chat') return
-    setGreetingText('')
-    setGreetingDone(false)
-    let i = 0
-    const timer = setInterval(() => {
-      i++
-      setGreetingText(MAYA_GREETING.slice(0, i))
-      if (i >= MAYA_GREETING.length) {
-        clearInterval(timer)
-        setGreetingDone(true)
-      }
-    }, 22)
-    return () => clearInterval(timer)
-  }, [tab])
 
   // Title editing
   const [editingTitle, setEditingTitle] = useState(false)
@@ -235,17 +204,6 @@ export default function TripDetailPage() {
       setDocuments(prev => prev.filter(d => d.key !== key))
     } catch (e) {
       setDocError(getApiError(e))
-    }
-  }
-
-  async function handleSendMessage(body: string) {
-    if (!tripId) return
-    setSendMessageError('')
-    try {
-      const msg = await sendClientMessage(tripId, body)
-      setMessages(prev => [...prev, msg])
-    } catch (e) {
-      setSendMessageError(getApiError(e))
     }
   }
 
@@ -396,26 +354,8 @@ export default function TripDetailPage() {
         }}>
           <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', overflowX: 'auto' }}>
             <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
-            <TabButton label="Ask Maya" active={tab === 'chat'} onClick={() => switchTab('chat')} />
             <TabButton label="Accommodation" active={tab === 'accommodation'} onClick={() => switchTab('accommodation')} />
             <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <TabButton
-                label={`Messages (${messages.length})`}
-                active={tab === 'messages'}
-                onClick={() => switchTab('messages')}
-              />
-              {(() => {
-                const unread = messages.filter(m => m.sender_type === 'ADMIN' && !m.is_read).length
-                return unread > 0 ? (
-                  <span style={{
-                    background: '#EF4444', color: 'white', borderRadius: '100px',
-                    fontSize: '11px', fontWeight: 700, padding: '1px 7px',
-                    marginLeft: '-8px', marginTop: '-10px',
-                  }}>{unread}</span>
-                ) : null
-              })()}
-            </div>
             <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
           </div>
 
@@ -554,145 +494,6 @@ export default function TripDetailPage() {
                   </>
                 )}
               </>
-            )}
-
-            {/* Chat Refinement Tab */}
-            {tab === 'chat' && (
-              <div>
-                <div style={{
-                  height: '420px', overflowY: 'auto', border: '1.5px solid var(--color-border)',
-                  borderRadius: '12px', padding: '16px', background: '#F8FAFC',
-                  display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px',
-                }}>
-                  {/* Maya's greeting — always visible */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                    {/* Maya avatar */}
-                    <div style={{
-                      width: 34, height: 34, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-                      background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 2px 8px rgba(240,115,50,0.35)',
-                    }}>
-                      <span style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px', fontFamily: 'inherit' }}>M</span>
-                    </div>
-                    <div style={{
-                      maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.6,
-                      borderRadius: '16px 16px 16px 4px', background: 'white',
-                      color: 'var(--color-text)', border: '1px solid var(--color-border)',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)', minHeight: 42,
-                    }}>
-                      {greetingText}
-                      {!greetingDone && (
-                        <span style={{ display: 'inline-block', width: 2, height: '1em', background: 'var(--color-primary)', marginLeft: 1, verticalAlign: 'text-bottom', animation: 'blink 0.8s step-end infinite' }} />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Suggested prompts — only show after typing finishes and before first user message */}
-                  {greetingDone && chatMessages.length === 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingLeft: 40 }}>
-                      {[
-                        'Make it more budget-friendly',
-                        'Add more adventure activities',
-                        'Swap a destination',
-                        'Change the travel pace',
-                        'Add a free day',
-                        'More local food experiences',
-                      ].map(prompt => (
-                        <button
-                          key={prompt}
-                          onClick={() => setChatInput(prompt)}
-                          style={{
-                            background: 'white', border: '1.5px solid var(--color-border)',
-                            borderRadius: '100px', padding: '6px 14px', fontSize: '13px',
-                            color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'inherit',
-                            transition: 'all 0.15s',
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
-                        >
-                          {prompt}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {chatMessages.map((msg, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                      {msg.role === 'assistant' && (
-                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 8, marginTop: 2, boxShadow: '0 2px 8px rgba(240,115,50,0.35)' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px' }}>M</span></div>
-                      )}
-                      <div style={{
-                        maxWidth: '80%', padding: '10px 14px', fontSize: '14px', lineHeight: 1.5,
-                        borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                        background: msg.role === 'user' ? 'var(--color-primary)' : 'white',
-                        color: msg.role === 'user' ? 'white' : 'var(--color-text)',
-                        border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                      }}>
-                        {msg.content}
-                      </div>
-                    </div>
-                  ))}
-                  {chatLoading && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(240,115,50,0.35)' }}><span style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.5px' }}>M</span></div>
-                      <div style={{ padding: '10px 14px', borderRadius: '16px 16px 16px 4px', background: 'white', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: 13 }}>Thinking...</div>
-                    </div>
-                  )}
-                  <div ref={chatBottomRef} />
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey && chatInput.trim() && !chatLoading) {
-                        e.preventDefault()
-                        const newMessages = [...chatMessages, { role: 'user', content: chatInput.trim() }]
-                        setChatMessages(newMessages)
-                        setChatInput('')
-                        setChatLoading(true)
-                        tripChat(tripId!, newMessages).then(res => {
-                          setChatMessages(prev => [...prev, { role: 'assistant', content: res.message }])
-                          if (res.itinerary_updated && res.new_itinerary) {
-                            setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
-                          }
-                          setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-                        }).catch(() => {
-                          setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong. Please try again." }])
-                        }).finally(() => setChatLoading(false))
-                      }
-                    }}
-                    placeholder="Ask Maya to change your itinerary..."
-                    disabled={chatLoading}
-                    style={{ flex: 1, border: '1.5px solid var(--color-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, outline: 'none' }}
-                  />
-                  <button
-                    type="button"
-                    disabled={chatLoading || !chatInput.trim()}
-                    onClick={() => {
-                      if (!chatInput.trim() || chatLoading) return
-                      const newMessages = [...chatMessages, { role: 'user', content: chatInput.trim() }]
-                      setChatMessages(newMessages)
-                      setChatInput('')
-                      setChatLoading(true)
-                      tripChat(tripId!, newMessages).then(res => {
-                        setChatMessages(prev => [...prev, { role: 'assistant', content: res.message }])
-                        if (res.itinerary_updated && res.new_itinerary) {
-                          setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
-                        }
-                        setTimeout(() => chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-                      }).catch(() => {
-                        setChatMessages(prev => [...prev, { role: 'assistant', content: "Sorry, something went wrong. Please try again." }])
-                      }).finally(() => setChatLoading(false))
-                    }}
-                    style={{ padding: '0 16px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 10, cursor: chatLoading || !chatInput.trim() ? 'default' : 'pointer', opacity: chatLoading || !chatInput.trim() ? 0.5 : 1 }}
-                  >
-                    <Send size={18} />
-                  </button>
-                </div>
-              </div>
             )}
 
             {/* Accommodation Tab */}
@@ -949,30 +750,6 @@ export default function TripDetailPage() {
               </div>
             )}
 
-            {/* Messages Tab */}
-            {tab === 'messages' && (
-              <>
-                {sendMessageError && (
-                  <div style={{
-                    background: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    borderRadius: 'var(--radius)',
-                    padding: '10px 14px',
-                    marginBottom: '12px',
-                    fontSize: '13px',
-                    color: '#B91C1C',
-                  }}>
-                    Failed to send message: {sendMessageError}
-                  </div>
-                )}
-                <MessageThread
-                  messages={messages}
-                  currentRole="CLIENT"
-                  onSend={handleSendMessage}
-                />
-              </>
-            )}
-
             {tab === 'documents' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1037,6 +814,18 @@ export default function TripDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Floating Maya + Advisor chat */}
+      {trip && (
+        <MayaChatPanel
+          tripId={trip.id}
+          messages={messages}
+          onMessagesUpdated={setMessages}
+          onItineraryUpdated={newItinerary =>
+            setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, newItinerary] } : prev)
+          }
+        />
+      )}
     </Layout>
   )
 }
