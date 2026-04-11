@@ -30,7 +30,7 @@ security = HTTPBearer()
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
 ALGORITHM = "HS256"
 
-VALID_STATUSES = {"INTAKE", "DRAFT", "REVIEW", "CONFIRMED", "ARCHIVED"}
+VALID_STATUSES = {"GENERATING", "ACTIVE", "COMPLETED"}
 
 
 def require_admin(
@@ -127,13 +127,6 @@ def update_trip(
         new_status = payload.status.upper()
         if new_status not in VALID_STATUSES:
             raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of {VALID_STATUSES}")
-        if new_status == "REVIEW" and trip.status != "REVIEW":
-            send_itinerary_for_review(
-                to=trip.client.email,
-                client_name=trip.client.name,
-                trip_title=trip.title,
-                trip_id=str(trip_id),
-            )
         trip.status = new_status
     if payload.title is not None:
         trip.title = payload.title
@@ -159,7 +152,7 @@ def _run_admin_generation(trip_id: uuid.UUID, additional_instructions: str = "")
         log.error("Admin generation failed for trip %s: %s", trip_id, e)
         trip = db.query(Trip).filter(Trip.id == trip_id).first()
         if trip:
-            trip.status = "INTAKE"
+            trip.status = "GENERATING"
             trip.updated_at = datetime.now(timezone.utc)
             db.commit()
     finally:

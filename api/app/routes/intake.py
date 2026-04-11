@@ -104,7 +104,7 @@ def _run_generation(trip_id, conversation_transcript: str):
         log.error("Background generation failed for trip %s: %s", trip_id, e)
         trip = db.query(Trip).filter(Trip.id == trip_id).first()
         if trip:
-            trip.status = "INTAKE"
+            trip.status = "GENERATING"
             trip.updated_at = datetime.now(timezone.utc)
             db.commit()
     finally:

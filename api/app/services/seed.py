@@ -99,7 +99,7 @@ def seed_demo_trip(db: Session) -> None:
         end_date=date(2026, 6, 10),
         budget_range="8000",
         pace="moderate",
-        status=TripStatus.REVIEW.value,
+        status=TripStatus.ACTIVE.value,
         admin_notes="Demo trip — great example to show clients. Flights confirmed with Jetstar, Park Hyatt booked.",
     )
     db.add(trip)
@@ -321,7 +321,7 @@ def seed_sarah_trips(db: Session) -> None:
         end_date=date(2026, 7, 5),
         budget_range="3500",
         pace="relaxed",
-        status=TripStatus.REVIEW.value,
+        status=TripStatus.ACTIVE.value,
         admin_notes="Short domestic getaway — Jetstar confirmed. Coral Sea Marina resort booked.",
     )
     db.add(trip1)
@@ -453,7 +453,7 @@ def seed_sarah_trips(db: Session) -> None:
         end_date=date(2027, 1, 5),
         budget_range="12000",
         pace="relaxed",
-        status=TripStatus.REVIEW.value,
+        status=TripStatus.ACTIVE.value,
         admin_notes="Staying with family in Edinburgh. Aviemore lodge booked for New Year. Qatar Airways via Doha.",
     )
     db.add(trip2)
@@ -711,7 +711,7 @@ def seed_sarah_trips(db: Session) -> None:
         end_date=date(2027, 2, 19),
         budget_range="14000",
         pace="moderate",
-        status=TripStatus.REVIEW.value,
+        status=TripStatus.ACTIVE.value,
         admin_notes="Via Incheon (ICN) on Korean Air. Niseko skiing + Tokyo city time. JR Pass recommended.",
     )
     db.add(trip3)

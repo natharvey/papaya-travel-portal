@@ -122,14 +122,12 @@ function StayFormFields({ stayForm, setStayForm }: {
   )
 }
 
-const VALID_STATUSES = ['INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
+const VALID_STATUSES = ['GENERATING', 'ACTIVE', 'COMPLETED']
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  INTAKE:    { bg: '#EEF2FF', text: '#4338CA' },
-  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)' },
-  REVIEW:    { bg: '#FFFBEB', text: '#B45309' },
-  CONFIRMED: { bg: '#F0FDF6', text: '#166534' },
-  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280' },
+  GENERATING: { bg: '#F5F3FF', text: '#6D28D9' },
+  ACTIVE:     { bg: '#F0FDF6', text: '#166534' },
+  COMPLETED:  { bg: '#F8F8F8', text: '#6B7280' },
 }
 
 function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -171,7 +169,6 @@ export default function AdminTripPage() {
 
   // Status update
   const [statusUpdating, setStatusUpdating] = useState(false)
-  const [sendingForReview, setSendingForReview] = useState(false)
   const [actionError, setActionError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
 
@@ -266,22 +263,6 @@ export default function AdminTripPage() {
       setActionError('Failed to update status: ' + getApiError(e))
     } finally {
       setStatusUpdating(false)
-    }
-  }
-
-  async function handleSendForReview() {
-    if (!tripId || !trip) return
-    if (!window.confirm(`This will email ${trip.client.name} their itinerary for review. Continue?`)) return
-    setSendingForReview(true)
-    setActionError('')
-    try {
-      const updated = await updateAdminTrip(tripId, { status: 'REVIEW' })
-      setTrip(updated)
-      setMessages(updated.messages)
-    } catch (e) {
-      setActionError('Failed to send for review: ' + getApiError(e))
-    } finally {
-      setSendingForReview(false)
     }
   }
 
@@ -658,7 +639,7 @@ export default function AdminTripPage() {
     )
   }
 
-  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.INTAKE
+  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.GENERATING
   const selectedItinerary = trip.itineraries.find(i => i.version === selectedItineraryVersion) || null
   const tripDays = Math.ceil(
     (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
@@ -891,50 +872,6 @@ export default function AdminTripPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Send for Review */}
-                {trip.itineraries.length > 0 && trip.status === 'DRAFT' && (
-                  <div style={{
-                    background: 'var(--color-accent)',
-                    border: '1px solid #FCD9B8',
-                    borderRadius: 'var(--radius)',
-                    padding: '16px',
-                    marginBottom: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                  }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-primary-dark)' }}>Ready to send to client?</div>
-                      <div style={{ fontSize: '13px', color: 'var(--color-primary-dark)', marginTop: '2px' }}>
-                        This will email {trip.client.name} and ask them to review and approve the itinerary.
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleSendForReview}
-                      disabled={sendingForReview}
-                      style={{
-                        background: sendingForReview ? 'var(--color-border)' : 'var(--color-primary)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: 'var(--radius)',
-                        padding: '10px 20px',
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        cursor: sendingForReview ? 'default' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {sendingForReview ? <LoadingSpinner size={14} color="white" label="" /> : <Send size={14} strokeWidth={2} />}
-                      {sendingForReview ? 'Sending...' : 'Send for Review'}
-                    </button>
-                  </div>
-                )}
 
                 {/* Regenerate section */}
                 {trip.itineraries.length > 0 && (

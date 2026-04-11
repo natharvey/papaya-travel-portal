@@ -8,16 +8,13 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const ItineraryMap = lazy(() => import('../components/ItineraryMap'))
-import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
+import { getClientTrip, sendClientMessage, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  INTAKE:      { bg: '#EEF2FF', text: '#4338CA' },
-  GENERATING:  { bg: '#FFF7ED', text: '#C2410C' },
-  DRAFT:       { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)' },
-  REVIEW:      { bg: '#FFFBEB', text: '#B45309' },
-  CONFIRMED:   { bg: '#F0FDF6', text: '#166534' },
-  ARCHIVED:    { bg: '#F8F8F8', text: '#6B7280' },
+  GENERATING: { bg: '#F5F3FF', text: '#6D28D9' },
+  ACTIVE:     { bg: '#F0FDF6', text: '#166534' },
+  COMPLETED:  { bg: '#F8F8F8', text: '#6B7280' },
 }
 
 function formatDate(d: string): string {
@@ -123,8 +120,6 @@ export default function TripDetailPage() {
     }
   }
 
-  const [confirming, setConfirming] = useState(false)
-  const [confirmError, setConfirmError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
 
   // Maya greeting typewriter
@@ -206,21 +201,6 @@ export default function TripDetailPage() {
     }
   }
 
-  async function handleConfirm() {
-    if (!tripId || !trip) return
-    setConfirming(true)
-    setConfirmError('')
-    try {
-      await confirmTrip(tripId)
-      setTrip(prev => prev ? { ...prev, status: 'CONFIRMED' } : prev)
-    } catch (e) {
-      setConfirmError(getApiError(e))
-    } finally {
-      setConfirming(false)
-    }
-  }
-
-
   async function handleClientUploadDocument(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !tripId) return
@@ -297,7 +277,7 @@ export default function TripDetailPage() {
     )
   }
 
-  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.INTAKE
+  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.GENERATING
   const latestItinerary = trip.itineraries.length > 0
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
@@ -457,120 +437,19 @@ export default function TripDetailPage() {
                     </p>
                   </div>
                 )}
-                {(!latestItinerary || !['REVIEW', 'CONFIRMED'].includes(trip.status)) && trip.status !== 'GENERATING' && (
+                {!latestItinerary && trip.status !== 'GENERATING' && (
                   <div style={{ textAlign: 'center', padding: '48px 20px' }}>
                     <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
                       <FileText size={48} color="var(--color-text-muted)" strokeWidth={1.2} />
                     </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
-                      {trip.status === 'DRAFT' ? 'Your changes are being processed' : 'Your itinerary is being prepared'}
-                    </h3>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>Your itinerary is being prepared</h3>
                     <p style={{ color: 'var(--color-text-muted)', lineHeight: '1.6' }}>
-                      {trip.status === 'DRAFT'
-                        ? "Your updated itinerary will appear here shortly."
-                        : "Your personalised itinerary will appear here once it's ready."}
+                      Your personalised itinerary will appear here once it's ready.
                     </p>
                   </div>
                 )}
-                {latestItinerary && ['REVIEW', 'CONFIRMED'].includes(trip.status) && (
+                {latestItinerary && (
                   <>
-                    {/* Review / approval banner */}
-                    {trip.status === 'REVIEW' && (
-                      <div style={{
-                        background: 'linear-gradient(135deg, var(--color-accent) 0%, var(--color-surface) 100%)',
-                        border: '1px solid #FCD9B8',
-                        borderRadius: 'var(--radius)',
-                        padding: '20px',
-                        marginBottom: '24px',
-                      }}>
-                        <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--color-primary-dark)', marginBottom: '6px' }}>
-                          Your itinerary is ready for approval
-                        </div>
-                        <p style={{ fontSize: '14px', color: 'var(--color-primary-dark)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
-                          Review the itinerary below and confirm when you're happy. Want changes? Ask Maya for instant AI edits, or message your planner for a personal touch.
-                        </p>
-                        {confirmError && (
-                          <p style={{ fontSize: '13px', color: '#B91C1C', marginBottom: '12px' }}>{confirmError}</p>
-                        )}
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={handleConfirm}
-                            disabled={confirming}
-                            style={{
-                              background: confirming ? 'var(--color-border)' : '#15803D',
-                              color: 'white', border: 'none',
-                              borderRadius: 'var(--radius)', padding: '10px 22px',
-                              fontSize: '14px', fontWeight: 700,
-                              cursor: confirming ? 'default' : 'pointer',
-                              display: 'flex', alignItems: 'center', gap: 7,
-                            }}
-                          >
-                            {confirming ? 'Confirming...' : 'Confirm itinerary'}
-                          </button>
-                          <button
-                            onClick={() => switchTab('chat')}
-                            style={{
-                              background: 'white', color: 'var(--color-primary-dark)',
-                              border: '1px solid #FCD9B8', borderRadius: 'var(--radius)',
-                              padding: '10px 18px', fontSize: '14px', fontWeight: 600,
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
-                              transition: 'background 0.15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-accent)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                          >
-                            <Sparkles size={14} strokeWidth={2} />
-                            Refine with Maya
-                          </button>
-                          <button
-                            onClick={() => switchTab('messages')}
-                            style={{
-                              background: 'white', color: 'var(--color-primary-dark)',
-                              border: '1px solid #FCD9B8', borderRadius: 'var(--radius)',
-                              padding: '10px 18px', fontSize: '14px', fontWeight: 600,
-                              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
-                              transition: 'background 0.15s',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'var(--color-accent)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'white'}
-                          >
-                            <UserRound size={14} strokeWidth={2} />
-                            Message your planner
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {trip.status === 'DRAFT' && (
-                      <div style={{
-                        background: '#FFF7ED',
-                        border: '1px solid #FED7AA',
-                        borderRadius: 'var(--radius)',
-                        padding: '14px 18px',
-                        marginBottom: '24px',
-                        fontSize: '14px',
-                        color: '#C2410C',
-                        fontWeight: 600,
-                      }}>
-                        Your change request has been sent. Maya will prepare an updated itinerary shortly.
-                      </div>
-                    )}
-
-                    {trip.status === 'CONFIRMED' && (
-                      <div style={{
-                        background: '#F0FDF4',
-                        border: '1px solid #BBF7D0',
-                        borderRadius: 'var(--radius)',
-                        padding: '14px 18px',
-                        marginBottom: '24px',
-                        fontSize: '14px',
-                        color: '#15803D',
-                        fontWeight: 600,
-                      }}>
-                        Your trip is confirmed! Check back here for any updates or use the chat to make last-minute tweaks.
-                      </div>
-                    )}
-
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
                         Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}

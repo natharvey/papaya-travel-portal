@@ -328,8 +328,8 @@ def generate_itinerary(
     )
     db.add(itinerary)
 
-    if trip.status in ("INTAKE", "GENERATING"):
-        trip.status = "REVIEW"
+    if trip.status in ("INTAKE", "GENERATING", "ACTIVE"):
+        trip.status = "ACTIVE"
         trip.updated_at = datetime.utcnow()
 
     db.commit()

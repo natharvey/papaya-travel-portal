@@ -125,7 +125,7 @@ export interface Message {
   created_at: string
 }
 
-export type TripStatus = 'INTAKE' | 'GENERATING' | 'DRAFT' | 'REVIEW' | 'CONFIRMED' | 'ARCHIVED'
+export type TripStatus = 'GENERATING' | 'ACTIVE' | 'COMPLETED'
 
 export interface Trip {
   id: string

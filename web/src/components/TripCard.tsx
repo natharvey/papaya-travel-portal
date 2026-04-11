@@ -3,11 +3,9 @@ import { PlaneTakeoff, Calendar, Wallet, Timer } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  INTAKE:    { bg: '#EEF2FF', text: '#4338CA', label: 'Intake' },
-  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)', label: 'Draft' },
-  REVIEW:    { bg: '#FFFBEB', text: '#B45309', label: 'In Review' },
-  CONFIRMED: { bg: '#F0FDF6', text: '#166534', label: 'Confirmed' },
-  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280', label: 'Archived' },
+  GENERATING: { bg: '#F5F3FF', text: '#6D28D9', label: 'Generating' },
+  ACTIVE:     { bg: '#F0FDF6', text: '#166534', label: 'Active' },
+  COMPLETED:  { bg: '#F8F8F8', text: '#6B7280', label: 'Completed' },
 }
 
 interface TripCardProps {
@@ -76,7 +74,7 @@ function CountdownBadge({ startDate }: { startDate: string }) {
 }
 
 export default function TripCard({ trip, linkTo, showClient, clientName, clientEmail }: TripCardProps) {
-  const config = STATUS_CONFIG[trip.status] || STATUS_CONFIG.INTAKE
+  const config = STATUS_CONFIG[trip.status] || STATUS_CONFIG.GENERATING
   const tripWithItinerary = trip as TripWithLatestItinerary
   const hasItinerary = tripWithItinerary.latest_itinerary != null
 
@@ -143,7 +141,7 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           ))}
         </div>
 
-        {trip.status !== 'ARCHIVED' && (
+        {trip.status !== 'COMPLETED' && (
           <div style={{ marginBottom: '14px' }}>
             <CountdownBadge startDate={trip.start_date} />
           </div>

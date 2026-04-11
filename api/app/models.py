@@ -41,11 +41,9 @@ class UUIDType(TypeDecorator):
 
 
 class TripStatus(str, enum.Enum):
-    INTAKE = "INTAKE"
-    DRAFT = "DRAFT"
-    REVIEW = "REVIEW"
-    CONFIRMED = "CONFIRMED"
-    ARCHIVED = "ARCHIVED"
+    GENERATING = "GENERATING"
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
 
 
 class SenderType(str, enum.Enum):

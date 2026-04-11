@@ -98,65 +98,6 @@ def get_trip(
     return TripDetail.model_validate(trip)
 
 
-@router.post("/trips/{trip_id}/confirm")
-def confirm_trip(
-    trip_id: uuid.UUID,
-    client: Client = Depends(get_current_client),
-    db: Session = Depends(get_db),
-):
-    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    if trip.status != "REVIEW":
-        raise HTTPException(status_code=400, detail="Your itinerary must be in review before it can be confirmed.")
-    trip.status = "CONFIRMED"
-    trip.updated_at = datetime.utcnow()
-    db.commit()
-    send_trip_confirmed_client(
-        to=client.email,
-        client_name=client.name,
-        trip_title=trip.title,
-        trip_id=str(trip_id),
-    )
-    send_trip_confirmed_admin(
-        client_name=client.name,
-        client_email=client.email,
-        trip_title=trip.title,
-        trip_id=str(trip_id),
-    )
-    return {"message": "Trip confirmed successfully."}
-
-
-@router.post("/trips/{trip_id}/request-changes", response_model=MessageOut)
-def request_changes(
-    trip_id: uuid.UUID,
-    payload: MessageCreate,
-    client: Client = Depends(get_current_client),
-    db: Session = Depends(get_db),
-):
-    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    if trip.status != "REVIEW":
-        raise HTTPException(status_code=400, detail="Changes can only be requested when the itinerary is under review.")
-    msg = Message(
-        trip_id=trip_id,
-        sender_type="CLIENT",
-        body=payload.body,
-    )
-    db.add(msg)
-    trip.status = "DRAFT"
-    trip.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(msg)
-    send_changes_requested_admin(
-        client_name=client.name,
-        client_email=client.email,
-        trip_title=trip.title,
-        trip_id=str(trip_id),
-        message_body=payload.body,
-    )
-    return MessageOut.model_validate(msg)
 
 
 @router.get("/trips/{trip_id}/messages", response_model=list[MessageOut])

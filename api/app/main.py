@@ -56,7 +56,7 @@ def _resume_stuck_generations():
 
     This covers two cases:
     - status=GENERATING: task was killed mid-flight (e.g. during a deploy)
-    - status=INTAKE: generation failed and rolled back, trip still has no itinerary
+    - status=GENERATING with no itinerary: generation failed or was killed mid-flight
     """
     import logging
     import time
@@ -70,7 +70,7 @@ def _resume_stuck_generations():
             db.query(Trip)
             .outerjoin(Itinerary, Itinerary.trip_id == Trip.id)
             .join(IntakeResponseModel, IntakeResponseModel.trip_id == Trip.id)
-            .filter(Trip.status.in_(["GENERATING", "INTAKE"]), Itinerary.id == None)  # noqa: E711
+            .filter(Trip.status == "GENERATING", Itinerary.id == None)  # noqa: E711
             .all()
         )
         if stuck:

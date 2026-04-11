@@ -6,20 +6,16 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { getAdminTrips, getApiError } from '../api/client'
 import type { AdminTripListItem, TripStatus } from '../types'
 
-// Visible pipeline stages — INTAKE/DRAFT are internal states folded into GENERATING
-const STATUSES = ['GENERATING', 'REVIEW', 'CONFIRMED', 'ARCHIVED'] as const
+const STATUSES = ['GENERATING', 'ACTIVE', 'COMPLETED'] as const
 type VisibleStatus = typeof STATUSES[number]
 
 const STATUS_CONFIG: Record<VisibleStatus, { bg: string; text: string; border: string; label: string }> = {
   GENERATING: { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE', label: 'Generating' },
-  REVIEW:    { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', label: 'In Review' },
-  CONFIRMED: { bg: '#F0FDF6', text: '#166534', border: '#A7F0C4', label: 'Confirmed' },
-  ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280', border: '#E5E7EB', label: 'Archived' },
+  ACTIVE:     { bg: '#F0FDF6', text: '#166534', border: '#A7F0C4', label: 'Active' },
+  COMPLETED:  { bg: '#F8F8F8', text: '#6B7280', border: '#E5E7EB', label: 'Completed' },
 }
 
-// Fold INTAKE and DRAFT into GENERATING for display purposes
 function toVisibleStatus(status: TripStatus): VisibleStatus {
-  if (status === 'INTAKE' || status === 'DRAFT') return 'GENERATING'
   return status as VisibleStatus
 }
 
@@ -184,7 +180,7 @@ export default function AdminDashboardPage() {
             {/* Kanban view */}
             {filter === 'ALL' ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
-                {STATUSES.filter(s => s !== 'ARCHIVED' as VisibleStatus).map(status => {
+                {STATUSES.filter(s => s !== 'COMPLETED' as VisibleStatus).map(status => {
                   const statusTrips = tripsByStatus[status] || []
                   const config = STATUS_CONFIG[status]
                   return (
