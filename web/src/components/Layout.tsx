@@ -40,24 +40,19 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
         >
           {isAdmin ? (
             <>
-              <PapayaLogo size={36} markOnly />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontWeight: 700, fontSize: '16px', color: 'white', letterSpacing: '-0.2px' }}>
-                  Travel Papaya
-                </span>
-                <span style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  color: 'var(--color-primary)',
-                  background: 'rgba(240,115,50,0.15)',
-                  padding: '2px 8px',
-                  borderRadius: '100px',
-                  letterSpacing: '0.8px',
-                  textTransform: 'uppercase',
-                }}>
-                  Admin
-                </span>
-              </div>
+              <PapayaLogo size={72} light />
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'var(--color-primary)',
+                background: 'rgba(240,115,50,0.15)',
+                padding: '2px 8px',
+                borderRadius: '100px',
+                letterSpacing: '0.8px',
+                textTransform: 'uppercase',
+              }}>
+                Admin
+              </span>
             </>
           ) : (
             <PapayaLogo size={72} />
