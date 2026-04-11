@@ -54,7 +54,7 @@ export default function LandingPage() {
 
         <div style={{ position: 'relative', maxWidth: 680, margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-            <PapayaLogo size={120} />
+            <PapayaLogo size={120} light />
           </div>
           <h1 style={{
             fontSize: 'clamp(32px, 5vw, 52px)',
