@@ -834,30 +834,30 @@ export default function AdminTripPage() {
                   flexWrap: 'wrap',
                 }}>
                   {trip.itineraries.length === 0 ? (
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={handleGenerate}
-                        disabled={generating}
-                        style={{
-                          background: generating ? 'var(--color-border)' : 'var(--color-primary)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 'var(--radius)',
-                          padding: '10px 22px',
-                          fontSize: '14px',
-                          fontWeight: 700,
-                          cursor: generating ? 'default' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                        }}
-                      >
-                        {generating ? <LoadingSpinner size={16} color="white" label="" /> : <Sparkles size={15} strokeWidth={2} />}
-                        {generating ? 'Generating itinerary...' : 'Generate Itinerary with AI'}
-                      </button>
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-                        Uses OpenAI GPT-4o with destination knowledge
-                      </span>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                      {generating || trip.status === 'GENERATING' ? (
+                        <>
+                          <LoadingSpinner size={18} label="" />
+                          <span style={{ fontSize: '14px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
+                            Generating itinerary with Claude...
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
+                            Generation failed.
+                          </span>
+                          <button
+                            onClick={handleGenerate}
+                            style={{
+                              background: 'none', border: 'none', color: 'var(--color-primary)',
+                              fontSize: '14px', fontWeight: 600, cursor: 'pointer', padding: 0,
+                            }}
+                          >
+                            Retry
+                          </button>
+                        </>
+                      )}
                     </div>
                   ) : (
                     <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
