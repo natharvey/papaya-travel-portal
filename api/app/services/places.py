@@ -4,7 +4,7 @@ Called in background thread after a stay is saved/updated.
 """
 import os
 import logging
-import requests
+import httpx
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def _search_place(query: str) -> dict | None:
         log.warning("GOOGLE_PLACES_API_KEY not set — skipping Places enrichment")
         return None
     try:
-        resp = requests.post(
+        resp = httpx.post(
             PLACES_SEARCH_URL,
             json={"textQuery": query, "maxResultCount": 1},
             headers={
