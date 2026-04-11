@@ -296,7 +296,7 @@ def generate_itinerary(
     last_exc = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = claude.messages.create(
+            response = claude.beta.messages.create(
                 model="claude-sonnet-4-6",
                 max_tokens=16000,
                 system=ITINERARY_SYSTEM,
