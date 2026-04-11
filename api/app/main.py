@@ -7,9 +7,15 @@ from slowapi.errors import RateLimitExceeded
 from alembic.config import Config
 from alembic import command
 from app.limiter import limiter
+import logging
 import os
 import threading
 import sentry_sdk
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s [%(name)s] %(message)s",
+)
 from pathlib import Path
 from app.db import engine, Base, SessionLocal, DATABASE_URL
 from app.routes import auth, intake, client, admin
