@@ -6,9 +6,10 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { getAdminTrips, getApiError } from '../api/client'
 import type { AdminTripListItem, TripStatus } from '../types'
 
-const STATUSES: TripStatus[] = ['INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
+const STATUSES: TripStatus[] = ['GENERATING', 'INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  GENERATING: { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE', label: 'Generating' },
   INTAKE:    { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE', label: 'Intake' },
   DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)', border: '#FCD9B8', label: 'Draft' },
   REVIEW:    { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', label: 'In Review' },
