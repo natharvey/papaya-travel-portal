@@ -12,7 +12,7 @@ import httpx
 from openai import OpenAI
 
 from app.db import get_db
-from app.models import Trip, Client, Itinerary, Message, Flight, Stay
+from app.models import Trip, Client, Itinerary, Message, Flight, Stay, IntakeResponse
 from app.schemas import (
     TripDetail, AdminTripListItem, TripUpdate, MessageCreate, MessageOut,
     ItineraryOut, RegenerateRequest, FlightCreate, FlightOut, StayCreate, StayOut,
@@ -547,6 +547,11 @@ def admin_delete_trip(
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    db.query(Message).filter(Message.trip_id == trip_id).delete()
+    db.query(Flight).filter(Flight.trip_id == trip_id).delete()
+    db.query(Stay).filter(Stay.trip_id == trip_id).delete()
+    db.query(Itinerary).filter(Itinerary.trip_id == trip_id).delete()
+    db.query(IntakeResponse).filter(IntakeResponse.trip_id == trip_id).delete()
     db.delete(trip)
     db.commit()
 
