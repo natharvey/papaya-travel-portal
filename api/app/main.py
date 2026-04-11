@@ -8,6 +8,7 @@ from alembic.config import Config
 from alembic import command
 from app.limiter import limiter
 import os
+import threading
 import sentry_sdk
 from pathlib import Path
 from app.db import engine, Base, SessionLocal, DATABASE_URL
@@ -44,6 +45,37 @@ def run_migrations():
         command.upgrade(alembic_cfg, "head")
 
 
+def _resume_stuck_generations():
+    """On startup, re-trigger generation for any trips stuck in GENERATING status."""
+    import logging
+    import time
+    from app.models import Trip, Itinerary
+    from app.routes.intake import _run_generation
+    log = logging.getLogger(__name__)
+    time.sleep(5)  # Let the server finish starting up
+    db = SessionLocal()
+    try:
+        stuck = (
+            db.query(Trip)
+            .outerjoin(Itinerary, Itinerary.trip_id == Trip.id)
+            .filter(Trip.status == "GENERATING", Itinerary.id == None)  # noqa: E711
+            .all()
+        )
+        if stuck:
+            log.info("Resuming %d stuck generation(s) after startup", len(stuck))
+        for trip in stuck:
+            log.info("Re-triggering generation for trip %s", trip.id)
+            threading.Thread(
+                target=_run_generation,
+                args=(trip.id, ""),
+                daemon=True,
+            ).start()
+    except Exception as e:
+        log.error("Failed to resume stuck generations: %s", e)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     jwt_secret = os.getenv("JWT_SECRET", "")
@@ -65,6 +97,10 @@ async def lifespan(app: FastAPI):
             seed_sarah_trips(db)
         finally:
             db.close()
+
+    # Resume any trips stuck in GENERATING (e.g. killed mid-task by a deploy)
+    threading.Thread(target=_resume_stuck_generations, daemon=True).start()
+
     yield
 
 
