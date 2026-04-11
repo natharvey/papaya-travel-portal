@@ -367,7 +367,7 @@ def send_itinerary_ready(
     trip_id: str,
 ) -> None:
     subject = f"Your Papaya itinerary is ready — {trip_title}"
-    trip_url = f"{PORTAL_URL}/trip/{trip_id}"
+    trip_url = f"{PORTAL_URL}/portal/trips/{trip_id}"
 
     plain = f"""Hi {client_name},
 
