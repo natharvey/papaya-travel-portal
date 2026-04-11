@@ -13,6 +13,7 @@ const AdminTripPage = lazy(() => import('./pages/AdminTripPage'))
 const MagicLoginPage = lazy(() => import('./pages/MagicLoginPage'))
 const NewTripPage = lazy(() => import('./pages/NewTripPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
+const ArchitecturePage = lazy(() => import('./pages/ArchitecturePage'))
 
 function PageLoader() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/intake" element={<IntakePage />} />
+          <Route path="/architecture" element={<ArchitecturePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/magic/:token" element={<MagicLoginPage />} />
 

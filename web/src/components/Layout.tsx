@@ -1,5 +1,5 @@
 import { ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import PapayaLogo from './PapayaLogo'
 
@@ -11,6 +11,7 @@ interface LayoutProps {
 export default function Layout({ children, variant = 'public' }: LayoutProps) {
   const { isAuthenticated, userRole, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   function handleLogout() {
     logout()
@@ -123,6 +124,23 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
           {variant === 'public' && (
             <>
               <Link
+                to="/architecture"
+                style={{
+                  color: 'var(--color-text-muted)',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius)',
+                  transition: 'color 0.15s, background 0.15s',
+                  background: location.pathname === '/architecture' ? 'var(--color-bg)' : 'transparent',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)'; e.currentTarget.style.background = 'var(--color-bg)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = location.pathname === '/architecture' ? 'var(--color-bg)' : 'transparent' }}
+              >
+                Architecture
+              </Link>
+              <Link
                 to="/login"
                 style={{
                   color: 'var(--color-text-muted)',
@@ -172,7 +190,17 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
         fontSize: '13px',
         fontWeight: 400,
       }}>
-        © {new Date().getFullYear()} Travel Papaya · Crafting unforgettable journeys for Australian travellers
+        <div>© {new Date().getFullYear()} Travel Papaya · Crafting unforgettable journeys for Australian travellers</div>
+        <div style={{ marginTop: 8 }}>
+          <Link
+            to="/architecture"
+            style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none', fontSize: '12px', transition: 'color 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.6)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+          >
+            System Architecture
+          </Link>
+        </div>
       </footer>
     </div>
   )
