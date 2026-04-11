@@ -285,47 +285,46 @@ export default function AdminTripPage() {
     }
   }
 
+  // Poll for itinerary when generation is running in the background
+  useEffect(() => {
+    if (!tripId || !trip || trip.status !== 'GENERATING') return
+    setGenerating(true)
+    const interval = setInterval(async () => {
+      try {
+        const updated = await getAdminTrip(tripId)
+        if (updated.status !== 'GENERATING') {
+          setTrip(updated)
+          setGenerating(false)
+          clearInterval(interval)
+          if (updated.itineraries.length > 0) {
+            setSelectedItineraryVersion(updated.itineraries[updated.itineraries.length - 1].version)
+          }
+        }
+      } catch { /* keep polling */ }
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [tripId, trip?.status])
+
   async function handleGenerate() {
     if (!tripId) return
-    setGenerating(true)
     setGenError('')
     try {
-      const itinerary = await generateItinerary(tripId)
-      setTrip(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          itineraries: [...prev.itineraries, itinerary],
-          status: prev.status === 'INTAKE' ? 'DRAFT' : prev.status,
-        }
-      })
-      setSelectedItineraryVersion(itinerary.version)
+      await generateItinerary(tripId)
+      setTrip(prev => prev ? { ...prev, status: 'GENERATING' } : prev)
     } catch (e) {
       setGenError(getApiError(e))
-    } finally {
-      setGenerating(false)
     }
   }
 
   async function handleRegenerate() {
     if (!tripId || !regenInstructions.trim()) return
-    setGenerating(true)
     setGenError('')
     try {
-      const itinerary = await regenerateItinerary(tripId, regenInstructions)
-      setTrip(prev => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          itineraries: [...prev.itineraries, itinerary],
-        }
-      })
-      setSelectedItineraryVersion(itinerary.version)
+      await regenerateItinerary(tripId, regenInstructions)
+      setTrip(prev => prev ? { ...prev, status: 'GENERATING' } : prev)
       setRegenInstructions('')
     } catch (e) {
       setGenError(getApiError(e))
-    } finally {
-      setGenerating(false)
     }
   }
 

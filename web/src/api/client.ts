@@ -211,13 +211,13 @@ export async function updateAdminTrip(
   return res.data
 }
 
-export async function generateItinerary(tripId: string): Promise<Itinerary> {
-  const res = await api.post<Itinerary>(`/admin/trips/${tripId}/generate-itinerary`)
+export async function generateItinerary(tripId: string): Promise<{ status: string }> {
+  const res = await api.post<{ status: string }>(`/admin/trips/${tripId}/generate-itinerary`)
   return res.data
 }
 
-export async function regenerateItinerary(tripId: string, instructions: string): Promise<Itinerary> {
-  const res = await api.post<Itinerary>(`/admin/trips/${tripId}/regenerate-itinerary`, { instructions })
+export async function regenerateItinerary(tripId: string, instructions: string): Promise<{ status: string }> {
+  const res = await api.post<{ status: string }>(`/admin/trips/${tripId}/regenerate-itinerary`, { instructions })
   return res.data
 }
 

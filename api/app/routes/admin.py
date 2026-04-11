@@ -1,6 +1,9 @@
 import uuid
 import base64
 import json
+import logging
+import threading
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -143,23 +146,43 @@ def update_trip(
     return TripDetail.model_validate(trip)
 
 
-@router.post("/trips/{trip_id}/generate-itinerary", response_model=ItineraryOut)
+log = logging.getLogger(__name__)
+
+
+def _run_admin_generation(trip_id: uuid.UUID, additional_instructions: str = "") -> None:
+    """Background thread: generate itinerary for a trip, update status when done."""
+    from app.db import SessionLocal
+    db = SessionLocal()
+    try:
+        generate_itinerary(db, trip_id=trip_id, additional_instructions=additional_instructions)
+    except Exception as e:
+        log.error("Admin generation failed for trip %s: %s", trip_id, e)
+        trip = db.query(Trip).filter(Trip.id == trip_id).first()
+        if trip:
+            trip.status = "INTAKE"
+            trip.updated_at = datetime.now(timezone.utc)
+            db.commit()
+    finally:
+        db.close()
+
+
+@router.post("/trips/{trip_id}/generate-itinerary")
 def generate_itinerary_endpoint(
     trip_id: uuid.UUID,
     _admin=Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    trip = db.query(Trip).options(joinedload(Trip.client)).filter(Trip.id == trip_id).first()
+    trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    try:
-        itinerary = generate_itinerary(db, trip_id=trip_id)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
-    return ItineraryOut.model_validate(itinerary)
+    trip.status = "GENERATING"
+    trip.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    threading.Thread(target=_run_admin_generation, args=(trip_id,), daemon=True).start()
+    return {"status": "generating"}
 
 
-@router.post("/trips/{trip_id}/regenerate-itinerary", response_model=ItineraryOut)
+@router.post("/trips/{trip_id}/regenerate-itinerary")
 def regenerate_itinerary_endpoint(
     trip_id: uuid.UUID,
     payload: RegenerateRequest,
@@ -169,11 +192,15 @@ def regenerate_itinerary_endpoint(
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    try:
-        itinerary = generate_itinerary(db, trip_id=trip_id, additional_instructions=payload.instructions)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI generation failed: {str(e)}")
-    return ItineraryOut.model_validate(itinerary)
+    trip.status = "GENERATING"
+    trip.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    threading.Thread(
+        target=_run_admin_generation,
+        args=(trip_id, payload.instructions),
+        daemon=True,
+    ).start()
+    return {"status": "generating"}
 
 
 @router.get("/trips/{trip_id}/messages", response_model=list[MessageOut])
