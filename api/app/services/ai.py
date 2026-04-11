@@ -298,9 +298,10 @@ def generate_itinerary(
         try:
             response = claude.messages.create(
                 model="claude-sonnet-4-6",
-                max_tokens=8000,
+                max_tokens=16000,
                 system=ITINERARY_SYSTEM,
                 messages=[{"role": "user", "content": user_prompt}],
+                betas=["output-128k-2025-02-19"],
             )
             raw_text = response.content[0].text
             itinerary_data = _parse_json_from_text(raw_text)
