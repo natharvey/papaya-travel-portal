@@ -190,7 +190,7 @@ export default function Layout({ children, variant = 'public' }: LayoutProps) {
         fontSize: '13px',
         fontWeight: 400,
       }}>
-        <div>© {new Date().getFullYear()} Travel Papaya · Crafting unforgettable journeys for Australian travellers</div>
+        <div>© {new Date().getFullYear()} Travel Papaya · Crafting unforgettable journeys worldwide</div>
         <div style={{ marginTop: 8 }}>
           <Link
             to="/architecture"

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -6,8 +6,6 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  addEdge,
-  Connection,
   Handle,
   Position,
   NodeProps,
@@ -30,34 +28,35 @@ function ServiceNode({ data, selected }: NodeProps) {
   const d = data as NodeData
   return (
     <div style={{
-      background: selected ? 'white' : 'white',
-      border: `2px solid ${selected ? d.color : '#e2e8f0'}`,
+      background: selected ? '#1a2744' : '#111827',
+      border: `1.5px solid ${selected ? d.color : d.color + '55'}`,
       borderRadius: '12px',
       padding: '14px 18px',
       minWidth: 160,
       boxShadow: selected
-        ? `0 0 0 3px ${d.color}33, 0 4px 20px rgba(0,0,0,0.12)`
-        : '0 2px 8px rgba(0,0,0,0.07)',
+        ? `0 0 16px ${d.color}44, 0 0 0 1px ${d.color}33`
+        : `0 2px 12px rgba(0,0,0,0.4)`,
       transition: 'all 0.15s',
       cursor: 'pointer',
       textAlign: 'center',
     }}>
-      <Handle type="target" position={Position.Left} style={{ background: d.color, border: 'none', width: 8, height: 8 }} />
-      <Handle type="target" position={Position.Top} style={{ background: d.color, border: 'none', width: 8, height: 8 }} />
+      <Handle type="target" position={Position.Left} style={{ background: d.color, border: 'none', width: 7, height: 7 }} />
+      <Handle type="target" position={Position.Top} style={{ background: d.color, border: 'none', width: 7, height: 7 }} />
       <div style={{
-        width: 40, height: 40, borderRadius: '10px',
-        background: `${d.color}18`,
+        width: 38, height: 38, borderRadius: '9px',
+        background: `${d.color}22`,
+        border: `1px solid ${d.color}44`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '20px', margin: '0 auto 10px',
+        fontSize: '18px', margin: '0 auto 10px',
       }}>
         {d.icon}
       </div>
-      <div style={{ fontSize: '13px', fontWeight: 700, color: '#1a2a35', lineHeight: 1.3 }}>{d.label}</div>
+      <div style={{ fontSize: '12px', fontWeight: 700, color: '#e2e8f0', lineHeight: 1.3 }}>{d.label}</div>
       {d.sublabel && (
-        <div style={{ fontSize: '11px', color: '#8a9bab', marginTop: 3, fontWeight: 500 }}>{d.sublabel}</div>
+        <div style={{ fontSize: '10px', color: d.color + 'cc', marginTop: 3, fontWeight: 600 }}>{d.sublabel}</div>
       )}
-      <Handle type="source" position={Position.Right} style={{ background: d.color, border: 'none', width: 8, height: 8 }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: d.color, border: 'none', width: 8, height: 8 }} />
+      <Handle type="source" position={Position.Right} style={{ background: d.color, border: 'none', width: 7, height: 7 }} />
+      <Handle type="source" position={Position.Bottom} style={{ background: d.color, border: 'none', width: 7, height: 7 }} />
     </div>
   )
 }
@@ -66,21 +65,22 @@ function GroupNode({ data }: NodeProps) {
   const d = data as NodeData
   return (
     <div style={{
-      border: `1.5px dashed ${d.color}55`,
+      border: `1px solid ${d.color}33`,
       borderRadius: '16px',
-      background: `${d.color}06`,
+      background: `${d.color}08`,
       width: '100%',
       height: '100%',
       position: 'relative',
     }}>
       <div style={{
         position: 'absolute', top: -13, left: 16,
-        background: `${d.color}18`,
+        background: '#0d1117',
+        border: `1px solid ${d.color}44`,
         color: d.color,
-        fontSize: '11px', fontWeight: 800,
+        fontSize: '10px', fontWeight: 800,
         padding: '2px 10px',
         borderRadius: '100px',
-        letterSpacing: '0.5px',
+        letterSpacing: '1px',
         textTransform: 'uppercase',
       }}>
         {d.label}
@@ -284,7 +284,7 @@ const initialNodes = [
       sublabel: 'GPT-4o · Fallback',
       icon: '🤖',
       color: EXT_COLOR,
-      detail: ['Screenshot scanning (vision)', 'Parses flight & hotel booking confirmations', 'Retained as AI fallback if needed'],
+      detail: ['Reads uploaded booking screenshots', 'Extracts flight & hotel details automatically', 'Retained as AI fallback if needed'],
     },
   },
   {
@@ -356,38 +356,38 @@ function DetailPanel({ node, onClose }: { node: typeof initialNodes[0] | null; o
   return (
     <div style={{
       position: 'absolute', top: 80, right: 24, zIndex: 10,
-      background: 'white',
-      border: `2px solid ${d.color}33`,
+      background: '#111827',
+      border: `1.5px solid ${d.color}55`,
       borderRadius: '16px',
       padding: '20px 24px',
       width: 260,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+      boxShadow: `0 8px 40px rgba(0,0,0,0.5), 0 0 20px ${d.color}22`,
     }}>
       <button
         onClick={onClose}
         style={{
           position: 'absolute', top: 12, right: 12,
           background: 'none', border: 'none', cursor: 'pointer',
-          color: '#94a3b8', fontSize: '18px', lineHeight: 1, padding: '0 4px',
+          color: '#4a6072', fontSize: '18px', lineHeight: 1, padding: '0 4px',
         }}
       >×</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <div style={{
           width: 36, height: 36, borderRadius: '9px',
-          background: `${d.color}18`,
+          background: `${d.color}22`, border: `1px solid ${d.color}44`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '18px',
         }}>
           {d.icon}
         </div>
         <div>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: '#1a2a35' }}>{d.label}</div>
-          {d.sublabel && <div style={{ fontSize: '11px', color: '#8a9bab', fontWeight: 500 }}>{d.sublabel}</div>}
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0' }}>{d.label}</div>
+          {d.sublabel && <div style={{ fontSize: '10px', color: d.color + 'cc', fontWeight: 600 }}>{d.sublabel}</div>}
         </div>
       </div>
       <ul style={{ margin: 0, padding: '0 0 0 16px', listStyle: 'disc' }}>
         {(d.detail as string[]).map((point, i) => (
-          <li key={i} style={{ fontSize: '12px', color: '#4a6072', lineHeight: 1.6, marginBottom: 4 }}>
+          <li key={i} style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.7, marginBottom: 3 }}>
             {point}
           </li>
         ))}
@@ -400,13 +400,8 @@ function DetailPanel({ node, onClose }: { node: typeof initialNodes[0] | null; o
 
 export default function ArchitecturePage() {
   const [nodes, , onNodesChange] = useNodesState(initialNodes as any)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [edges, , onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNode, setSelectedNode] = useState<typeof initialNodes[0] | null>(null)
-
-  const onConnect = useCallback(
-    (connection: Connection) => setEdges(eds => addEdge(connection, eds)),
-    [setEdges]
-  )
 
   function handleNodeClick(_: React.MouseEvent, node: any) {
     const full = initialNodes.find(n => n.id === node.id)
@@ -417,39 +412,48 @@ export default function ArchitecturePage() {
 
   return (
     <Layout variant="public">
-      <div style={{ background: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)', padding: '32px 40px 24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--color-text)', marginBottom: 8, letterSpacing: '-0.3px' }}>
+      <div style={{ background: '#0d1117', borderBottom: '1px solid #1e2d3d', padding: '28px 40px 20px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#e2e8f0', marginBottom: 6, letterSpacing: '-0.3px' }}>
           System Architecture
         </h1>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', margin: 0 }}>
-          How Travel Papaya is built and deployed. Click any node to see details. Drag to rearrange, scroll to zoom.
+        <p style={{ color: '#4a6072', fontSize: '13px', margin: 0 }}>
+          How Travel Papaya is built and deployed. Click any node to see details.
         </p>
       </div>
 
-      <div style={{ width: '100%', height: 'calc(100vh - 220px)', position: 'relative' }}>
+      <div style={{ width: '100%', height: 'calc(100vh - 210px)', position: 'relative' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
           onNodeClick={handleNodeClick}
           nodeTypes={nodeTypes}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={true}
           fitView
           fitViewOptions={{ padding: 0.15 }}
           minZoom={0.3}
           maxZoom={2}
-          style={{ background: '#f8fafc' }}
+          style={{ background: '#0d1117' }}
           defaultEdgeOptions={{ type: 'smoothstep' }}
         >
-          <Background color="#cbd5e1" gap={24} size={1} />
-          <Controls style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)', borderRadius: '10px', border: '1px solid #e2e8f0' }} />
+          <Background color="#1e2d3d" gap={28} size={1} />
+          <Controls
+            showInteractive={false}
+            style={{
+              boxShadow: 'none', borderRadius: '10px',
+              border: '1px solid #1e2d3d', background: '#111827',
+            }}
+          />
           <MiniMap
             nodeColor={(n) => {
               const d = n.data as NodeData
-              return d?.color || '#e2e8f0'
+              return d?.color || '#1e2d3d'
             }}
-            style={{ borderRadius: '10px', border: '1px solid #e2e8f0' }}
+            maskColor="rgba(13,17,23,0.75)"
+            style={{ borderRadius: '10px', border: '1px solid #1e2d3d', background: '#111827' }}
           />
         </ReactFlow>
 
@@ -458,11 +462,11 @@ export default function ArchitecturePage() {
         {/* Legend */}
         <div style={{
           position: 'absolute', bottom: 24, left: 24, zIndex: 10,
-          background: 'white', border: '1px solid #e2e8f0',
-          borderRadius: '12px', padding: '12px 16px',
+          background: '#111827', border: '1px solid #1e2d3d',
+          borderRadius: '12px', padding: '10px 16px',
           display: 'flex', gap: 20,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-          fontSize: '12px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          fontSize: '11px',
         }}>
           {[
             { color: AWS_COLOR, label: 'AWS Infrastructure' },
@@ -471,8 +475,8 @@ export default function ArchitecturePage() {
             { color: USER_COLOR, label: 'Client / User' },
           ].map(({ color, label }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-              <span style={{ color: '#4a6072', fontWeight: 500 }}>{label}</span>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }} />
+              <span style={{ color: '#64748b', fontWeight: 500 }}>{label}</span>
             </div>
           ))}
         </div>
