@@ -52,11 +52,31 @@ The JSON must match this exact schema — no extra fields, no missing fields:
     "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null} | null,
     "notes": ["string"]
   }],
+  "transport_legs": [
+    {
+      "from": "string — must exactly match the origin city or a destination name from the destinations array",
+      "to": "string — must exactly match the origin city or a destination name from the destinations array",
+      "mode": "flight | drive | train | bus | ferry | cruise | transfer",
+      "duration": "string e.g. '~24 hrs', '3.5 hrs', '45 min'",
+      "notes": "string — one specific booking tip for this leg, empty string if none"
+    }
+  ],
   "transport_notes": ["string"],
   "budget_summary": {"estimated_total_aud": number|null, "assumptions": ["string"]},
   "packing_checklist": ["string"],
   "risks_and_notes": ["string"]
-}"""
+}
+
+TRANSPORT LEGS RULES:
+- Must cover the full round trip: origin city → destination 1 → destination 2 → ... → origin city
+- "from" and "to" values must exactly match the names used in "destinations" or the origin city
+- Choose mode based on realistic options for that route:
+  flight for long-haul international legs, train for rail corridors (Tokyo→Kyoto, London→Edinburgh),
+  drive for road trips and short overland routes, ferry for island crossings and water routes,
+  bus for coach connections, cruise for ocean/river cruise segments
+- Put leg-specific booking advice in the leg's "notes" field (e.g. "Book Shinkansen tickets in advance via JR Pass")
+- Keep "transport_notes" for general destination transport tips only (e.g. "Get a Suica card for Tokyo transit")
+  not for advice that belongs to a specific leg"""
 
 INTAKE_CHAT_SYSTEM = """You are Maya, a friendly and knowledgeable travel consultant at Papaya Travel.
 Your job is to have a warm, natural conversation to understand a client's travel needs.
@@ -330,6 +350,10 @@ If the client asks a question (e.g. "what's the weather like in Bali in July?"),
 If the client wants changes to the itinerary (e.g. "make day 3 more relaxed", "swap the cooking class for snorkelling"), then:
 1. Describe the changes you're making in a friendly sentence or two
 2. Output the COMPLETE updated itinerary JSON in a ```json block at the end of your response
+
+When outputting updated JSON, always preserve the transport_legs array exactly as-is unless the
+client is specifically asking to change their transport arrangements. Never remove confirmed_booking
+values from transport legs. Keep transport_notes unchanged unless directly relevant to the edit.
 
 Important: only include the ```json block when you are making actual changes to the itinerary.
 Keep all responses concise — 2-4 sentences for conversational replies."""
@@ -660,6 +684,25 @@ def render_itinerary_markdown(data: dict) -> str:
         lines.append("## Accommodation Suggestions")
         for a in data["accommodation_suggestions"]:
             lines.append(f"- **{a['area']}** ({a['style']}): {a['notes']}")
+        lines.append("")
+
+    if data.get("transport_legs"):
+        lines.append("## Journey Overview")
+        mode_labels = {
+            "flight": "✈️ Flight", "drive": "🚗 Drive", "train": "🚂 Train",
+            "bus": "🚌 Bus", "ferry": "⛴️ Ferry", "cruise": "🚢 Cruise", "transfer": "🚐 Transfer"
+        }
+        for leg in data["transport_legs"]:
+            mode = mode_labels.get(leg.get("mode", ""), leg.get("mode", "").capitalize())
+            duration = leg.get("duration", "")
+            notes = leg.get("notes", "")
+            confirmed = leg.get("confirmed_booking", "")
+            line = f"- **{leg['from']} → {leg['to']}** · {mode} · {duration}"
+            if confirmed:
+                line += f" · ✓ {confirmed}"
+            elif notes:
+                line += f" — {notes}"
+            lines.append(line)
         lines.append("")
 
     if data.get("transport_notes"):

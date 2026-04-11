@@ -7,6 +7,7 @@ import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
+const ItineraryMap = lazy(() => import('../components/ItineraryMap'))
 import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
@@ -591,6 +592,17 @@ export default function TripDetailPage() {
                         />
                       </div>
                     </div>
+                    {/* Journey map — only renders when transport_legs present */}
+                    {latestItinerary.itinerary_json.transport_legs && latestItinerary.itinerary_json.transport_legs.length > 0 && (
+                      <Suspense fallback={<div style={{ height: 300, background: '#e8f0f5', borderRadius: 12, marginBottom: 28 }} />}>
+                        <ItineraryMap
+                          itinerary={latestItinerary.itinerary_json}
+                          originCity={trip.origin_city}
+                          stays={trip.stays ?? []}
+                        />
+                      </Suspense>
+                    )}
+
                     <ItineraryTimeline
                       data={latestItinerary.itinerary_json}
                       onBlockEdit={async (dayNum, period, blockTitle, prompt) => {

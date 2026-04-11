@@ -2,7 +2,7 @@ import uuid
 import enum
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, String, Integer, DateTime, Date, ForeignKey, Text, Boolean,
+    Column, String, Integer, Float, DateTime, Date, ForeignKey, Text, Boolean,
     Enum as SAEnum, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -177,6 +177,11 @@ class Stay(Base):
     check_out = Column(DateTime, nullable=False)
     confirmation_number = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
+    # Map + hotel card fields
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    website = Column(String(500), nullable=True)
+    google_place_id = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     trip = relationship("Trip", back_populates="stays")

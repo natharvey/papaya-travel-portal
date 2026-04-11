@@ -83,13 +83,25 @@ export interface BudgetSummary {
   assumptions: string[]
 }
 
+export type TransportMode = 'flight' | 'drive' | 'train' | 'bus' | 'ferry' | 'cruise' | 'transfer'
+
+export interface TransportLeg {
+  from: string               // matches origin_city or a destination name exactly
+  to: string                 // matches origin_city or a destination name exactly
+  mode: TransportMode
+  duration: string           // e.g. "~24 hrs", "3.5 hrs"
+  notes: string              // AI-generated tip, e.g. "Book 3+ months ahead"
+  confirmed_booking?: string // populated when client adds a real booking, e.g. "QF1 · BNE→EDI · 14 Jan"
+}
+
 export interface ItineraryJSON {
   trip_title: string
   overview: string
   destinations: Destination[]
   day_plans: DayPlan[]
   accommodation_suggestions?: AccommodationSuggestion[]
-  transport_notes: string[]
+  transport_legs?: TransportLeg[]  // structured legs for map + timeline — optional for backward compat
+  transport_notes: string[]        // human-readable notes displayed alongside map
   budget_summary: BudgetSummary
   packing_checklist: string[]
   risks_and_notes: string[]
@@ -144,6 +156,10 @@ export interface Stay {
   check_out: string
   confirmation_number: string | null
   notes: string | null
+  latitude: number | null
+  longitude: number | null
+  website: string | null
+  google_place_id: string | null
   created_at: string
 }
 

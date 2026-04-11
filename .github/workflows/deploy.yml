@@ -55,6 +55,7 @@ jobs:
           tags: ${{ env.ECR_REGISTRY }}/papaya-web:latest
           build-args: |
             VITE_API_URL=https://www.travel-papaya.com
+            VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
