@@ -7,7 +7,7 @@ import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
-import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, type TripDocument, type AccommodationSuggestion, type FlightSuggestion } from '../api/client'
+import { getClientTrip, sendClientMessage, confirmTrip, requestChanges, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
 import type { TripDetail, Message, Itinerary } from '../types'
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
@@ -99,6 +99,28 @@ export default function TripDetailPage() {
   // Flight suggestions
   const [flightSuggestions, setFlightSuggestions] = useState<FlightSuggestion[] | null>(null)
   const [flightSuggestionsLoading, setFlightSuggestionsLoading] = useState(false)
+
+  // Flight lookup
+  const [lookupNumber, setLookupNumber] = useState('')
+  const [lookupDate, setLookupDate] = useState('')
+  const [lookupResult, setLookupResult] = useState<FlightLookupResult | null>(null)
+  const [lookupLoading, setLookupLoading] = useState(false)
+  const [lookupError, setLookupError] = useState('')
+
+  async function handleFlightLookup() {
+    if (!lookupNumber.trim() || !lookupDate) return
+    setLookupLoading(true)
+    setLookupError('')
+    setLookupResult(null)
+    try {
+      const result = await clientLookupFlight(lookupNumber.trim().toUpperCase(), lookupDate)
+      setLookupResult(result)
+    } catch (e: any) {
+      setLookupError(e?.response?.data?.detail || 'Flight not found. Check the flight number and date.')
+    } finally {
+      setLookupLoading(false)
+    }
+  }
 
   const [confirming, setConfirming] = useState(false)
   const [confirmError, setConfirmError] = useState('')
@@ -382,15 +404,6 @@ export default function TripDetailPage() {
             </div>
           </div>
         </div>
-
-        {/* Flight map */}
-        {trip.flights && trip.flights.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <Suspense fallback={<div style={{ height: 260 }} />}>
-              <FlightMap flights={trip.flights} originCity={trip.origin_city} />
-            </Suspense>
-          </div>
-        )}
 
         {/* Tabs */}
         <div style={{
@@ -852,54 +865,176 @@ export default function TripDetailPage() {
 
             {/* Flights Tab */}
             {tab === 'flights' && (
-              <div>
-                <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
-                  Suggested flight routes for your trip. Click through to see live prices on Google Flights or Skyscanner.
-                </p>
-                {!flightSuggestions && !flightSuggestionsLoading && (
-                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <Plane size={48} color="var(--color-text-muted)" strokeWidth={1.2} style={{ marginBottom: 16 }} />
-                    <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: 10 }}>Find your flights</h3>
-                    <p style={{ color: 'var(--color-text-muted)', marginBottom: 24, fontSize: 14 }}>Our AI will suggest the best routes and link you to live prices.</p>
-                    <button onClick={() => { setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
-                      style={{ background: 'var(--color-primary)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                      Search Flights
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+                {/* Booked route map */}
+                {trip.flights && trip.flights.length > 0 ? (
+                  <div>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Your route</h3>
+                    <Suspense fallback={<div style={{ height: 260, background: '#0f1f3d', borderRadius: 'var(--radius-lg)' }} />}>
+                      <FlightMap flights={trip.flights} originCity={trip.origin_city} />
+                    </Suspense>
+                  </div>
+                ) : (
+                  <div style={{ background: 'var(--color-bg)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '28px 24px', textAlign: 'center' }}>
+                    <Plane size={32} color="var(--color-text-muted)" strokeWidth={1.5} style={{ marginBottom: 10 }} />
+                    <p style={{ fontSize: 14, color: 'var(--color-text-muted)', margin: 0 }}>No flights have been added to your trip yet. Your travel planner will add them once your itinerary is confirmed.</p>
+                  </div>
+                )}
+
+                {/* Flight number lookup */}
+                <div style={{ border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>Look up a flight</h3>
+                  <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 20 }}>Enter your flight number and date to see route details and departure times.</p>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: lookupError || lookupResult ? 16 : 0 }}>
+                    <input
+                      value={lookupNumber}
+                      onChange={e => setLookupNumber(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === 'Enter' && handleFlightLookup()}
+                      placeholder="e.g. QF1"
+                      maxLength={8}
+                      style={{
+                        border: '1.5px solid var(--color-border)', borderRadius: 8,
+                        padding: '10px 14px', fontSize: 15, fontWeight: 700,
+                        fontFamily: 'inherit', width: 120, color: 'var(--color-text)',
+                        outline: 'none', letterSpacing: '0.5px',
+                      }}
+                    />
+                    <input
+                      type="date"
+                      value={lookupDate}
+                      onChange={e => setLookupDate(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleFlightLookup()}
+                      min={trip.start_date?.slice(0, 10)}
+                      max={trip.end_date?.slice(0, 10)}
+                      style={{
+                        border: '1.5px solid var(--color-border)', borderRadius: 8,
+                        padding: '10px 14px', fontSize: 14, fontFamily: 'inherit',
+                        color: 'var(--color-text)', outline: 'none',
+                      }}
+                    />
+                    <button
+                      onClick={handleFlightLookup}
+                      disabled={lookupLoading || !lookupNumber.trim() || !lookupDate}
+                      style={{
+                        background: 'var(--color-primary)', color: 'white', border: 'none',
+                        padding: '10px 22px', borderRadius: 8, fontWeight: 700, fontSize: 14,
+                        cursor: lookupLoading || !lookupNumber.trim() || !lookupDate ? 'not-allowed' : 'pointer',
+                        opacity: !lookupNumber.trim() || !lookupDate ? 0.5 : 1,
+                        fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 7,
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      {lookupLoading ? <><Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Looking up...</> : <><Plane size={14} /> Look up</>}
                     </button>
                   </div>
-                )}
-                {flightSuggestionsLoading && (
-                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <LoadingSpinner size={36} label="" />
-                    <p style={{ color: 'var(--color-text-muted)', marginTop: 16 }}>Finding the best routes for your trip...</p>
-                  </div>
-                )}
-                {flightSuggestions && flightSuggestions.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {flightSuggestions.map((f, i) => (
-                      <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 20 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                          Leg {i + 1}
+
+                  {lookupError && (
+                    <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#B91C1C' }}>
+                      {lookupError}
+                    </div>
+                  )}
+
+                  {lookupResult && (
+                    <div style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 12, padding: '18px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                        <div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{lookupResult.airline}</span>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.3px' }}>{lookupResult.flight_number}</div>
                         </div>
-                        <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{f.route}</div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)', marginBottom: 8 }}>{f.typical_price_aud}</div>
-                        <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 6 }}>{f.airlines.join(' · ')} · {f.flight_time}</div>
-                        <p style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>{f.tips}</p>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                          <a href={f.google_flights_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-primary)', padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}>
-                            <ExternalLink size={13} /> Google Flights
-                          </a>
-                          <a href={f.skyscanner_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', border: '1.5px solid var(--color-primary)', padding: '8px 16px', borderRadius: 8 }}>
-                            <ExternalLink size={13} /> Skyscanner
-                          </a>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{lookupResult.departure_airport}</div>
+                            {lookupResult.departure_time && (
+                              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                {new Date(lookupResult.departure_time).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                            {lookupResult.terminal_departure && (
+                              <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Terminal {lookupResult.terminal_departure}</div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                            <Plane size={18} color="var(--color-primary)" />
+                            <div style={{ width: 60, height: 1.5, background: 'var(--color-border)' }} />
+                          </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{lookupResult.arrival_airport}</div>
+                            {lookupResult.arrival_time && (
+                              <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                {new Date(lookupResult.arrival_time).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
+                            {lookupResult.terminal_arrival && (
+                              <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Terminal {lookupResult.terminal_arrival}</div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    ))}
-                    <button onClick={() => { setFlightSuggestions(null); setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
-                      style={{ background: 'white', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)' }}>
-                      Refresh suggestions
+                      {/* Mini route map for looked-up flight */}
+                      <Suspense fallback={<div style={{ height: 180, background: '#0f1f3d', borderRadius: 8 }} />}>
+                        <FlightMap
+                          flights={[{
+                            id: 'lookup',
+                            leg_order: 1,
+                            flight_number: lookupResult.flight_number,
+                            airline: lookupResult.airline,
+                            departure_airport: lookupResult.departure_airport,
+                            arrival_airport: lookupResult.arrival_airport,
+                            departure_time: lookupResult.departure_time,
+                            arrival_time: lookupResult.arrival_time,
+                            terminal_departure: lookupResult.terminal_departure,
+                            terminal_arrival: lookupResult.terminal_arrival,
+                          } as any]}
+                          originCity={trip.origin_city}
+                        />
+                      </Suspense>
+                    </div>
+                  )}
+                </div>
+
+                {/* AI flight suggestions */}
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 4 }}>Suggested routes</h3>
+                  <p style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 16 }}>AI-suggested flight routes with links to live prices.</p>
+                  {!flightSuggestions && !flightSuggestionsLoading && (
+                    <button onClick={() => { setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
+                      style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}>
+                      Search for suggestions
                     </button>
-                  </div>
-                )}
+                  )}
+                  {flightSuggestionsLoading && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--color-text-muted)', fontSize: 13 }}>
+                      <LoadingSpinner size={20} label="" /> Finding the best routes...
+                    </div>
+                  )}
+                  {flightSuggestions && flightSuggestions.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {flightSuggestions.map((f, i) => (
+                        <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 18 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Leg {i + 1}</div>
+                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{f.route}</div>
+                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', marginBottom: 6 }}>{f.typical_price_aud}</div>
+                          <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 6 }}>{f.airlines.join(' · ')} · {f.flight_time}</div>
+                          <p style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>{f.tips}</p>
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            <a href={f.google_flights_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-primary)', padding: '7px 14px', borderRadius: 8, textDecoration: 'none' }}>
+                              <ExternalLink size={12} /> Google Flights
+                            </a>
+                            <a href={f.skyscanner_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', border: '1.5px solid var(--color-primary)', padding: '7px 14px', borderRadius: 8 }}>
+                              <ExternalLink size={12} /> Skyscanner
+                            </a>
+                          </div>
+                        </div>
+                      ))}
+                      <button onClick={() => { setFlightSuggestions(null); setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
+                        style={{ alignSelf: 'flex-start', background: 'white', border: '1.5px solid var(--color-border)', padding: '8px 16px', borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}>
+                        Refresh suggestions
+                      </button>
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
 

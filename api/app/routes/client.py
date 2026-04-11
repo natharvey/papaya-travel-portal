@@ -6,6 +6,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from jose import jwt, JWTError
 import os
+import httpx
 
 from app.db import get_db
 from app.models import Client, Trip, Itinerary, Message, Flight, Stay
@@ -547,3 +548,66 @@ def client_delete_document(
     if not key.startswith(f"trips/{trip_id}/client/"):
         raise HTTPException(status_code=403, detail="You can only delete your own documents")
     delete_document(key)
+
+
+# ─── Flight lookup ────────────────────────────────────────────────────────────
+
+@router.get("/flights/lookup")
+def client_lookup_flight(
+    flight_number: str = Query(...),
+    date: str = Query(...),  # YYYY-MM-DD
+    _client=Depends(get_current_client),
+):
+    """Look up a flight via AeroDataBox. Available to authenticated clients."""
+    api_key = os.getenv("AERODATABOX_API_KEY", "")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Flight lookup not configured")
+
+    url = f"https://aerodatabox.p.rapidapi.com/flights/number/{flight_number}/{date}"
+    headers = {
+        "x-rapidapi-key": api_key,
+        "x-rapidapi-host": "aerodatabox.p.rapidapi.com",
+    }
+
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.get(url, headers=headers)
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Flight lookup service unavailable")
+
+    if resp.status_code == 404:
+        raise HTTPException(status_code=404, detail="Flight not found for that number and date")
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"Flight lookup failed (status {resp.status_code})")
+
+    data = resp.json()
+    if not data:
+        raise HTTPException(status_code=404, detail="No flight data returned")
+
+    flight = data[0] if isinstance(data, list) else data
+
+    def parse_local_time(t: str) -> str:
+        if not t:
+            return ""
+        t = t.strip().replace(" ", "T")
+        for i in range(len(t) - 1, 9, -1):
+            if t[i] in ("+", "-"):
+                t = t[:i]
+                break
+        if t.endswith("Z"):
+            t = t[:-1]
+        return t[:16]
+
+    dep = flight.get("departure") or {}
+    arr = flight.get("arrival") or {}
+
+    return {
+        "flight_number": (flight.get("number") or flight_number).replace(" ", ""),
+        "airline": (flight.get("airline") or {}).get("name", ""),
+        "departure_airport": (dep.get("airport") or {}).get("iata", ""),
+        "arrival_airport": (arr.get("airport") or {}).get("iata", ""),
+        "departure_time": parse_local_time(dep.get("scheduledTimeLocal") or dep.get("scheduledTimeUtc", "")),
+        "arrival_time": parse_local_time(arr.get("scheduledTimeLocal") or arr.get("scheduledTimeUtc", "")),
+        "terminal_departure": dep.get("terminal") or "",
+        "terminal_arrival": arr.get("terminal") or "",
+    }

@@ -276,6 +276,13 @@ export async function lookupFlight(flightNumber: string, date: string): Promise<
   return res.data
 }
 
+export async function clientLookupFlight(flightNumber: string, date: string): Promise<FlightLookupResult> {
+  const res = await api.get<FlightLookupResult>('/client/flights/lookup', {
+    params: { flight_number: flightNumber, date },
+  })
+  return res.data
+}
+
 export async function addFlight(tripId: string, payload: FlightPayload): Promise<Flight> {
   const res = await api.post<Flight>(`/admin/trips/${tripId}/flights`, payload)
   return res.data
