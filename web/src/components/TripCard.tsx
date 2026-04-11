@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { PlaneTakeoff, Calendar, Wallet, Gauge, Timer } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Wallet, Timer } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
@@ -134,8 +134,7 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           {[
             { Icon: PlaneTakeoff, text: trip.origin_city },
             { Icon: Calendar, text: `${formatDate(trip.start_date)} – ${formatDate(trip.end_date)}` },
-            { Icon: Wallet, text: trip.budget_range },
-            { Icon: Gauge, text: trip.pace },
+            { Icon: Wallet, text: `$${trip.budget_range}` },
           ].map(({ Icon, text }) => (
             <span key={text} style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <Icon size={13} strokeWidth={2} />
