@@ -46,10 +46,15 @@ def run_migrations():
 
 
 def _resume_stuck_generations():
-    """On startup, re-trigger generation for any trips stuck in GENERATING status."""
+    """On startup, re-trigger generation for any trips that never got an itinerary.
+
+    This covers two cases:
+    - status=GENERATING: task was killed mid-flight (e.g. during a deploy)
+    - status=INTAKE: generation failed and rolled back, trip still has no itinerary
+    """
     import logging
     import time
-    from app.models import Trip, Itinerary
+    from app.models import Trip, Itinerary, IntakeResponse as IntakeResponseModel
     from app.routes.intake import _run_generation
     log = logging.getLogger(__name__)
     time.sleep(5)  # Let the server finish starting up
@@ -58,13 +63,16 @@ def _resume_stuck_generations():
         stuck = (
             db.query(Trip)
             .outerjoin(Itinerary, Itinerary.trip_id == Trip.id)
-            .filter(Trip.status == "GENERATING", Itinerary.id == None)  # noqa: E711
+            .join(IntakeResponseModel, IntakeResponseModel.trip_id == Trip.id)
+            .filter(Trip.status.in_(["GENERATING", "INTAKE"]), Itinerary.id == None)  # noqa: E711
             .all()
         )
         if stuck:
             log.info("Resuming %d stuck generation(s) after startup", len(stuck))
         for trip in stuck:
             log.info("Re-triggering generation for trip %s", trip.id)
+            trip.status = "GENERATING"
+            db.commit()
             threading.Thread(
                 target=_run_generation,
                 args=(trip.id, ""),
