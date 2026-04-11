@@ -94,11 +94,23 @@ export interface TransportLeg {
   confirmed_booking?: string // populated when client adds a real booking, e.g. "QF1 · BNE→EDI · 14 Jan"
 }
 
+export interface HotelSuggestion {
+  destination: string
+  name: string
+  area: string
+  style: string
+  why_suits: string
+  price_per_night_aud: number | null
+  booking_com_search: string
+  google_maps_url: string
+}
+
 export interface ItineraryJSON {
   trip_title: string
   overview: string
   destinations: Destination[]
   day_plans: DayPlan[]
+  hotel_suggestions?: HotelSuggestion[]
   accommodation_suggestions?: AccommodationSuggestion[]
   transport_legs?: TransportLeg[]  // structured legs for map + timeline — optional for backward compat
   transport_notes: string[]        // human-readable notes displayed alongside map
@@ -160,6 +172,8 @@ export interface Stay {
   longitude: number | null
   website: string | null
   google_place_id: string | null
+  photo_reference: string | null
+  rating: number | null
   created_at: string
 }
 

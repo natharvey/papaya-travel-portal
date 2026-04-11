@@ -61,11 +61,30 @@ The JSON must match this exact schema — no extra fields, no missing fields:
       "notes": "string — one specific booking tip for this leg, empty string if none"
     }
   ],
+  "hotel_suggestions": [
+    {
+      "destination": "string — matches a name in the destinations array",
+      "name": "string — real hotel name",
+      "area": "string — neighbourhood/district",
+      "style": "string — e.g. Boutique, Luxury, Mid-range, Budget",
+      "why_suits": "string — 1-2 sentences on why it fits this traveller",
+      "price_per_night_aud": number|null,
+      "booking_com_search": "https://www.booking.com/search.html?ss=HOTEL+CITY",
+      "google_maps_url": "https://www.google.com/maps/search/HOTEL+NAME+CITY"
+    }
+  ],
   "transport_notes": ["string"],
   "budget_summary": {"estimated_total_aud": number|null, "assumptions": ["string"]},
   "packing_checklist": ["string"],
   "risks_and_notes": ["string"]
 }
+
+HOTEL SUGGESTIONS RULES:
+- Include 2-3 hotel suggestions per destination
+- Use REAL hotel names that actually exist and operate
+- Match style to the client's accommodation preference
+- Price should be realistic for the budget and destination
+- booking_com_search URL: use the format https://www.booking.com/search.html?ss=HOTEL+NAME+CITY (URL-encode spaces as +)
 
 TRANSPORT LEGS RULES:
 - Must cover the full round trip: origin city → destination 1 → destination 2 → ... → origin city
@@ -156,6 +175,8 @@ def build_generation_prompt(
     intake: IntakeResponse,
     client: Client,
     conversation_transcript: str = "",
+    confirmed_flights: list = None,
+    confirmed_stays: list = None,
 ) -> str:
     days = (trip.end_date - trip.start_date).days
     parts = [
@@ -178,6 +199,16 @@ def build_generation_prompt(
     if intake.constraints:
         parts.append(f"CONSTRAINTS: {intake.constraints}")
 
+    if confirmed_flights:
+        parts.append("\nCONFIRMED FLIGHTS (already booked — structure itinerary around these exact dates and times):")
+        for f in confirmed_flights:
+            parts.append(f"  - {f.flight_number} ({f.airline}): {f.departure_airport} → {f.arrival_airport}, departs {f.departure_time}, arrives {f.arrival_time}")
+
+    if confirmed_stays:
+        parts.append("\nCONFIRMED ACCOMMODATION (already booked — do NOT suggest alternatives for these nights):")
+        for s in confirmed_stays:
+            parts.append(f"  - {s.name}: check-in {s.check_in.date()}, check-out {s.check_out.date()}")
+
     if conversation_transcript:
         # Cap transcript to ~3000 chars to avoid bloating token count
         transcript = conversation_transcript[:3000]
@@ -192,6 +223,7 @@ def build_generation_prompt(
     parts.append(
         "\nUsing your knowledge of real, currently-operating establishments, "
         "name specific restaurants, hotels, and attractions throughout. "
+        "Include 2-3 hotel suggestions per destination in hotel_suggestions. "
         "Output the complete itinerary JSON."
     )
 
@@ -283,7 +315,15 @@ def generate_itinerary(
     if not client_obj:
         raise ValueError(f"Client for trip {trip_id} not found")
 
-    user_prompt = build_generation_prompt(trip, intake, client_obj, conversation_transcript)
+    from app.models import Flight as FlightModel, Stay as StayModel
+    confirmed_flights = db.query(FlightModel).filter(FlightModel.trip_id == trip_id).order_by(FlightModel.leg_order).all()
+    confirmed_stays = db.query(StayModel).filter(StayModel.trip_id == trip_id).order_by(StayModel.stay_order).all()
+
+    user_prompt = build_generation_prompt(
+        trip, intake, client_obj, conversation_transcript,
+        confirmed_flights=confirmed_flights or None,
+        confirmed_stays=confirmed_stays or None,
+    )
     if additional_instructions:
         user_prompt += f"\n\nSPECIAL INSTRUCTIONS FOR THIS VERSION:\n{additional_instructions}"
 

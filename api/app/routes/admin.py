@@ -23,6 +23,8 @@ from app.schemas import (
 from app.services.ai import generate_itinerary
 from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
 from app.services.email import send_itinerary_for_review, send_new_message_to_client
+from app.services.places import enrich_stay
+from app.db import SessionLocal
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 security = HTTPBearer()
@@ -462,6 +464,16 @@ def list_stays(
     return [StayOut.model_validate(s) for s in stays]
 
 
+def _enrich_stay_background(stay_id: uuid.UUID) -> None:
+    db = SessionLocal()
+    try:
+        stay = db.query(Stay).filter(Stay.id == stay_id).first()
+        if stay:
+            enrich_stay(stay, db)
+    finally:
+        db.close()
+
+
 @router.post("/trips/{trip_id}/stays", response_model=StayOut, status_code=201)
 def add_stay(
     trip_id: uuid.UUID,
@@ -476,6 +488,7 @@ def add_stay(
     db.add(stay)
     db.commit()
     db.refresh(stay)
+    threading.Thread(target=_enrich_stay_background, args=(stay.id,), daemon=True).start()
     return StayOut.model_validate(stay)
 
 
@@ -494,6 +507,7 @@ def update_stay(
         setattr(stay, field, value)
     db.commit()
     db.refresh(stay)
+    threading.Thread(target=_enrich_stay_background, args=(stay.id,), daemon=True).start()
     return StayOut.model_validate(stay)
 
 

@@ -180,6 +180,8 @@ class Stay(Base):
     longitude = Column(Float, nullable=True)
     website = Column(String(500), nullable=True)
     google_place_id = Column(String(255), nullable=True)
+    photo_reference = Column(String(500), nullable=True)
+    rating = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     trip = relationship("Trip", back_populates="stays")

@@ -222,6 +222,12 @@ class StayOut(BaseModel):
     check_out: datetime
     confirmation_number: Optional[str] = None
     notes: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    website: Optional[str] = None
+    google_place_id: Optional[str] = None
+    photo_reference: Optional[str] = None
+    rating: Optional[float] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

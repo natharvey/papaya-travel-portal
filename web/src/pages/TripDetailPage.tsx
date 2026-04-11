@@ -498,80 +498,142 @@ export default function TripDetailPage() {
 
             {/* Accommodation Tab */}
             {tab === 'accommodation' && (
-              <div>
-                <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', marginBottom: '20px' }}>
-                  AI-researched accommodation options tailored to your style and budget. Click through to see live prices and availability.
-                </p>
-                {!accommodation && !accommodationLoading && (
-                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <Hotel size={48} color="var(--color-text-muted)" strokeWidth={1.2} style={{ marginBottom: 16 }} />
-                    <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: 10 }}>Find the perfect places to stay</h3>
-                    <p style={{ color: 'var(--color-text-muted)', marginBottom: 24, fontSize: 14 }}>Our AI will search for real hotels and properties that match your profile.</p>
-                    <button onClick={() => { setAccommodationLoading(true); getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false)) }}
-                      style={{ background: 'var(--color-primary)', color: 'white', border: 'none', padding: '12px 28px', borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                      Search Accommodation
-                    </button>
-                  </div>
-                )}
-                {accommodationLoading && (
-                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <LoadingSpinner size={36} label="" />
-                    <p style={{ color: 'var(--color-text-muted)', marginTop: 16 }}>Searching for the best options for you...</p>
-                  </div>
-                )}
-                {accommodation && accommodation.length > 0 && (() => {
-                  // Group by destination
-                  const grouped: Record<string, typeof accommodation> = {}
-                  accommodation.forEach(a => {
-                    const dest = a.destination || 'Other'
-                    if (!grouped[dest]) grouped[dest] = []
-                    grouped[dest].push(a)
-                  })
-                  const destinations = Object.keys(grouped)
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-                      {destinations.map(dest => (
-                        <div key={dest}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>{dest}</h3>
-                            <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {grouped[dest].map((a, i) => (
-                              <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 20 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                                  <div>
-                                    <div style={{ fontWeight: 700, fontSize: 15 }}>{a.name}</div>
-                                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{a.area} · {a.style}</div>
-                                  </div>
-                                  {a.price_per_night_aud && (
-                                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-primary)', whiteSpace: 'nowrap', marginLeft: 12 }}>
-                                      ~${a.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 11 }}>/night</span>
-                                    </div>
-                                  )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+                {/* Confirmed stays */}
+                {trip.stays && trip.stays.length > 0 && (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Confirmed Stays</h3>
+                      <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {trip.stays.map(stay => {
+                        const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
+                        const photoUrl = stay.photo_reference
+                          ? `https://places.googleapis.com/v1/${stay.photo_reference}/media?maxHeightPx=300&maxWidthPx=500&key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY}`
+                          : null
+                        return (
+                          <div key={stay.id} style={{ border: '1.5px solid #BBF7D0', borderRadius: 12, overflow: 'hidden', background: '#F0FDF4' }}>
+                            {photoUrl && (
+                              <img src={photoUrl} alt={stay.name} style={{ width: '100%', height: 160, objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                            )}
+                            <div style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: 15, color: '#166534' }}>{stay.name}</div>
+                                  {stay.address && <div style={{ fontSize: 12, color: '#15803D', marginTop: 2 }}>{stay.address}</div>}
                                 </div>
-                                <p style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>{a.why_suits}</p>
-                                {a.notes && <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 10 }}>{a.notes}</p>}
-                                <div style={{ display: 'flex', gap: 10 }}>
-                                  <a href={a.booking_com_search} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>
-                                    <ExternalLink size={13} /> Booking.com
-                                  </a>
-                                  <a href={a.google_maps_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}>
-                                    <ExternalLink size={13} /> Maps
-                                  </a>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                                  <span style={{ background: '#166534', color: 'white', borderRadius: 6, padding: '3px 9px', fontSize: 12, fontWeight: 700 }}>{nights}n</span>
+                                  {stay.rating && <span style={{ fontSize: 12, color: '#15803D', fontWeight: 600 }}>★ {stay.rating}</span>}
                                 </div>
                               </div>
-                            ))}
+                              <div style={{ fontSize: 12, color: '#15803D', marginBottom: 8 }}>
+                                {new Date(stay.check_in).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} → {new Date(stay.check_out).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                {stay.confirmation_number && <span style={{ marginLeft: 10 }}>· Ref: <strong>{stay.confirmation_number}</strong></span>}
+                              </div>
+                              <div style={{ display: 'flex', gap: 10 }}>
+                                {stay.website && <a href={stay.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#15803D', textDecoration: 'none' }}><ExternalLink size={12} /> Website</a>}
+                                {stay.google_place_id && <a href={`https://www.google.com/maps/place/?q=place_id:${stay.google_place_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#15803D', textDecoration: 'none' }}><ExternalLink size={12} /> Maps</a>}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      <button onClick={() => { setAccommodation(null); setAccommodationLoading(true); getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false)) }}
-                        style={{ background: 'white', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)' }}>
-                        Refresh suggestions
-                      </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Hotel suggestions from itinerary */}
+                {latestItinerary?.itinerary_json.hotel_suggestions && latestItinerary.itinerary_json.hotel_suggestions.length > 0 && (() => {
+                  const suggestions = latestItinerary.itinerary_json.hotel_suggestions!
+                  const grouped: Record<string, typeof suggestions> = {}
+                  suggestions.forEach(h => {
+                    if (!grouped[h.destination]) grouped[h.destination] = []
+                    grouped[h.destination].push(h)
+                  })
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Suggested Hotels</h3>
+                        <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                        {Object.keys(grouped).map(dest => (
+                          <div key={dest}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dest}</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {grouped[dest].map((h, i) => (
+                                <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: '16px 18px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                                    <div>
+                                      <div style={{ fontWeight: 700, fontSize: 14 }}>{h.name}</div>
+                                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{h.area} · {h.style}</div>
+                                    </div>
+                                    {h.price_per_night_aud && (
+                                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                                        ~${h.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 11 }}>/night</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <p style={{ fontSize: 13, color: '#374151', marginBottom: 10 }}>{h.why_suits}</p>
+                                  <div style={{ display: 'flex', gap: 10 }}>
+                                    <a href={h.booking_com_search} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}><ExternalLink size={12} /> Booking.com</a>
+                                    <a href={h.google_maps_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}><ExternalLink size={12} /> Maps</a>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )
                 })()}
+
+                {/* On-demand AI search */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>More Options</h3>
+                    <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                  </div>
+                  {!accommodation && !accommodationLoading && (
+                    <button onClick={() => { setAccommodationLoading(true); getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false)) }}
+                      style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}>
+                      Search additional options
+                    </button>
+                  )}
+                  {accommodationLoading && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--color-text-muted)', fontSize: 13 }}>
+                      <LoadingSpinner size={20} label="" /> Searching...
+                    </div>
+                  )}
+                  {accommodation && accommodation.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {accommodation.map((a, i) => (
+                        <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: '16px 18px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
+                              <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{a.area} · {a.style} · {a.destination}</div>
+                            </div>
+                            {a.price_per_night_aud && (
+                              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                                ~${a.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 11 }}>/night</span>
+                              </div>
+                            )}
+                          </div>
+                          <p style={{ fontSize: 13, color: '#374151', marginBottom: 10 }}>{a.why_suits}</p>
+                          <div style={{ display: 'flex', gap: 10 }}>
+                            <a href={a.booking_com_search} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}><ExternalLink size={12} /> Booking.com</a>
+                            <a href={a.google_maps_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}><ExternalLink size={12} /> Maps</a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

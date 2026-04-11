@@ -57,6 +57,7 @@ jobs:
             VITE_API_URL=https://www.travel-papaya.com/api
             VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
             VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }}
+            VITE_GOOGLE_PLACES_API_KEY=${{ secrets.VITE_GOOGLE_PLACES_API_KEY }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
