@@ -6,15 +6,21 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { getAdminTrips, getApiError } from '../api/client'
 import type { AdminTripListItem, TripStatus } from '../types'
 
-const STATUSES: TripStatus[] = ['GENERATING', 'INTAKE', 'DRAFT', 'REVIEW', 'CONFIRMED', 'ARCHIVED']
+// Visible pipeline stages — INTAKE/DRAFT are internal states folded into GENERATING
+const STATUSES = ['GENERATING', 'REVIEW', 'CONFIRMED', 'ARCHIVED'] as const
+type VisibleStatus = typeof STATUSES[number]
 
-const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; label: string }> = {
+const STATUS_CONFIG: Record<VisibleStatus, { bg: string; text: string; border: string; label: string }> = {
   GENERATING: { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE', label: 'Generating' },
-  INTAKE:    { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE', label: 'Intake' },
-  DRAFT:     { bg: 'var(--color-accent)', text: 'var(--color-primary-dark)', border: '#FCD9B8', label: 'Draft' },
   REVIEW:    { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', label: 'In Review' },
   CONFIRMED: { bg: '#F0FDF6', text: '#166534', border: '#A7F0C4', label: 'Confirmed' },
   ARCHIVED:  { bg: '#F8F8F8', text: '#6B7280', border: '#E5E7EB', label: 'Archived' },
+}
+
+// Fold INTAKE and DRAFT into GENERATING for display purposes
+function toVisibleStatus(status: TripStatus): VisibleStatus {
+  if (status === 'INTAKE' || status === 'DRAFT') return 'GENERATING'
+  return status as VisibleStatus
 }
 
 function formatDate(d: string): string {
@@ -95,7 +101,7 @@ export default function AdminDashboardPage() {
   const [trips, setTrips] = useState<AdminTripListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState<string>('ALL')
+  const [filter, setFilter] = useState<'ALL' | VisibleStatus>('ALL')
 
   useEffect(() => {
     getAdminTrips()
@@ -104,10 +110,10 @@ export default function AdminDashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filteredTrips = filter === 'ALL' ? trips : trips.filter(t => t.status === filter)
+  const filteredTrips = filter === 'ALL' ? trips : trips.filter(t => toVisibleStatus(t.status) === filter)
 
   const tripsByStatus = STATUSES.reduce<Record<string, AdminTripListItem[]>>((acc, s) => {
-    acc[s] = trips.filter(t => t.status === s)
+    acc[s] = trips.filter(t => toVisibleStatus(t.status) === s)
     return acc
   }, {} as Record<string, AdminTripListItem[]>)
 
@@ -178,7 +184,7 @@ export default function AdminDashboardPage() {
             {/* Kanban view */}
             {filter === 'ALL' ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '16px' }}>
-                {STATUSES.filter(s => s !== 'ARCHIVED').map(status => {
+                {STATUSES.filter(s => s !== 'ARCHIVED' as VisibleStatus).map(status => {
                   const statusTrips = tripsByStatus[status] || []
                   const config = STATUS_CONFIG[status]
                   return (
