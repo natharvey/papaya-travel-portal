@@ -15,15 +15,6 @@ const TRANSPORT_COLORS: Record<string, string> = {
   transfer: '#6b7280',
 }
 
-const TRANSPORT_ICONS: Record<string, string> = {
-  flight: '✈',
-  drive: '🚗',
-  train: '🚂',
-  bus: '🚌',
-  ferry: '⛴',
-  cruise: '🚢',
-  transfer: '🚐',
-}
 
 const DEST_COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b', '#06b6d4', '#ec4899']
 
@@ -264,59 +255,15 @@ export default function ItineraryMap({ itinerary, originCity, stays }: Itinerary
       map.current.dragPan.disable()
       map.current.touchZoomRotate.disable()
     }
+    // Resize after CSS height transition completes (300ms)
+    const t = setTimeout(() => map.current?.resize(), 320)
+    return () => clearTimeout(t)
   }, [expanded])
 
   if (!legs.length && !destinations.length) return null
 
   return (
     <div style={{ marginBottom: 28 }}>
-      {/* Timeline strip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', paddingBottom: 12, marginBottom: 12, scrollbarWidth: 'none' }}>
-        {legs.map((leg, i) => {
-          const isFirst = i === 0
-          const isLast = i === legs.length - 1
-          const destIndex = destinations.findIndex(d => d.name.toLowerCase() === leg.to.toLowerCase())
-          const color = destIndex >= 0 ? DEST_COLORS[destIndex % DEST_COLORS.length] : '#6b7280'
-          const isHomeLeg = isFirst || isLast
-
-          return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-              {isFirst && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
-                  <span style={{ fontSize: 11 }}>📍</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{leg.from}</span>
-                </div>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 6px' }}>
-                <div style={{ width: 16, height: 1.5, background: 'var(--color-border)' }} />
-                <div title={`${leg.duration}${leg.notes ? ' — ' + leg.notes : ''}`} style={{ fontSize: 14, cursor: 'default' }}>
-                  {TRANSPORT_ICONS[leg.mode] || '→'}
-                </div>
-                <div style={{ width: 16, height: 1.5, background: 'var(--color-border)' }} />
-              </div>
-              {!isHomeLeg ? (
-                <div style={{ padding: '6px 12px', borderRadius: 8, background: `${color}18`, border: `1.5px solid ${color}40` }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{leg.to}</div>
-                  {(() => {
-                    const dest = destinations.find(d => d.name.toLowerCase() === leg.to.toLowerCase())
-                    if (!dest) return null
-                    let startDay = 1
-                    for (let j = 0; j < destIndex; j++) startDay += destinations[j].nights
-                    const endDay = startDay + dest.nights - 1
-                    return <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 1, whiteSpace: 'nowrap' }}>{dest.nights === 1 ? `Day ${startDay}` : `Days ${startDay}–${endDay}`}</div>
-                  })()}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 8, background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
-                  <span style={{ fontSize: 11 }}>📍</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}>{leg.to}</span>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
       {/* Map */}
       <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)' }}>
         <div ref={mapContainer} style={{ height: expanded ? 500 : 320, width: '100%', transition: 'height 0.3s ease' }} />
@@ -343,15 +290,6 @@ export default function ItineraryMap({ itinerary, originCity, stays }: Itinerary
         )}
       </div>
 
-      {/* Transport notes */}
-      {itinerary.transport_notes && itinerary.transport_notes.length > 0 && (
-        <div style={{ marginTop: 12, padding: '12px 16px', background: 'var(--color-bg)', borderRadius: 8, border: '1px solid var(--color-border)' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Transport notes</div>
-          {itinerary.transport_notes.map((note, i) => (
-            <div key={i} style={{ fontSize: 13, color: 'var(--color-text)', lineHeight: 1.5, paddingLeft: 8, borderLeft: '2px solid var(--color-border)', marginTop: i > 0 ? 6 : 0 }}>{note}</div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

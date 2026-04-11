@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, Send, ExternalLink, Hotel, Plane, MessageCircle, Loader2, Pencil, Sparkles, UserRound, MapPin } from 'lucide-react'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const ItineraryMap = lazy(() => import('../components/ItineraryMap'))
 import { getClientTrip, sendClientMessage, markClientMessagesRead, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, tripChat, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
@@ -471,6 +471,25 @@ export default function TripDetailPage() {
                         />
                       </div>
                     </div>
+                    {/* Blurb: overview + destination pills */}
+                    {(latestItinerary.itinerary_json.overview || latestItinerary.itinerary_json.destinations?.length > 0) && (
+                      <div style={{ marginBottom: 24 }}>
+                        {latestItinerary.itinerary_json.overview && (
+                          <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '14px' }}>
+                            {latestItinerary.itinerary_json.overview}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                          {latestItinerary.itinerary_json.destinations?.map((d: { name: string; nights: number }, i: number) => (
+                            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
+                              <MapPin size={11} strokeWidth={2.5} color="#FF6B35" />
+                              {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Journey map — only renders when transport_legs present */}
                     {latestItinerary.itinerary_json.transport_legs && latestItinerary.itinerary_json.transport_legs.length > 0 && (
                       <Suspense fallback={<div style={{ height: 300, background: '#e8f0f5', borderRadius: 12, marginBottom: 28 }} />}>
@@ -484,6 +503,7 @@ export default function TripDetailPage() {
 
                     <ItineraryTimeline
                       data={latestItinerary.itinerary_json}
+                      hideOverview
                       onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
                         if (!tripId) return
                         const res = await editItineraryBlock(tripId, {

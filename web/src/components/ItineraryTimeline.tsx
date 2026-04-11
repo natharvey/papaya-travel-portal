@@ -12,6 +12,7 @@ import type { ItineraryJSON, DayPlan, DayBlock } from '../types'
 interface Props {
   data: ItineraryJSON
   onBlockEdit?: (dayNum: number, period: string, blockTitle: string, prompt: string) => Promise<void>
+  hideOverview?: boolean
 }
 
 // ─── Location palette ─────────────────────────────────────────────────────────
@@ -280,7 +281,7 @@ const PERIOD_KEYS: Record<Period, 'morning' | 'afternoon' | 'evening'> = {
   Morning: 'morning', Afternoon: 'afternoon', Evening: 'evening',
 }
 
-export default function ItineraryTimeline({ data, onBlockEdit }: Props) {
+export default function ItineraryTimeline({ data, onBlockEdit, hideOverview }: Props) {
   const [selectedDayNum, setSelectedDayNum] = useState(1)
   const [copied, setCopied] = useState(false)
   const [view, setView] = useState<'detail' | 'overview'>('detail')
@@ -330,17 +331,19 @@ export default function ItineraryTimeline({ data, onBlockEdit }: Props) {
   return (
     <div style={{ maxWidth: '820px' }}>
       {/* ── Overview text + destinations ── */}
-      <div style={{ marginBottom: '20px' }}>
-        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '16px' }}>{data.overview}</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-          {data.destinations?.map((d, i) => (
-            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
-              <MapPin size={11} strokeWidth={2.5} color="#FF6B35" />
-              {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
-            </span>
-          ))}
+      {!hideOverview && (
+        <div style={{ marginBottom: '20px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '16px' }}>{data.overview}</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+            {data.destinations?.map((d, i) => (
+              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
+                <MapPin size={11} strokeWidth={2.5} color="#FF6B35" />
+                {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ── View toggle ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
