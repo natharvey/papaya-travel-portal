@@ -5,7 +5,10 @@ import Layout from '../components/Layout'
 import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MayaChatPanel from '../components/MayaChatPanel'
+import HotelDetailPanel from '../components/HotelDetailPanel'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, ExternalLink, Hotel, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
+import { usePlacePhoto } from '../hooks/usePlacePhoto'
+import type { HotelSuggestion } from '../types'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const ItineraryMap = lazy(() => import('../components/ItineraryMap'))
 import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
@@ -66,6 +69,69 @@ function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON
   )
 }
 
+function HotelCard({ hotel, onClick }: { hotel: HotelSuggestion; onClick: () => void }) {
+  const { photoUrl, rating, loading } = usePlacePhoto(hotel.name, hotel.destination)
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        border: '1.5px solid var(--color-border)',
+        borderRadius: 14,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'box-shadow 0.18s, transform 0.18s',
+        background: 'var(--color-bg)',
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.boxShadow = '0 6px 24px rgba(0,0,0,0.10)'
+        el.style.transform = 'translateY(-1px)'
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.boxShadow = 'none'
+        el.style.transform = 'none'
+      }}
+    >
+      {/* Photo */}
+      <div style={{ position: 'relative', width: '100%', height: 140, background: '#F3F4F6' }}>
+        {loading && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 22, height: 22, border: '3px solid #E5E7EB', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        )}
+        {!loading && photoUrl && (
+          <img src={photoUrl} alt={hotel.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
+        {!loading && !photoUrl && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🏨</div>
+        )}
+        {rating && (
+          <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+            ★ {rating.toFixed(1)}
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text)', marginBottom: 2 }}>{hotel.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{hotel.area} · {hotel.style}</div>
+          </div>
+          {hotel.price_per_night_aud && (
+            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              ~${hotel.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 11, color: 'var(--color-text-muted)' }}>/night</span>
+            </div>
+          )}
+        </div>
+        <p style={{ fontSize: 12, color: '#6B7280', margin: '8px 0 0', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{hotel.why_suits}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function TripDetailPage() {
   const { tripId } = useParams<{ tripId: string }>()
   const [trip, setTrip] = useState<TripDetail | null>(null)
@@ -80,6 +146,9 @@ export default function TripDetailPage() {
   function switchTab(next: 'itinerary' | 'accommodation' | 'flights' | 'documents') {
     setTab(next)
   }
+
+  // Hotel detail panel
+  const [selectedHotel, setSelectedHotel] = useState<HotelSuggestion | null>(null)
 
   // Accommodation suggestions
   const [accommodation, setAccommodation] = useState<AccommodationSuggestion[] | null>(null)
@@ -563,26 +632,9 @@ export default function TripDetailPage() {
                         {Object.keys(grouped).map(dest => (
                           <div key={dest}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dest}</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
                               {grouped[dest].map((h, i) => (
-                                <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: '16px 18px' }}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
-                                    <div>
-                                      <div style={{ fontWeight: 700, fontSize: 14 }}>{h.name}</div>
-                                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>{h.area} · {h.style}</div>
-                                    </div>
-                                    {h.price_per_night_aud && (
-                                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', whiteSpace: 'nowrap', marginLeft: 12 }}>
-                                        ~${h.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 11 }}>/night</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <p style={{ fontSize: 13, color: '#374151', marginBottom: 10 }}>{h.why_suits}</p>
-                                  <div style={{ display: 'flex', gap: 10 }}>
-                                    <a href={h.booking_com_search} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}><ExternalLink size={12} /> Booking.com</a>
-                                    <a href={h.google_maps_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none' }}><ExternalLink size={12} /> Maps</a>
-                                  </div>
-                                </div>
+                                <HotelCard key={i} hotel={h} onClick={() => setSelectedHotel(h)} />
                               ))}
                             </div>
                           </div>
@@ -888,6 +940,11 @@ export default function TripDetailPage() {
           }
         />
       )}
+
+      {/* Hotel detail panel */}
+      <HotelDetailPanel hotel={selectedHotel} onClose={() => setSelectedHotel(null)} />
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </Layout>
   )
 }
