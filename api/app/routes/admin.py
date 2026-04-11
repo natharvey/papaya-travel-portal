@@ -550,3 +550,38 @@ def admin_delete_document(
     if not key.startswith(f"trips/{trip_id}/"):
         raise HTTPException(status_code=403, detail="Access denied")
     delete_document(key)
+
+
+# ─── Data cleanup (one-shot, remove after use) ────────────────────────────────
+
+@router.delete("/cleanup-test-clients", status_code=200)
+def cleanup_test_clients(
+    keep_email: str = Query(..., description="Email address to keep"),
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Delete all clients (and their trips/data) except the specified email."""
+    clients_to_delete = db.query(Client).filter(Client.email != keep_email).all()
+    deleted_clients = []
+
+    for client in clients_to_delete:
+        trips = db.query(Trip).filter(Trip.client_id == client.id).all()
+        for trip in trips:
+            db.query(Message).filter(Message.trip_id == trip.id).delete()
+            db.query(Flight).filter(Flight.trip_id == trip.id).delete()
+            db.query(Stay).filter(Stay.trip_id == trip.id).delete()
+            db.query(Itinerary).filter(Itinerary.trip_id == trip.id).delete()
+            from app.models import IntakeResponse, LoginToken
+            db.query(IntakeResponse).filter(IntakeResponse.trip_id == trip.id).delete()
+            db.delete(trip)
+        from app.models import LoginToken
+        db.query(LoginToken).filter(LoginToken.client_id == client.id).delete()
+        deleted_clients.append(client.email)
+        db.delete(client)
+
+    db.commit()
+    return {
+        "kept": keep_email,
+        "deleted_clients": deleted_clients,
+        "count": len(deleted_clients),
+    }

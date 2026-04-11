@@ -1,87 +1,92 @@
 # Travel Papaya
 
-A production travel planning portal for Australian travellers. Clients submit trip enquiries and admins generate AI-powered personalised itineraries using GPT-4o and Claude. Clients review and refine their itinerary through a structured workflow, with an AI assistant (Maya) available to help make changes.
+An AI-powered travel planning portal for Australian travellers. Clients describe their dream trip through a conversational intake, receive a personalised day-by-day itinerary built by AI, and can refine it further through the portal — all without manual involvement from a planner.
 
 **Live:** https://www.travel-papaya.com
 
 ---
 
-## Features
+## How it works
 
-- **AI itinerary generation** — GPT-4o produces structured day-by-day itineraries with costs, activities, transport notes and packing lists
-- **Ask Maya** — clients chat with an AI assistant directly in their portal to request itinerary changes
-- **Screenshot scanning** — upload a flight or hotel booking screenshot; GPT-4o vision extracts all details and auto-fills the form
-- **Flight management** — add flights manually, look up live data via AeroDataBox, or scan booking screenshots; multi-leg support with automatic date ordering
-- **Accommodation management** — add stays with check-in/out details; scan hotel confirmation screenshots to auto-fill
-- **S3 document storage** — admins and clients upload trip documents (PDFs, images) stored in AWS S3; clients can delete their own uploads
-- **Magic link login** — clients receive a one-click login link by email; single-use with 1-hour expiry
-- **PDF itinerary export** — clients download a branded PDF of their itinerary
-- **Real-time messaging** — in-portal message thread between admin and client with email notifications and unread badges
-- **Trip management** — clients can edit their trip title and delete trips from their portal
-- **Countdown timer** — trip cards show days until departure
-- **Interactive flight map** — visual route map on the client portal
-- **CloudWatch dashboard** — live monitoring of request counts, response times, errors, ECS CPU/memory and RDS metrics
+### Client flow
+
+1. **Intake** — Client visits the landing page and starts a short AI-guided conversation about their trip (destination, dates, budget, style, interests). Maya (the AI) gathers all the details naturally before submitting.
+2. **Generation** — The moment the form is submitted, AI generates a personalised day-by-day itinerary in the background. The client receives a magic login link by email and is shown a "building your itinerary" screen in their portal.
+3. **Review** — When generation completes the client receives an "itinerary ready" email and the portal updates automatically. They can read through the full day-by-day plan, view the budget breakdown, packing list, transport notes, and more.
+4. **Refine** — The client can use **Ask Maya** to adjust anything — swap activities, change the pace, add day trips, shift dates. Maya edits the itinerary live. Clients can also message the human planner directly if they want personal advice.
+5. **Confirm** — Once happy, the client confirms the itinerary. Both parties receive a confirmation email.
+
+### Admin (planner) role
+
+The admin dashboard provides a view across all trips and allows the planner to:
+- Read and respond to client messages
+- Provide personalised guidance when a client reaches out
+- View trip status and itinerary details
+- Archive completed or cancelled trips
+
+The AI handles all itinerary generation and refinement. Admin involvement is optional and purely advisory.
 
 ---
 
-## Quick Start (Local)
+## Trip lifecycle
+
+```
+GENERATING → REVIEW → CONFIRMED → ARCHIVED
+```
+
+| Status | Meaning |
+|--------|---------|
+| **GENERATING** | Intake submitted — AI is building the itinerary |
+| **REVIEW** | Itinerary ready — client is reviewing and refining |
+| **CONFIRMED** | Client approved the itinerary |
+| **ARCHIVED** | Trip complete or cancelled |
+
+---
+
+## Features
+
+- **Conversational intake** — Maya guides clients through trip planning via natural chat before submitting
+- **AI itinerary generation** — GPT-4o produces structured day-by-day itineraries with activities, costs, transport notes, packing lists, and risk notes
+- **Ask Maya** — Clients refine their itinerary post-generation via AI chat directly in the portal
+- **Flight lookup** — Clients enter a flight number and date to see route details, times, terminals, and a live route map
+- **Flight route map** — Visual route map showing all booked flights
+- **Accommodation tab** — AI-suggested stays for each destination with booking links
+- **PDF export** — Clients download a branded PDF of their full itinerary
+- **Document uploads** — Clients and admins upload trip documents (PDFs, images) stored in S3
+- **Magic link login** — Single-use login links sent by email; no passwords for clients
+- **Messaging** — In-portal message thread between client and planner with email notifications and unread badges
+- **Trip management** — Clients can edit their trip title or delete a trip from the portal
+- **Countdown timer** — Trip cards show days until departure
+- **CloudWatch monitoring** — Live dashboard tracking request counts, error rates, ECS CPU/memory, and RDS metrics
+
+---
+
+## Quick start (local)
 
 ```bash
 cp .env.example .env
-# Edit .env and add your credentials (see Environment Variables below)
+# Edit .env — add your API keys (see Environment Variables below)
 docker-compose up --build
 ```
 
 | Service | URL |
 |---------|-----|
-| **Client Portal** | http://localhost:5173 |
-| **Admin Dashboard** | http://localhost:5173/admin/login |
+| **Client portal** | http://localhost:5173 |
+| **Admin dashboard** | http://localhost:5173/admin/login |
 | **API** | http://localhost:8000 |
-| **API Docs (Swagger)** | http://localhost:8000/docs |
+| **API docs** | http://localhost:8000/docs |
 
 ---
 
-## Default Admin Credentials
+## Default admin credentials
 
 | Field | Value |
 |-------|-------|
-| URL | http://localhost:5173/admin/login |
 | Password | `admin123` (set via `ADMIN_PASSWORD` in `.env`) |
 
 ---
 
-## Trip Lifecycle
-
-```
-INTAKE → DRAFT → REVIEW → CONFIRMED → ARCHIVED
-```
-
-| Status | Meaning | Who acts |
-|--------|---------|----------|
-| **INTAKE** | Client submitted an enquiry, no itinerary yet | Admin |
-| **DRAFT** | Admin has generated an AI itinerary — internal working copy | Admin |
-| **REVIEW** | Itinerary sent to client for approval | Client |
-| **CONFIRMED** | Client approved — trip is locked in | — |
-| **ARCHIVED** | Trip complete or cancelled | Admin |
-
-### Full Flow
-
-1. Client submits enquiry via intake form → receives **welcome email** with a one-click magic login link
-2. Admin generates AI itinerary (status: `DRAFT`)
-3. Admin reviews, adds internal notes, refines, and regenerates with custom instructions as needed
-4. Admin clicks **"Send for Review"** → client receives **itinerary review email** (status: `REVIEW`)
-5. Client logs in and can:
-   - Click **"Confirm this itinerary"** → both parties receive **confirmation emails** (status: `CONFIRMED`)
-   - Use **"Refine with Maya"** → opens the Ask Maya chat tab to request AI-driven changes
-   - Use **"Message your planner"** → opens the Messages tab to contact the human travel planner
-6. Admin and client can exchange messages at any time — both receive email notifications for new messages
-7. Admin archives the trip once complete (status: `ARCHIVED`)
-
-**Unread message badges** appear on the Messages tab and admin dashboard cards whenever a new message arrives.
-
----
-
-## Architecture Overview
+## Architecture
 
 ```
                     ┌─────────────────────────────────────────────┐
@@ -91,114 +96,96 @@ INTAKE → DRAFT → REVIEW → CONFIRMED → ARCHIVED
                     │   │                                         │
                     │   ├──▶ /api/* ──▶ ECS Fargate (papaya-api)  │
                     │   │               FastAPI + SQLAlchemy       │
-                    │   │               Port 8000                  │
                     │   │                    │                     │
                     │   │               RDS PostgreSQL             │
-                    │   │               (papaya-db)                │
+                    │   │               S3 (documents)             │
                     │   │                                         │
                     │   └──▶ /* ──▶ ECS Fargate (papaya-web)      │
                     │               React + Vite (nginx)           │
-                    │               Port 80                        │
                     │                                             │
                     │  ECR — Docker image registry                │
-                    │  S3  — Trip document storage                │
                     │  CloudWatch — Logs + monitoring             │
                     └─────────────────────────────────────────────┘
-                              │               │
-                        OpenAI GPT-4o    Claude (Anthropic)
-                        Itinerary gen    Ask Maya AI chat
-                              │
-                         Gmail SMTP
-                         Transactional email
+                         │              │              │
+                   OpenAI GPT-4o   Anthropic       Gmail SMTP
+                   Itinerary gen   Ask Maya        Transactional
+                   + vision        AI chat         email
 ```
 
-### Key Components
+See the live interactive version at [travel-papaya.com/architecture](https://www.travel-papaya.com/architecture).
 
-**Backend (`/api`)**
-- `app/main.py` — FastAPI app, CORS, Alembic migrations at startup, Sentry init, JWT secret enforcement
-- `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, LoginToken, DestinationCard
-- `app/routes/auth.py` — JWT auth (client + admin), magic link login, rate limiting
-- `app/routes/intake.py` — Public intake form, generates magic login token, triggers welcome email, rate limited
-- `app/routes/client.py` — Client portal: trips, messages, confirm itinerary, title editing, trip deletion, mark-read
-- `app/routes/admin.py` — Admin: trip management, admin notes, AI generation, send-for-review, mark-read
-- `app/services/ai.py` — GPT-4o generation with retry logic (3 attempts, exponential backoff)
-- `app/services/email.py` — Gmail SMTP with branded HTML templates for all notification types
-- `app/services/retrieval.py` — Destination card retrieval for AI context injection
-- `app/services/s3.py` — S3 upload, list, delete and presigned download URL helpers
-- `app/services/seed.py` — Seeds 35 destination cards and a polished demo trip on startup
-- `alembic/` — Database migration history
+### Backend (`/api`)
 
-**Frontend (`/web`)**
-- React 18 + Vite + TypeScript
-- React Router v6, Axios with JWT interceptors
-- Lucide React icon library
-- Public landing page at `/` with hero, how-it-works, and features sections
-- Multi-step intake form with animated progress bar
-- Calendar-style day-by-day itinerary timeline view
-- Ask Maya tab — AI chat interface with typewriter greeting and suggested prompts
-- Trip title inline editing and trip deletion from client portal
-- PDF itinerary export via `@react-pdf/renderer`
-- Magic link handler at `/magic/:token`
-- Sentry browser error tracking
+- `app/main.py` — FastAPI app, CORS, Alembic migrations on startup, Sentry init
+- `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, Flight, Stay
+- `app/routes/auth.py` — Magic link login, admin login, JWT issuance
+- `app/routes/intake.py` — Intake chat endpoint + intake submission; fires AI generation as a background task
+- `app/routes/client.py` — Client portal: trip detail, itinerary, messages, confirm, Ask Maya, flight lookup, document uploads
+- `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, document uploads
+- `app/services/ai.py` — GPT-4o itinerary generation, Maya chat, block editing, accommodation/flight suggestions
+- `app/services/email.py` — Gmail SMTP with branded HTML templates
+- `app/services/s3.py` — S3 upload, list, delete and presigned URL helpers
 
-**Seed Data (`/seed/destinations`)**
-- 35 destination cards covering Asia-Pacific, Europe, Americas, Middle East, Africa
-- Injected into AI prompt as context for relevant destinations
+### Frontend (`/web`)
+
+- React 18 + Vite + TypeScript, React Router v6
+- `pages/LandingPage.tsx` — Public marketing page
+- `pages/IntakePage.tsx` — Multi-step intake with Maya AI chat
+- `pages/TripDetailPage.tsx` — Client portal: itinerary, Ask Maya, flights, accommodation, messages, documents
+- `pages/AdminDashboardPage.tsx` — Admin trip list with unread badges
+- `pages/AdminTripPage.tsx` — Admin trip detail, messaging, flight/stay management
+- `pages/ArchitecturePage.tsx` — Interactive Reactflow architecture diagram
+- Lucide React icons, `@react-pdf/renderer` for PDF export
 
 ---
 
-## Environment Variables
-
-Copy `.env.example` to `.env` and configure:
+## Environment variables
 
 ```env
 DATABASE_URL=postgresql://papaya:papaya_secret@db:5432/papaya
-OPENAI_API_KEY=sk-your-key-here          # Required for AI generation
-ANTHROPIC_API_KEY=sk-ant-your-key-here   # Required for Ask Maya chat
-JWT_SECRET=change-me-in-production       # Required — use a long random string
-                                         # Generate: python -c "import secrets; print(secrets.token_hex(32))"
-ADMIN_PASSWORD=admin123                  # Change for production
-ADMIN_EMAIL=admin@yourdomain.com         # Receives admin notifications
+OPENAI_API_KEY=sk-your-key-here
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+JWT_SECRET=change-me-in-production
+ADMIN_PASSWORD=admin123
+ADMIN_EMAIL=you@yourdomain.com
 CORS_ORIGINS=http://localhost:5173
-SEED_ON_STARTUP=true
+SEED_ON_STARTUP=false
 
-# Email (Gmail SMTP)
-# Generate an App Password at: myaccount.google.com > Security > App passwords
+# Email (Gmail App Password)
 EMAIL_ADDRESS=you@gmail.com
 EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
-PORTAL_URL=http://localhost:5173        # Used in email links and magic login URLs
+PORTAL_URL=http://localhost:5173
 
-# AWS S3 (optional for local dev)
+# AWS S3
 S3_BUCKET=your-bucket-name
 
-# Sentry error tracking (optional — leave blank to disable)
-SENTRY_DSN=                              # Backend DSN from sentry.io
-VITE_SENTRY_DSN=                         # Frontend DSN from sentry.io
-ENVIRONMENT=production
+# AeroDataBox (optional — enables flight number lookup)
+AERODATABOX_API_KEY=your-key-here
+
+# Sentry (optional)
+SENTRY_DSN=
+VITE_SENTRY_DSN=
 ```
 
-### Email Notifications
+### Email notifications
 
-| Trigger | Recipient | Contents |
-|---------|-----------|----------|
-| Intake form submitted | Client | Welcome email with magic login link |
-| Admin sends for review | Client | Itinerary ready — link to portal |
-| Client confirms | Client + Admin | Confirmation notification |
-| Client requests changes | Admin | Change request with quoted message |
-| Admin sends message | Client | Message notification with reply link |
-| Client sends message | Admin | Message notification with portal link |
+| Trigger | Recipient |
+|---------|-----------|
+| Intake submitted | Client — welcome + magic login link |
+| Itinerary ready | Client — link to portal |
+| Client confirms | Client + Admin — confirmation |
+| New client message | Admin |
+| New admin message | Client |
 
-### Magic Link Login
+### Magic link login
 
-When a client submits an intake form, their welcome email includes a one-click login button. The link:
-- Is single-use and expires after **1 hour**
-- Automatically logs the client in and redirects to their portal
+Clients receive a single-use login link by email. Links expire after 1 hour. No passwords required.
 
 ---
 
-## Database Migrations
+## Database migrations
 
-Migrations run automatically at startup via Alembic. To create a new migration after changing a model:
+Alembic runs automatically on startup. To create a new migration after changing a model:
 
 ```bash
 docker-compose exec api alembic revision --autogenerate -m "describe the change"
@@ -207,88 +194,78 @@ docker-compose restart api
 
 ---
 
-## API Reference
+## API reference
 
-Full interactive documentation at http://localhost:8000/docs
+Full interactive docs at http://localhost:8000/docs
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/intake` | None | Submit trip enquiry |
+| POST | `/intake/chat` | None | Intake chat turn with Maya |
+| POST | `/intake` | None | Submit trip — triggers AI generation |
 | POST | `/auth/admin-login` | None | Admin login |
-| GET | `/auth/magic/{token}` | None | Magic link login (single-use, 1hr expiry) |
+| GET | `/auth/magic/{token}` | None | Magic link login |
 | GET | `/client/trips` | Client JWT | List client's trips |
 | GET | `/client/trips/{id}` | Client JWT | Trip detail + itinerary |
 | POST | `/client/trips/{id}/confirm` | Client JWT | Confirm itinerary |
-| PATCH | `/client/trips/{id}/title` | Client JWT | Update trip title |
+| PATCH | `/client/trips/{id}/title` | Client JWT | Edit trip title |
 | DELETE | `/client/trips/{id}` | Client JWT | Delete trip |
+| POST | `/client/trips/{id}/chat` | Client JWT | Ask Maya (itinerary chat) |
 | GET | `/client/trips/{id}/messages` | Client JWT | Get messages |
-| POST | `/client/trips/{id}/messages` | Client JWT | Send message |
-| POST | `/client/trips/{id}/messages/read` | Client JWT | Mark admin messages as read |
-| GET | `/client/trips/{id}/documents` | Client JWT | List trip documents |
-| POST | `/client/trips/{id}/documents` | Client JWT | Upload document (client prefix) |
-| DELETE | `/client/trips/{id}/documents` | Client JWT | Delete own document only |
+| POST | `/client/trips/{id}/messages` | Client JWT | Send message to planner |
+| POST | `/client/trips/{id}/messages/read` | Client JWT | Mark messages read |
+| GET | `/client/trips/{id}/documents` | Client JWT | List documents |
+| POST | `/client/trips/{id}/documents` | Client JWT | Upload document |
+| DELETE | `/client/trips/{id}/documents` | Client JWT | Delete own document |
+| GET | `/client/flights/lookup` | Client JWT | Look up flight by number + date |
 | GET | `/admin/trips` | Admin JWT | All trips (filterable by status) |
 | GET | `/admin/trips/{id}` | Admin JWT | Trip detail |
-| PATCH | `/admin/trips/{id}` | Admin JWT | Update trip status, title, or admin notes |
-| POST | `/admin/trips/{id}/generate-itinerary` | Admin JWT | Generate AI itinerary |
-| POST | `/admin/trips/{id}/regenerate-itinerary` | Admin JWT | Regenerate with instructions |
+| PATCH | `/admin/trips/{id}` | Admin JWT | Update trip status or admin notes |
 | GET | `/admin/trips/{id}/messages` | Admin JWT | Get messages |
-| POST | `/admin/trips/{id}/messages` | Admin JWT | Send admin message |
-| POST | `/admin/trips/{id}/messages/read` | Admin JWT | Mark client messages as read |
-| GET | `/admin/trips/{id}/documents` | Admin JWT | List trip documents from S3 |
-| POST | `/admin/trips/{id}/documents` | Admin JWT | Upload document to S3 |
-| GET | `/admin/trips/{id}/documents/download-url` | Admin JWT | Get presigned S3 download URL |
-| DELETE | `/admin/trips/{id}/documents` | Admin JWT | Delete document from S3 |
-| POST | `/admin/parse-screenshot` | Admin JWT | Parse flight/stay screenshot with GPT-4o vision |
-| GET | `/admin/flights/lookup` | Admin JWT | Look up live flight data via AeroDataBox |
-| GET | `/health` | None | Health check (includes DB ping) |
+| POST | `/admin/trips/{id}/messages` | Admin JWT | Send message to client |
+| POST | `/admin/trips/{id}/messages/read` | Admin JWT | Mark messages read |
+| GET | `/admin/trips/{id}/flights` | Admin JWT | List flights |
+| POST | `/admin/trips/{id}/flights` | Admin JWT | Add flight |
+| PATCH | `/admin/trips/{id}/flights/{fid}` | Admin JWT | Update flight |
+| DELETE | `/admin/trips/{id}/flights/{fid}` | Admin JWT | Delete flight |
+| GET | `/admin/trips/{id}/stays` | Admin JWT | List stays |
+| POST | `/admin/trips/{id}/stays` | Admin JWT | Add stay |
+| PATCH | `/admin/trips/{id}/stays/{sid}` | Admin JWT | Update stay |
+| DELETE | `/admin/trips/{id}/stays/{sid}` | Admin JWT | Delete stay |
+| GET | `/admin/trips/{id}/documents` | Admin JWT | List documents |
+| POST | `/admin/trips/{id}/documents` | Admin JWT | Upload document |
+| DELETE | `/admin/trips/{id}/documents` | Admin JWT | Delete document |
+| GET | `/health` | None | Health check |
 
 ---
 
 ## Deployment
 
-Deployments are fully automated via GitHub Actions. Every push to `main` triggers the CD pipeline:
+Every push to `main` triggers the CD pipeline automatically:
 
 1. Builds `linux/amd64` Docker images for API and web
-2. Pushes images to ECR
-3. Forces a new ECS deployment
-4. Waits for the service to stabilise
+2. Pushes to ECR
+3. Forces a new ECS deployment and waits for stability
 
-See `.github/workflows/deploy.yml` for the full pipeline config.
+See `.github/workflows/deploy.yml` for the pipeline config.
 
-### AWS Infrastructure
+### AWS infrastructure
 
-| Component | AWS Service | Details |
-|-----------|-------------|---------|
-| Container registry | ECR | Stores API and web Docker images |
-| Container runtime | ECS Fargate | Serverless containers — no EC2 to manage |
-| Database | RDS PostgreSQL | Managed Postgres in private VPC |
-| Load balancer | ALB | HTTPS on port 443, HTTP→HTTPS redirect |
-| SSL certificate | ACM | Covers `travel-papaya.com` and `www.travel-papaya.com` |
-| File storage | S3 | Private bucket; presigned URLs for secure downloads |
-| DNS | GoDaddy | `www` CNAME → ALB; root domain forwarded to `www` |
-| Logging & monitoring | CloudWatch | Container logs at `/ecs/papaya`; production dashboard |
+| Component | Service | Notes |
+|-----------|---------|-------|
+| Container runtime | ECS Fargate | Serverless — no EC2 to manage |
+| Container registry | ECR | API and web images |
+| Database | RDS PostgreSQL | Private VPC |
+| Load balancer | ALB | HTTPS on 443, HTTP→HTTPS redirect |
+| SSL | ACM | Covers `travel-papaya.com` + `www` |
+| File storage | S3 | Private bucket, presigned URLs |
+| DNS | GoDaddy | `www` CNAME → ALB |
+| Logging | CloudWatch | `/ecs/papaya` log group |
 
-### Secrets
-
-All production secrets (API keys, DB password, JWT secret, email credentials) are set as environment variables in the ECS task definition. The `task-definition.json` file is gitignored — never commit secrets to the repository.
-
-A pre-commit hook blocks commits containing known secret patterns (API keys, database URLs, private keys).
+Secrets (API keys, DB password, JWT secret) are set as environment variables in the ECS task definition. `task-definition.json` is gitignored. A pre-commit hook blocks accidental secret commits.
 
 ---
 
-## Running Tests
-
-```bash
-cd api
-pytest tests/ -v
-```
-
-Tests use SQLite and run without Docker.
-
----
-
-## Local Development (without Docker)
+## Local development (without Docker)
 
 ```bash
 # API
@@ -296,10 +273,10 @@ cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export DATABASE_URL=postgresql://papaya:papaya_secret@localhost:5432/papaya
-export JWT_SECRET=dev-secret ADMIN_PASSWORD=admin123 OPENAI_API_KEY=sk-your-key ANTHROPIC_API_KEY=sk-ant-your-key
+export JWT_SECRET=dev ADMIN_PASSWORD=admin123 OPENAI_API_KEY=sk-... ANTHROPIC_API_KEY=sk-ant-...
 uvicorn app.main:app --reload --port 8000
 
-# Frontend
+# Web
 cd web
 npm install
 VITE_API_URL=http://localhost:8000 npm run dev
@@ -307,13 +284,21 @@ VITE_API_URL=http://localhost:8000 npm run dev
 
 ---
 
-## Production Checklist
+## Running tests
 
-- [x] Custom domain (`travel-papaya.com`) via GoDaddy
-- [x] HTTPS via ACM — SSL certificate attached to ALB
-- [x] CD pipeline — automated deployments on push to `main`
-- [x] Pre-commit hook blocking accidental secret commits
-- [ ] Move secrets from task definition to AWS Secrets Manager
-- [ ] Enable RDS automated backups with longer retention
-- [ ] Switch to multi-AZ RDS for high availability
+```bash
+cd api && pytest tests/ -v
+```
+
+---
+
+## Production checklist
+
+- [x] Custom domain (`travel-papaya.com`)
+- [x] HTTPS via ACM
+- [x] Automated CD pipeline on push to `main`
+- [x] Pre-commit hook blocking secret commits
+- [ ] Move secrets to AWS Secrets Manager
+- [ ] Increase RDS backup retention
+- [ ] Multi-AZ RDS for high availability
 - [ ] Set `SENTRY_DSN` and `VITE_SENTRY_DSN` for error tracking
