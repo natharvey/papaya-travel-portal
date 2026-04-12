@@ -81,7 +81,7 @@ The JSON must match this exact schema — no extra fields, no missing fields:
 }
 
 HOTEL SUGGESTIONS RULES:
-- Include 5-6 hotel suggestions per destination (we verify against Google Places and need enough candidates to land 2-3 confirmed results)
+- Include 6-8 hotel suggestions per destination (we verify against Google Places and need enough candidates to land 3 confirmed results per destination)
 - CRITICAL: Use the EXACT official hotel name as it appears on Google Maps and Booking.com — not a paraphrase, not a shortened version. For example "Park Hyatt Tokyo" not "Park Hyatt" or "Tokyo Park Hyatt". Precision here is essential.
 - Prefer well-known, established properties (major international chains, well-reviewed boutique hotels with strong online presence) over obscure or newly opened properties — these are far more likely to be indexed on Google Places
 - Never invent or approximate a hotel name. If you are not confident the hotel exists under that exact name, do not include it
@@ -227,7 +227,7 @@ def build_generation_prompt(
     parts.append(
         "\nUsing your knowledge of real, currently-operating establishments, "
         "name specific restaurants, hotels, and attractions throughout. "
-        "Include 5-6 hotel suggestions per destination in hotel_suggestions, using exact official names as they appear on Google Maps. "
+        "Include 6-8 hotel suggestions per destination in hotel_suggestions, using exact official names as they appear on Google Maps. "
         "Output the complete itinerary JSON."
     )
 
@@ -399,7 +399,7 @@ def _enrich_hotel_suggestions_background(itinerary_id: uuid.UUID, raw_suggestion
     from app.services.places import verify_hotel_suggestions
     from app.db import SessionLocal
 
-    verified = verify_hotel_suggestions(raw_suggestions, max_results=8)
+    verified = verify_hotel_suggestions(raw_suggestions, max_results=9)
     logger.info("Hotel verification: %d/%d suggestions verified for itinerary %s",
                 len(verified), len(raw_suggestions), itinerary_id)
 
