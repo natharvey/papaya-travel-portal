@@ -1,14 +1,14 @@
 """add maya_memory to clients
 
-Revision ID: a1b2c3d4e5f6
-Revises: f01457e6f4d8
+Revision ID: 9f8e7d6c5b4a
+Revises: e2f3a4b5c6d7
 Create Date: 2026-04-12
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = 'a1b2c3d4e5f6'
-down_revision = 'f01457e6f4d8'
+revision = '9f8e7d6c5b4a'
+down_revision = 'e2f3a4b5c6d7'
 branch_labels = None
 depends_on = None
 
