@@ -292,6 +292,13 @@ export default function TripDetailPage() {
     }
   }
 
+  // Hero photo — must be called before early returns (Rules of Hooks)
+  const latestItineraryForHero = trip?.itineraries?.length
+    ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
+    : null
+  const heroQuery = latestItineraryForHero?.itinerary_json.destinations?.[0]?.name || trip?.title || ''
+  const { photoUrl: heroPhotoUrl } = usePlacePhoto(heroQuery, '')
+
   if (loading) {
     return (
       <Layout variant="client">
@@ -324,10 +331,6 @@ export default function TripDetailPage() {
   const latestItinerary = trip.itineraries.length > 0
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
-
-  // Hero photo: use first destination from itinerary, fall back to trip title
-  const heroQuery = latestItinerary?.itinerary_json.destinations?.[0]?.name || trip.title
-  const { photoUrl: heroPhotoUrl } = usePlacePhoto(heroQuery, '')
 
   const tripDays = Math.ceil(
     (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
