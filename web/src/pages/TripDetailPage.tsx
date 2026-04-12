@@ -951,6 +951,7 @@ export default function TripDetailPage() {
           onItineraryUpdated={newItinerary =>
             setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, newItinerary] } : prev)
           }
+          hidden={!!selectedHotel}
         />
       )}
 

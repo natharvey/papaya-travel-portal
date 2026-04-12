@@ -552,3 +552,53 @@ def client_lookup_flight(
         "terminal_departure": dep.get("terminal") or "",
         "terminal_arrival": arr.get("terminal") or "",
     }
+
+
+PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+PLACES_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+
+
+@router.get("/place-lookup")
+def place_lookup(
+    query: str = Query(..., description="Hotel name + destination, e.g. 'Park Hyatt Tokyo'"),
+    _client=Depends(get_current_client),
+):
+    """Proxy a Google Places text search. Returns photo_url, place_id, rating, website, address."""
+    if not PLACES_API_KEY:
+        raise HTTPException(status_code=503, detail="Places API not configured")
+
+    try:
+        resp = httpx.post(
+            PLACES_SEARCH_URL,
+            json={"textQuery": query, "maxResultCount": 1},
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": PLACES_API_KEY,
+                "X-Goog-FieldMask": "places.id,places.photos,places.rating,places.websiteUri,places.formattedAddress",
+            },
+            timeout=8,
+        )
+        resp.raise_for_status()
+    except httpx.RequestError:
+        raise HTTPException(status_code=503, detail="Places service unavailable")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Places API error: {e.response.status_code}")
+
+    data = resp.json()
+    place = (data.get("places") or [None])[0]
+    if not place:
+        return {"photo_url": None, "place_id": None, "rating": None, "website": None, "address": None}
+
+    photo_ref = (place.get("photos") or [{}])[0].get("name")
+    photo_url = (
+        f"https://places.googleapis.com/v1/{photo_ref}/media?maxHeightPx=480&maxWidthPx=640&key={PLACES_API_KEY}"
+        if photo_ref else None
+    )
+
+    return {
+        "photo_url": photo_url,
+        "place_id": place.get("id"),
+        "rating": place.get("rating"),
+        "website": place.get("websiteUri"),
+        "address": place.get("formattedAddress"),
+    }

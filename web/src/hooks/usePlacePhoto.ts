@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 
-const PLACES_API_KEY = import.meta.env.VITE_GOOGLE_PLACES_API_KEY || ''
-const cache = new Map<string, { photoUrl: string | null; placeId: string | null; rating: number | null; website: string | null; address: string | null }>()
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
+
+// Cache keyed by query string
+const cache = new Map<string, PlaceData>()
 
 export interface PlaceData {
   photoUrl: string | null
@@ -11,44 +13,29 @@ export interface PlaceData {
   address: string | null
 }
 
-async function fetchPlaceData(query: string): Promise<PlaceData> {
-  if (!PLACES_API_KEY) return { photoUrl: null, placeId: null, rating: null, website: null, address: null }
+async function fetchPlaceData(query: string, token: string): Promise<PlaceData> {
   if (cache.has(query)) return cache.get(query)!
 
   try {
-    const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': PLACES_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.photos,places.rating,places.websiteUri,places.formattedAddress',
-      },
-      body: JSON.stringify({ textQuery: query, maxResultCount: 1 }),
-    })
+    const res = await fetch(
+      `${API_BASE}/client/place-lookup?query=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json()
-    const place = data.places?.[0]
-    if (!place) {
-      cache.set(query, { photoUrl: null, placeId: null, rating: null, website: null, address: null })
-      return cache.get(query)!
-    }
-
-    const photoRef = place.photos?.[0]?.name
-    const photoUrl = photoRef
-      ? `https://places.googleapis.com/v1/${photoRef}/media?maxHeightPx=480&maxWidthPx=640&key=${PLACES_API_KEY}`
-      : null
-
-    const result = {
-      photoUrl,
-      placeId: place.id ?? null,
-      rating: place.rating ?? null,
-      website: place.websiteUri ?? null,
-      address: place.formattedAddress ?? null,
+    const result: PlaceData = {
+      photoUrl: data.photo_url ?? null,
+      placeId: data.place_id ?? null,
+      rating: data.rating ?? null,
+      website: data.website ?? null,
+      address: data.address ?? null,
     }
     cache.set(query, result)
     return result
   } catch {
-    cache.set(query, { photoUrl: null, placeId: null, rating: null, website: null, address: null })
-    return cache.get(query)!
+    const empty: PlaceData = { photoUrl: null, placeId: null, rating: null, website: null, address: null }
+    cache.set(query, empty)
+    return empty
   }
 }
 
@@ -58,17 +45,21 @@ export function usePlacePhoto(hotelName: string, destination: string): PlaceData
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!hotelName) { setLoading(false); return }
+
+    const token = localStorage.getItem('papaya_token') || ''
+
     if (cache.has(query)) {
       setData(cache.get(query)!)
       setLoading(false)
       return
     }
     setLoading(true)
-    fetchPlaceData(query).then(d => {
+    fetchPlaceData(query, token).then(d => {
       setData(d)
       setLoading(false)
     })
-  }, [query])
+  }, [query, hotelName])
 
   return { ...data, loading }
 }

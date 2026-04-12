@@ -19,6 +19,7 @@ interface Props {
   messages: Message[]
   onMessagesUpdated: (msgs: Message[]) => void
   onItineraryUpdated: (newItinerary: Itinerary) => void
+  hidden?: boolean
 }
 
 function formatTime(dateStr: string): string {
@@ -27,7 +28,7 @@ function formatTime(dateStr: string): string {
     ' ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onItineraryUpdated }: Props) {
+export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onItineraryUpdated, hidden }: Props) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<'maya' | 'advisor'>('maya')
 
@@ -133,13 +134,14 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
         onClick={handleOpen}
         style={{
           position: 'fixed', bottom: 28, right: 28, zIndex: 1000,
+          opacity: hidden ? 0 : 1, pointerEvents: hidden ? 'none' : 'auto',
           display: 'flex', alignItems: 'center', gap: 8,
           background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)',
           color: 'white', border: 'none', borderRadius: '100px',
           padding: '13px 22px', fontSize: 14, fontWeight: 700,
           cursor: 'pointer', fontFamily: 'inherit',
           boxShadow: '0 4px 20px rgba(240,115,50,0.45)',
-          transition: 'transform 0.15s, box-shadow 0.15s',
+          transition: 'opacity 0.2s, transform 0.15s, box-shadow 0.15s',
         }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(240,115,50,0.55)' }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(240,115,50,0.45)' }}
