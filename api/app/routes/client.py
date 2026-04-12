@@ -1,7 +1,11 @@
 import uuid
+import threading
+import logging
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
+
+logger = logging.getLogger(__name__)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from jose import jwt, JWTError
@@ -15,7 +19,7 @@ from app.schemas import (
 )
 from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
 from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
-from app.services.ai import chat_with_itinerary, edit_block, generate_accommodation_suggestions, generate_flight_suggestions
+from app.services.ai import chat_with_itinerary, edit_block, generate_accommodation_suggestions, generate_flight_suggestions, extract_client_memory, generate_itinerary
 from pydantic import BaseModel as PydanticBaseModel
 
 router = APIRouter(prefix="/client", tags=["client"])
@@ -212,9 +216,26 @@ def trip_chat(
     msg_dicts = [{"role": m.role, "content": m.content} for m in payload.messages]
 
     try:
-        reply, updated_json = chat_with_itinerary(msg_dicts, latest.itinerary_json, trip_context)
+        reply, updated_json, regen_requested = chat_with_itinerary(
+            msg_dicts, latest.itinerary_json, trip_context,
+            client_memory=client.maya_memory,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+    # Full regeneration requested — kick off in background
+    if regen_requested:
+        def _regen():
+            from app.db import SessionLocal
+            _db = SessionLocal()
+            try:
+                generate_itinerary(_db, trip_id=trip_id)
+            except Exception as exc:
+                logger.warning("Background regen failed: %s", exc)
+            finally:
+                _db.close()
+        threading.Thread(target=_regen, daemon=True).start()
+        return TripChatResponse(message=reply, itinerary_updated=False, new_itinerary=None)
 
     new_itinerary_out = None
     if updated_json:
@@ -231,6 +252,21 @@ def trip_chat(
         db.commit()
         db.refresh(new_it)
         new_itinerary_out = ItineraryOut.model_validate(new_it)
+
+    # Update client memory in background after each conversation turn
+    def _update_memory():
+        from app.db import SessionLocal
+        _db = SessionLocal()
+        try:
+            _client = _db.query(Client).filter(Client.id == client.id).first()
+            if _client:
+                _client.maya_memory = extract_client_memory(_client.maya_memory, msg_dicts + [{"role": "assistant", "content": reply}])
+                _db.commit()
+        except Exception as exc:
+            logger.warning("Memory update failed: %s", exc)
+        finally:
+            _db.close()
+    threading.Thread(target=_update_memory, daemon=True).start()
 
     return TripChatResponse(
         message=reply,

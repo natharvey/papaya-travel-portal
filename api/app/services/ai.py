@@ -422,49 +422,75 @@ def _enrich_hotel_suggestions_background(itinerary_id: uuid.UUID, raw_suggestion
 
 # ─── Chat refinement ─────────────────────────────────────────────────────────
 
-CHAT_SYSTEM = """You are Maya, an expert travel consultant at Papaya Travel.
-You are helping a client refine their travel itinerary.
+CHAT_SYSTEM = """You are Maya, a travel consultant at Papaya Travel. You help clients adjust their itinerary.
 
-The client's current itinerary is provided as JSON context.
-Respond conversationally and warmly — like a knowledgeable friend, not a chatbot.
+RULES:
+- Be direct and concise. Maximum 2 sentences for conversational replies.
+- Never use emojis, bullet points, or markdown formatting in your replies. Plain sentences only.
+- Never ask multiple questions at once. If you need clarification, ask one specific question.
+- Act on requests immediately — do not ask for permission or confirmation before making changes.
+- Never explain what you *could* do. Just do it.
 
-If the client asks a question (e.g. "what's the weather like in Bali in July?"), answer it conversationally.
+If the client asks a travel question, answer it in 1-2 sentences.
 
-If the client wants changes to the itinerary (e.g. "make day 3 more relaxed", "swap the cooking class for snorkelling"), then:
-1. Describe the changes you're making in a friendly sentence or two
-2. Output the COMPLETE updated itinerary JSON in a ```json block at the end of your response
+If the client wants changes to the itinerary, make them and output the COMPLETE updated itinerary JSON in a ```json block. Briefly describe the change in one sentence before the JSON.
 
-When outputting updated JSON, always preserve the transport_legs array exactly as-is unless the
-client is specifically asking to change their transport arrangements. Never remove confirmed_booking
-values from transport legs. Keep transport_notes unchanged unless directly relevant to the edit.
+When outputting updated JSON:
+- Preserve transport_legs exactly unless the client is changing transport
+- Never remove confirmed_booking values
+- Keep transport_notes unchanged unless directly relevant
 
-Important: only include the ```json block when you are making actual changes to the itinerary.
-Keep all responses concise — 2-4 sentences for conversational replies."""
+Only include the ```json block when making actual changes."""
+
+# Keywords that indicate the user wants a full regeneration
+_REGEN_PHRASES = [
+    "regenerate", "regeneration", "start over", "start fresh", "rebuild",
+    "redo the itinerary", "redo my itinerary", "full new itinerary", "completely new",
+    "from scratch",
+]
+
+def _is_regeneration_request(message: str) -> bool:
+    lower = message.lower()
+    return any(phrase in lower for phrase in _REGEN_PHRASES)
 
 
 def chat_with_itinerary(
     messages: list[dict],
     itinerary_json: dict,
     trip_context: str,
-) -> tuple[str, dict | None]:
+    client_memory: str | None = None,
+) -> tuple[str, dict | None, bool]:
     """
     Run one turn of itinerary refinement chat.
-    Returns (assistant_message, updated_itinerary_json | None).
-    updated_itinerary_json is set only when Claude made changes.
+    Returns (assistant_message, updated_itinerary_json | None, regeneration_requested).
+    updated_itinerary_json is set only when Claude made targeted changes.
+    regeneration_requested is True when the user wants a full rebuild.
     """
+    # Check last user message for regeneration intent before calling Claude
+    last_user_msg = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
+    if _is_regeneration_request(last_user_msg):
+        return (
+            "Regenerating your itinerary now — this usually takes about 30 seconds.",
+            None,
+            True,
+        )
+
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
-    client = anthropic.Anthropic(api_key=api_key)
+    claude = anthropic.Anthropic(api_key=api_key)
+
+    memory_block = f"\nWHAT YOU KNOW ABOUT THIS CLIENT:\n{client_memory}\n" if client_memory else ""
 
     system = (
-        f"{CHAT_SYSTEM}\n\n"
+        f"{CHAT_SYSTEM}"
+        f"{memory_block}\n\n"
         f"TRIP CONTEXT:\n{trip_context}\n\n"
         f"CURRENT ITINERARY JSON:\n```json\n{json.dumps(itinerary_json, indent=2)}\n```"
     )
 
-    response = client.messages.create(
+    response = claude.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=8000,
         system=system,
@@ -477,12 +503,46 @@ def chat_with_itinerary(
     # Check if Claude included an updated itinerary JSON block
     try:
         updated = _parse_json_from_text(text)
-        # Strip the JSON block from the displayed message
         text = re.sub(r"```(?:json)?\s*\{.*?\}\s*```", "", text, flags=re.DOTALL).strip()
     except (ValueError, json.JSONDecodeError):
-        pass  # No JSON block — conversational reply only
+        pass
 
-    return text, updated
+    return text, updated, False
+
+
+MEMORY_EXTRACTION_SYSTEM = """You maintain a concise memory profile for a travel client based on their conversations with Maya.
+
+Given the existing memory (if any) and the latest conversation, output an updated memory profile.
+Keep it under 150 words. Write in second person ("prefers...", "dislikes...", "has mentioned...").
+Focus on: travel style preferences, budget sensitivity, activity interests, dietary needs, accommodation preferences, past feedback on itineraries.
+Only include facts clearly stated by the client. Do not infer or assume.
+Output the updated memory text only — no preamble."""
+
+
+def extract_client_memory(existing_memory: str | None, conversation: list[dict]) -> str:
+    """Extract and update client preference memory from a conversation."""
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return existing_memory or ""
+
+    claude = anthropic.Anthropic(api_key=api_key)
+
+    context = f"EXISTING MEMORY:\n{existing_memory or 'None yet.'}\n\nCONVERSATION:\n"
+    for msg in conversation:
+        role = "Client" if msg["role"] == "user" else "Maya"
+        context += f"{role}: {msg['content']}\n"
+
+    try:
+        response = claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=300,
+            system=MEMORY_EXTRACTION_SYSTEM,
+            messages=[{"role": "user", "content": context}],
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        logger.warning("Memory extraction failed: %s", e)
+        return existing_memory or ""
 
 
 # ─── Block edit ──────────────────────────────────────────────────────────────

@@ -325,6 +325,10 @@ export default function TripDetailPage() {
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
 
+  // Hero photo: use first destination from itinerary, fall back to trip title
+  const heroQuery = latestItinerary?.itinerary_json.destinations?.[0]?.name || trip.title
+  const { photoUrl: heroPhotoUrl } = usePlacePhoto(heroQuery, '')
+
   const tripDays = Math.ceil(
     (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
   )
@@ -341,13 +345,31 @@ export default function TripDetailPage() {
 
         {/* Trip header */}
         <div style={{
+          position: 'relative',
           background: 'linear-gradient(135deg, var(--color-secondary) 0%, #1A3344 100%)',
           color: 'white',
           borderRadius: 'var(--radius-lg)',
           padding: '28px 32px',
           marginBottom: '24px',
+          overflow: 'hidden',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          {/* Hero photo background */}
+          {heroPhotoUrl && (
+            <>
+              <div style={{
+                position: 'absolute', inset: 0,
+                backgroundImage: `url(${heroPhotoUrl})`,
+                backgroundSize: 'cover', backgroundPosition: 'center',
+                borderRadius: 'var(--radius-lg)',
+              }} />
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(135deg, rgba(15,31,61,0.82) 0%, rgba(26,51,68,0.78) 100%)',
+                borderRadius: 'var(--radius-lg)',
+              }} />
+            </>
+          )}
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ flex: 1 }}>
               {/* Editable title */}
               {editingTitle ? (

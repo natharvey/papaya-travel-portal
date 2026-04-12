@@ -59,6 +59,7 @@ class Client(Base):
     name = Column(String(255), nullable=False)
     reference_code = Column(String(16), unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    maya_memory = Column(Text, nullable=True)  # Running summary of client preferences learned by Maya
 
     trips = relationship("Trip", back_populates="client")
 
