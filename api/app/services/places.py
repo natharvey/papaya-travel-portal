@@ -5,6 +5,7 @@ Called in background thread after a stay is saved/updated.
 import os
 import logging
 import httpx
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,69 @@ def _search_place(query: str) -> dict | None:
     except Exception as e:
         log.warning("Places text search failed for %r: %s", query, e)
         return None
+
+
+def _verify_hotel(suggestion: dict) -> dict | None:
+    """
+    Verify a hotel suggestion against Google Places.
+    Returns enriched suggestion dict if found, None if not verified.
+    """
+    query = f"{suggestion['name']} {suggestion['destination']}"
+    place = _search_place(query)
+    if not place:
+        return None
+
+    photos = place.get("photos", [])
+    photo_ref = photos[0].get("name") if photos else None
+    place_id = place.get("id")
+
+    # Must have at least a place_id to be considered verified
+    if not place_id:
+        return None
+
+    photo_url = (
+        f"https://places.googleapis.com/v1/{photo_ref}/media?maxHeightPx=480&maxWidthPx=640&key={PLACES_API_KEY}"
+        if photo_ref else None
+    )
+    maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+
+    return {
+        **suggestion,
+        "place_id": place_id,
+        "photo_url": photo_url,
+        "rating": place.get("rating") or suggestion.get("rating"),
+        "address": place.get("formattedAddress"),
+        "website": place.get("websiteUri"),
+        "google_maps_url": maps_url,
+    }
+
+
+def verify_hotel_suggestions(suggestions: list[dict], max_results: int = 8) -> list[dict]:
+    """
+    Verify a list of AI-generated hotel suggestions against Google Places in parallel.
+    Returns only verified suggestions (up to max_results), enriched with Places data.
+    """
+    if not suggestions:
+        return []
+
+    verified = []
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_verify_hotel, s): s for s in suggestions}
+        for future in as_completed(futures):
+            result = future.result()
+            if result is not None:
+                verified.append(result)
+            if len(verified) >= max_results:
+                # Cancel remaining futures once we have enough
+                for f in futures:
+                    f.cancel()
+                break
+
+    # Preserve original destination grouping order
+    dest_order = {s["destination"]: i for i, s in enumerate(suggestions)}
+    verified.sort(key=lambda s: (dest_order.get(s["destination"], 99), s["destination"]))
+
+    return verified[:max_results]
 
 
 def enrich_stay(stay, db) -> None:

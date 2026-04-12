@@ -29,10 +29,18 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function HotelDetailPanel({ hotel, onClose }: Props) {
-  const { photoUrl, rating, website, address, loading } = usePlacePhoto(
-    hotel?.name ?? '',
-    hotel?.destination ?? ''
+  // Use pre-enriched data if available, otherwise fall back to live lookup
+  const hasEnrichedData = !!(hotel?.photo_url !== undefined)
+  const live = usePlacePhoto(
+    hasEnrichedData ? '' : (hotel?.name ?? ''),
+    hasEnrichedData ? '' : (hotel?.destination ?? ''),
   )
+
+  const photoUrl = hotel?.photo_url ?? live.photoUrl
+  const rating = hotel?.rating ?? live.rating
+  const website = hotel?.website ?? live.website
+  const address = hotel?.address ?? live.address
+  const loading = hasEnrichedData ? false : live.loading
 
   // Close on Escape
   useEffect(() => {

@@ -103,6 +103,12 @@ export interface HotelSuggestion {
   price_per_night_aud: number | null
   booking_com_search: string
   google_maps_url: string
+  // Enriched by Google Places verification at generation time
+  place_id?: string | null
+  photo_url?: string | null
+  rating?: number | null
+  address?: string | null
+  website?: string | null
 }
 
 export interface ItineraryJSON {

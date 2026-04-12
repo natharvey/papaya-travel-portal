@@ -70,7 +70,14 @@ function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON
 }
 
 function HotelCard({ hotel, onClick }: { hotel: HotelSuggestion; onClick: () => void }) {
-  const { photoUrl, rating, loading } = usePlacePhoto(hotel.name, hotel.destination)
+  const hasEnrichedData = hotel.photo_url !== undefined
+  const live = usePlacePhoto(
+    hasEnrichedData ? '' : hotel.name,
+    hasEnrichedData ? '' : hotel.destination,
+  )
+  const photoUrl = hotel.photo_url ?? live.photoUrl
+  const rating = hotel.rating ?? live.rating
+  const loading = hasEnrichedData ? false : live.loading
   return (
     <div
       onClick={onClick}

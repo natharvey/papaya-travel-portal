@@ -4,6 +4,7 @@ import uuid
 import time
 import re
 import logging
+import threading
 from datetime import datetime
 from sqlalchemy.orm import Session
 import anthropic
@@ -80,11 +81,14 @@ The JSON must match this exact schema — no extra fields, no missing fields:
 }
 
 HOTEL SUGGESTIONS RULES:
-- Include 2-3 hotel suggestions per destination
-- Use REAL hotel names that actually exist and operate
+- Include 5-6 hotel suggestions per destination (we verify against Google Places and need enough candidates to land 2-3 confirmed results)
+- CRITICAL: Use the EXACT official hotel name as it appears on Google Maps and Booking.com — not a paraphrase, not a shortened version. For example "Park Hyatt Tokyo" not "Park Hyatt" or "Tokyo Park Hyatt". Precision here is essential.
+- Prefer well-known, established properties (major international chains, well-reviewed boutique hotels with strong online presence) over obscure or newly opened properties — these are far more likely to be indexed on Google Places
+- Never invent or approximate a hotel name. If you are not confident the hotel exists under that exact name, do not include it
 - Match style to the client's accommodation preference
 - Price should be realistic for the budget and destination
 - booking_com_search URL: use the format https://www.booking.com/search.html?ss=HOTEL+NAME+CITY (URL-encode spaces as +)
+- google_maps_url: use the format https://www.google.com/maps/search/HOTEL+NAME+CITY (URL-encode spaces as +)
 
 TRANSPORT LEGS RULES:
 - Must cover the full round trip: origin city → destination 1 → destination 2 → ... → origin city
@@ -223,7 +227,7 @@ def build_generation_prompt(
     parts.append(
         "\nUsing your knowledge of real, currently-operating establishments, "
         "name specific restaurants, hotels, and attractions throughout. "
-        "Include 2-3 hotel suggestions per destination in hotel_suggestions. "
+        "Include 5-6 hotel suggestions per destination in hotel_suggestions, using exact official names as they appear on Google Maps. "
         "Output the complete itinerary JSON."
     )
 
@@ -375,7 +379,45 @@ def generate_itinerary(
 
     db.commit()
     db.refresh(itinerary)
+
+    # Verify hotel suggestions against Google Places in the background
+    raw_suggestions = itinerary_data.get("hotel_suggestions") or []
+    if raw_suggestions:
+        itinerary_id = itinerary.id
+        t = threading.Thread(
+            target=_enrich_hotel_suggestions_background,
+            args=(itinerary_id, raw_suggestions),
+            daemon=True,
+        )
+        t.start()
+
     return itinerary
+
+
+def _enrich_hotel_suggestions_background(itinerary_id: uuid.UUID, raw_suggestions: list[dict]) -> None:
+    """Verify hotel suggestions against Google Places and write enriched results back to the itinerary."""
+    from app.services.places import verify_hotel_suggestions
+    from app.db import SessionLocal
+
+    verified = verify_hotel_suggestions(raw_suggestions, max_results=8)
+    logger.info("Hotel verification: %d/%d suggestions verified for itinerary %s",
+                len(verified), len(raw_suggestions), itinerary_id)
+
+    db = SessionLocal()
+    try:
+        itinerary = db.query(Itinerary).filter(Itinerary.id == itinerary_id).first()
+        if not itinerary:
+            return
+        updated_json = dict(itinerary.itinerary_json)
+        updated_json["hotel_suggestions"] = verified
+        itinerary.itinerary_json = updated_json
+        db.commit()
+        logger.info("Hotel suggestions enriched and saved for itinerary %s", itinerary_id)
+    except Exception as e:
+        logger.warning("Failed to save enriched hotel suggestions for %s: %s", itinerary_id, e)
+        db.rollback()
+    finally:
+        db.close()
 
 
 # ─── Chat refinement ─────────────────────────────────────────────────────────
