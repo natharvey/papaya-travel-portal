@@ -330,9 +330,8 @@ export default function TripDetailPage() {
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
 
-  const tripDays = Math.ceil(
-    (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
-  )
+  const tripDays = latestItineraryForHero?.itinerary_json?.day_plans?.length
+    || Math.ceil((new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24))
 
   const showMosaic = heroDests.length >= 2
   const thumbDests = heroDests.slice(1, 3) // up to 2 right-side thumbnails

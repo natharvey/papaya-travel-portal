@@ -90,8 +90,8 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/light-v11',
-        zoom: 2,
-        center: [100, 10],
+        zoom: 1.5,
+        center: [20, 20],
         interactive: true,
         attributionControl: false,
       })
@@ -148,11 +148,33 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         dc += dest.nights
       })
 
-      allCoords.current = stops.map(s => s.coords)
+      // Fit bounds to destination coords only (not origin, which may be on a different continent)
+      const destCoords = stops.filter(s => !s.isOrigin).map(s => s.coords)
+      allCoords.current = destCoords.length > 0 ? destCoords : stops.map(s => s.coords)
       const stayPins = stays.filter(s => s.latitude && s.longitude)
       stayPins.forEach(s => allCoords.current.push([s.longitude!, s.latitude!]))
 
       // ── Draw transport routes ──
+      // Auto-add origin → first destination flight arc if no leg covers that route
+      const firstDest = stops.find(s => !s.isOrigin)
+      const hasOriginLeg = legs.some(l =>
+        l.from.toLowerCase() === originCity.toLowerCase() ||
+        l.to.toLowerCase() === originCity.toLowerCase()
+      )
+      if (firstDest && !hasOriginLeg && map.current) {
+        const arcCoords = buildArc(originCoords, firstDest.coords)
+        const sourceId = `route-origin-${firstDest.name}`.replace(/[\s/]/g, '-')
+        map.current.addSource(sourceId, {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arcCoords } },
+        })
+        map.current.addLayer({
+          id: sourceId, type: 'line', source: sourceId,
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': TRANSPORT_COLORS.flight, 'line-width': 2.5, 'line-opacity': 0.7, 'line-dasharray': [2, 2.5] },
+        })
+      }
+
       for (const leg of legs) {
         const fromStop = stops.find(s => s.name.toLowerCase() === leg.from.toLowerCase())
           || (leg.from.toLowerCase() === originCity.toLowerCase() ? stops[0] : null)
