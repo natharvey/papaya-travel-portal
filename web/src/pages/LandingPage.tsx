@@ -65,7 +65,7 @@ export default function LandingPage() {
             marginBottom: 20,
           }}>
             Your dream trip,<br />
-            <span style={{ color: 'var(--color-primary)' }}>planned by AI.</span>
+            <span style={{ color: 'var(--color-primary)' }}>planned by Papaya.</span>
           </h1>
           <p style={{
             fontSize: '18px',
@@ -75,7 +75,7 @@ export default function LandingPage() {
             maxWidth: 500,
             margin: '0 auto 40px',
           }}>
-            Personalised travel itineraries crafted for Australian travellers. Tell us where you want to go — we handle the rest.
+            Personalised travel itineraries crafted for you. Tell us where you want to go — we handle the rest.
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
