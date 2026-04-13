@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Calendar, Wallet, Users, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
+import { MapPin, Calendar, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Button from '../components/Button'
 import { submitIntake, intakeChat, getClientMe, getApiError } from '../api/client'
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -12,7 +13,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
   marginBottom: '6px',
-  color: '#374151',
+  color: 'var(--color-text)',
   letterSpacing: '0.2px',
 }
 
@@ -27,6 +28,181 @@ const inputStyle: React.CSSProperties = {
   color: 'var(--color-text)',
   boxSizing: 'border-box',
 }
+
+// ─── City autocomplete ────────────────────────────────────────────────────────
+
+interface CitySuggestion { place_name: string; text: string }
+
+function CityAutocomplete({ value, onChange, placeholder }: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([])
+  const [open, setOpen] = useState(false)
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) { setSuggestions([]); setOpen(false); return }
+    const token = import.meta.env.VITE_MAPBOX_TOKEN
+    if (!token) return
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?types=place,locality,region&limit=5&access_token=${token}`
+      )
+      const data = await res.json()
+      const results: CitySuggestion[] = (data.features ?? []).map((f: { place_name: string; text: string }) => ({
+        place_name: f.place_name,
+        text: f.text,
+      }))
+      setSuggestions(results)
+      setOpen(results.length > 0)
+    } catch { /* ignore */ }
+  }, [])
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    onChange(v)
+    if (debounce.current) clearTimeout(debounce.current)
+    debounce.current = setTimeout(() => fetchSuggestions(v), 220)
+  }
+
+  function pick(s: CitySuggestion) {
+    onChange(s.place_name)
+    setSuggestions([])
+    setOpen(false)
+  }
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+      <input
+        type="text"
+        value={value}
+        onChange={handleInput}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        placeholder={placeholder}
+        style={{ ...inputStyle, paddingLeft: '36px' }}
+        autoComplete="off"
+      />
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50,
+          background: 'white', border: '1.5px solid var(--color-border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden',
+        }}>
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={() => pick(s)}
+              style={{
+                width: '100%', textAlign: 'left', padding: '10px 14px',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 14, color: 'var(--color-text)', fontFamily: 'inherit',
+                borderBottom: i < suggestions.length - 1 ? '1px solid var(--color-border)' : 'none',
+                display: 'flex', flexDirection: 'column', gap: 2,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+            >
+              <span style={{ fontWeight: 600 }}>{s.text}</span>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{s.place_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Budget chips ─────────────────────────────────────────────────────────────
+
+const BUDGET_OPTIONS = ['Under $3,000', '$3,000–$6,000', '$6,000–$10,000', '$10,000–$15,000', '$15,000+']
+
+function BudgetChips({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {BUDGET_OPTIONS.map(opt => {
+        const selected = value === opt
+        return (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => onChange(selected ? '' : opt)}
+            style={{
+              padding: '7px 16px', borderRadius: 100, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+              background: selected ? 'var(--color-primary)' : 'white',
+              color: selected ? 'white' : 'var(--color-text)',
+              border: `1.5px solid ${selected ? 'var(--color-primary)' : 'var(--color-border)'}`,
+            }}
+          >
+            {opt}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Traveller stepper ────────────────────────────────────────────────────────
+
+function TravellerStepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, value - 1))}
+        disabled={value <= 1}
+        style={{
+          width: 36, height: 36, borderRadius: '50%', border: '1.5px solid var(--color-border)',
+          background: 'white', cursor: value <= 1 ? 'default' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, fontWeight: 400, color: value <= 1 ? 'var(--color-border)' : 'var(--color-text)',
+          fontFamily: 'inherit', flexShrink: 0,
+        }}
+      >−</button>
+      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', minWidth: 72, textAlign: 'center' }}>
+        {value} {value === 1 ? 'person' : 'people'}
+      </span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(20, value + 1))}
+        disabled={value >= 20}
+        style={{
+          width: 36, height: 36, borderRadius: '50%', border: '1.5px solid var(--color-border)',
+          background: 'white', cursor: value >= 20 ? 'default' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, fontWeight: 400, color: value >= 20 ? 'var(--color-border)' : 'var(--color-text)',
+          fontFamily: 'inherit', flexShrink: 0,
+        }}
+      >+</button>
+    </div>
+  )
+}
+
+// ─── Maya avatar ──────────────────────────────────────────────────────────────
+
+const MayaAvatar = () => (
+  <div style={{
+    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(240,115,50,0.30)',
+  }}>
+    <span style={{ color: 'white', fontWeight: 800, fontSize: 14, fontFamily: 'inherit' }}>M</span>
+  </div>
+)
 
 // ─── Step 1: Trip basics ──────────────────────────────────────────────────────
 
@@ -48,7 +224,7 @@ function StepTripBasics({ data, onChange }: { data: TripData; onChange: (k: keyo
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <div>
-          <label style={labelStyle}>Destination</label>
+          <label style={labelStyle}>Destinations</label>
           <div style={{ position: 'relative' }}>
             <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
             <input
@@ -64,16 +240,11 @@ function StepTripBasics({ data, onChange }: { data: TripData; onChange: (k: keyo
 
         <div>
           <label style={labelStyle}>Departing from</label>
-          <div style={{ position: 'relative' }}>
-            <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={data.origin_city}
-              onChange={e => onChange('origin_city', e.target.value)}
-              placeholder="e.g. Sydney, Melbourne, Brisbane"
-              style={{ ...inputStyle, paddingLeft: '36px' }}
-            />
-          </div>
+          <CityAutocomplete
+            value={data.origin_city}
+            onChange={v => onChange('origin_city', v)}
+            placeholder="e.g. Sydney, Melbourne, Brisbane"
+          />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -103,34 +274,14 @@ function StepTripBasics({ data, onChange }: { data: TripData; onChange: (k: keyo
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-          <div>
-            <label style={labelStyle}>Budget (AUD)</label>
-            <div style={{ position: 'relative' }}>
-              <Wallet size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="text"
-                value={data.budget_range}
-                onChange={e => onChange('budget_range', e.target.value)}
-                placeholder="e.g. $5,000–$8,000"
-                style={{ ...inputStyle, paddingLeft: '36px' }}
-              />
-            </div>
-          </div>
-          <div>
-            <label style={labelStyle}>Travellers</label>
-            <div style={{ position: 'relative' }}>
-              <Users size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={data.travellers_count}
-                onChange={e => onChange('travellers_count', parseInt(e.target.value) || 1)}
-                style={{ ...inputStyle, paddingLeft: '36px' }}
-              />
-            </div>
-          </div>
+        <div>
+          <label style={labelStyle}>Budget (AUD)</label>
+          <BudgetChips value={data.budget_range} onChange={v => onChange('budget_range', v)} />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Travellers</label>
+          <TravellerStepper value={data.travellers_count} onChange={v => onChange('travellers_count', v)} />
         </div>
       </div>
     </div>
@@ -228,7 +379,7 @@ function StepChat({ seedData, onComplete }: StepChatProps) {
         border: '1.5px solid var(--color-border)',
         borderRadius: '12px',
         padding: '16px',
-        background: '#F8FAFC',
+        background: 'var(--color-bg)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
@@ -243,20 +394,15 @@ function StepChat({ seedData, onComplete }: StepChatProps) {
         {messages.map((msg, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
             {msg.role === 'assistant' && (
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: 'var(--color-primary)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                fontSize: '14px', flexShrink: 0, marginRight: '8px', marginTop: '2px',
-              }}>
-                🌴
+              <div style={{ marginRight: 8, marginTop: 2 }}>
+                <MayaAvatar />
               </div>
             )}
             <div style={{
               maxWidth: '80%',
               padding: '10px 14px',
-              borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-              background: msg.role === 'user' ? 'var(--color-primary)' : 'white',
+              borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+              background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-surface)',
               color: msg.role === 'user' ? 'white' : 'var(--color-text)',
               fontSize: '14px', lineHeight: '1.5',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
@@ -269,21 +415,17 @@ function StepChat({ seedData, onComplete }: StepChatProps) {
 
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MayaAvatar />
             <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: 'var(--color-primary)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0,
-            }}>🌴</div>
-            <div style={{
-              padding: '10px 14px', borderRadius: '16px 16px 16px 4px',
-              background: 'white', border: '1px solid var(--color-border)',
+              padding: '10px 14px', borderRadius: '4px 16px 16px 16px',
+              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
               display: 'flex', gap: '4px', alignItems: 'center',
             }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{
                   width: '6px', height: '6px', borderRadius: '50%',
                   background: 'var(--color-text-muted)',
-                  animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                  animation: `blink 1.2s ease-in-out ${i * 0.2}s infinite`,
                 }} />
               ))}
             </div>
@@ -293,8 +435,8 @@ function StepChat({ seedData, onComplete }: StepChatProps) {
         {complete && (
           <div style={{
             textAlign: 'center', padding: '12px',
-            background: '#F0FDF4', border: '1px solid #BBF7D0',
-            borderRadius: '10px', fontSize: '13px', color: '#15803D', fontWeight: 600,
+            background: 'var(--color-success-bg, #F0FDF4)', border: '1px solid #BBF7D0',
+            borderRadius: '10px', fontSize: '13px', color: 'var(--color-success)', fontWeight: 600,
           }}>
             ✓ All set! Click "Generate My Itinerary" below.
           </div>
@@ -332,17 +474,6 @@ function StepChat({ seedData, onComplete }: StepChatProps) {
           </button>
         </div>
       )}
-
-      <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-          40% { transform: scale(1.2); opacity: 1; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   )
 }
@@ -424,7 +555,7 @@ export default function NewTripPage() {
     if (!tripData.start_date) return 'Please select a departure date.'
     if (!tripData.end_date) return 'Please select a return date.'
     if (tripData.start_date >= tripData.end_date) return 'Return date must be after departure date.'
-    if (!tripData.budget_range.trim()) return 'Please enter your budget.'
+    if (!tripData.budget_range.trim()) return 'Please select a budget range.'
     return ''
   }
 
@@ -459,7 +590,6 @@ export default function NewTripPage() {
         notes: '',
         conversation_transcript: transcript,
       })
-      // Already authenticated — go straight to the new trip
       navigate(`/portal/trips/${result.trip_id}`)
     } catch (e) {
       setError(getApiError(e))
@@ -531,68 +661,37 @@ export default function NewTripPage() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '28px', gap: '12px' }}>
             {step === 2 ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => { setError(''); setStep(1) }}
                 disabled={chatComplete}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'white', border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-text-muted)', padding: '11px 20px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 600,
-                  cursor: chatComplete ? 'default' : 'pointer',
-                  opacity: chatComplete ? 0.4 : 1,
-                }}
               >
                 <ArrowLeft size={15} /> Back
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
-                onClick={() => navigate('/portal')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'white', border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-text-muted)', padding: '11px 20px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
+              <Button variant="ghost" size="md" onClick={() => navigate('/portal')}>
                 Cancel
-              </button>
+              </Button>
             )}
 
             {step === 1 ? (
-              <button
-                type="button"
-                onClick={goNext}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'var(--color-primary)', color: 'white',
-                  border: 'none', padding: '11px 24px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
+              <Button variant="primary" size="md" onClick={goNext}>
                 Continue <ArrowRight size={15} />
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="md"
                 onClick={handleSubmit}
                 disabled={!chatComplete || submitting}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  background: !chatComplete || submitting ? 'var(--color-border)' : 'var(--color-primary)',
-                  color: 'white', border: 'none', padding: '11px 24px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 700,
-                  cursor: !chatComplete || submitting ? 'default' : 'pointer',
-                }}
               >
                 {submitting ? (
                   <><LoadingSpinner size={16} color="white" label="" /> Generating...</>
                 ) : (
                   <>Generate My Itinerary <ArrowRight size={15} /></>
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>
