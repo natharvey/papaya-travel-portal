@@ -1,34 +1,35 @@
 import { Link } from 'react-router-dom'
+import { Sparkles, LayoutDashboard, MessageCircle, FileDown } from 'lucide-react'
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
 
 const FEATURES = [
   {
-    icon: '✈️',
-    title: 'AI-Crafted Itineraries',
-    desc: 'Tell us your dream trip and our AI builds a day-by-day itinerary tailored to your style, budget, and travel dates.',
+    Icon: Sparkles,
+    title: 'Instant Itineraries',
+    desc: 'Enter your destination, dates, and budget — Papaya generates a complete day-by-day itinerary in minutes, tailored to your style.',
   },
   {
-    icon: '🗺️',
-    title: 'Your Own Client Portal',
-    desc: 'Track flights, stays, and activities in one place. Your itinerary is always up to date and accessible anywhere.',
+    Icon: LayoutDashboard,
+    title: 'Your Planning Hub',
+    desc: 'Everything in one place — your itinerary, flights, and stays, accessible anywhere and always up to date.',
   },
   {
-    icon: '💬',
-    title: 'Real Collaboration',
-    desc: 'Chat directly with your travel planner, request changes, and get quick responses — no endless email threads.',
+    Icon: MessageCircle,
+    title: 'Refine with Maya',
+    desc: 'Ask Maya to swap activities, adjust the pace, add a free day, or rethink a destination. Instant changes, no waiting.',
   },
   {
-    icon: '📄',
+    Icon: FileDown,
     title: 'Downloadable PDF',
     desc: 'Export your full itinerary as a beautifully formatted PDF to take offline or share with travel companions.',
   },
 ]
 
 const STEPS = [
-  { number: '01', title: 'Submit your enquiry', desc: 'Tell us where you want to go, your dates, travel style, and budget. Takes about 2 minutes.' },
-  { number: '02', title: 'We build your itinerary', desc: 'Our AI and travel experts craft a personalised day-by-day plan just for you.' },
-  { number: '03', title: 'Refine and confirm', desc: 'Review everything in your portal, request tweaks, and confirm when you\'re happy.' },
+  { number: '01', title: 'Tell us your trip', desc: 'Enter your destination, dates, travel style, and budget. Takes about 2 minutes.' },
+  { number: '02', title: 'Your itinerary is ready', desc: 'Papaya instantly generates a personalised day-by-day plan — no waiting, no back-and-forth.' },
+  { number: '03', title: 'Refine until it\'s perfect', desc: 'Adjust anything in your portal — swap activities, change the pace, or ask Maya to tweak it.' },
 ]
 
 export default function LandingPage() {
@@ -130,7 +131,7 @@ export default function LandingPage() {
             How it works
           </h2>
           <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '15px', marginBottom: 56 }}>
-            From enquiry to confirmed itinerary in days, not weeks.
+            A few minutes to plan. A trip you'll remember forever.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 32 }}>
             {STEPS.map((step) => (
@@ -166,7 +167,7 @@ export default function LandingPage() {
             Everything you need
           </h2>
           <p style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '15px', marginBottom: 56 }}>
-            A complete travel planning experience from first enquiry to departure day.
+            Everything you need to plan, refine, and manage your trip — all in one place.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24 }}>
             {FEATURES.map((f) => (
@@ -176,7 +177,13 @@ export default function LandingPage() {
                 borderRadius: 'var(--radius-lg)',
                 padding: '28px 24px',
               }}>
-                <div style={{ fontSize: '28px', marginBottom: 14 }}>{f.icon}</div>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12, marginBottom: 16,
+                  background: 'var(--color-accent)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <f.Icon size={22} color="var(--color-primary)" strokeWidth={1.75} />
+                </div>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text)', marginBottom: 8 }}>
                   {f.title}
                 </h3>
@@ -199,7 +206,7 @@ export default function LandingPage() {
             Ready to start planning?
           </h2>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '15px', lineHeight: 1.6, marginBottom: 36 }}>
-            Submit your enquiry and we'll have a personalised itinerary ready for you to review in your portal.
+            Tell Papaya where you want to go — get a full personalised itinerary in minutes, ready to refine and take with you.
           </p>
           <Link
             to="/intake"
