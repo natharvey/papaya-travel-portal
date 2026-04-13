@@ -348,14 +348,14 @@ export default function TripDetailPage() {
           <div style={{ display: 'grid', gridTemplateColumns: '62% 38%', gridTemplateRows: `repeat(${thumbDests.length === 1 ? 1 : 2}, 1fr)`, gap: 3, height: '100%' }}>
             {/* Main photo */}
             <div style={{ gridRow: `1 / ${thumbDests.length === 1 ? 2 : 3}`, position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
-              {heroPhoto0 && <img src={heroPhoto0} alt={heroDests[0]?.name || trip.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.05) 100%)' }} />
+              {heroPhoto0 && <img src={heroPhoto0} alt={heroDests[0]?.name || trip.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.04) 100%)' }} />
             </div>
             {/* Thumbnails */}
             {thumbDests.map((dest, i) => (
               <div key={dest.name} style={{ position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
-                {thumbPhotos[i] && <img src={thumbPhotos[i]!} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.0) 60%)' }} />
+                {thumbPhotos[i] && <img src={thumbPhotos[i]!} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.0) 60%)' }} />
                 <div style={{
                   position: 'absolute', bottom: 10, left: 12,
                   background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(6px)',
@@ -370,8 +370,8 @@ export default function TripDetailPage() {
         ) : (
           /* ── Single photo banner fallback ── */
           <>
-            {heroPhoto0 && <img src={heroPhoto0} alt={trip.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.40) 55%, rgba(0,0,0,0.14) 100%)' }} />
+            {heroPhoto0 && <img src={heroPhoto0} alt={trip.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.10) 100%)' }} />
           </>
         )}
 
