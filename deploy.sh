@@ -16,6 +16,11 @@ TASK_FAMILY="papaya"
 
 TARGET="${1:-both}"
 
+# Load VITE_ build vars from root .env if present
+if [ -f ".env" ]; then
+  export $(grep -E "^VITE_" .env | xargs)
+fi
+
 echo "==> Logging in to ECR..."
 aws ecr get-login-password --region $AWS_REGION \
   | docker login --username AWS --password-stdin $ECR_BASE
@@ -32,7 +37,12 @@ build_api() {
 build_web() {
   echo ""
   echo "==> Building web image (linux/amd64)..."
-  docker build --platform linux/amd64 -t papaya-web ./web
+  docker build --platform linux/amd64 \
+    --build-arg VITE_MAPBOX_TOKEN="${VITE_MAPBOX_TOKEN}" \
+    --build-arg VITE_SENTRY_DSN="${VITE_SENTRY_DSN}" \
+    --build-arg VITE_GOOGLE_PLACES_API_KEY="${VITE_GOOGLE_PLACES_API_KEY}" \
+    --build-arg VITE_API_URL="${VITE_API_URL}" \
+    -t papaya-web ./web
   docker tag papaya-web:latest $ECR_BASE/papaya-web:latest
   echo "==> Pushing web image..."
   docker push $ECR_BASE/papaya-web:latest

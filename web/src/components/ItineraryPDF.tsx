@@ -221,9 +221,9 @@ function TimeBlockView({ period, block }: { period: string; block: TimeBlock }) 
   return (
     <View style={styles.periodRow}>
       <Text style={styles.periodLabel}>{period}</Text>
-      <Text style={styles.periodTitle}>{block.title}</Text>
-      <Text style={styles.periodDetails}>{block.details}</Text>
-      {(block.booking_needed || block.est_cost_aud) && (
+      <Text style={styles.periodTitle}>{block.title ?? ''}</Text>
+      <Text style={styles.periodDetails}>{block.details ?? ''}</Text>
+      {!!(block.booking_needed || block.est_cost_aud) && (
         <Text style={styles.periodMeta}>
           {block.booking_needed ? 'Booking required  ' : ''}
           {block.est_cost_aud ? `~$${block.est_cost_aud.toLocaleString()} AUD` : ''}
@@ -262,7 +262,7 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
         {/* Overview */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Overview</Text>
-          <Text style={styles.overviewText}>{data.overview}</Text>
+          <Text style={styles.overviewText}>{data.overview ?? ''}</Text>
         </View>
 
         {/* Destinations */}
@@ -327,10 +327,10 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
         )}
 
         {/* Transport */}
-        {data.transport_notes.length > 0 && (
+        {(data.transport_notes ?? []).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Transport Notes</Text>
-            {data.transport_notes.map((t, i) => (
+            {(data.transport_notes ?? []).map((t, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={styles.bullet}>·</Text>
                 <Text style={styles.listText}>{t}</Text>
@@ -343,7 +343,7 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
         {data.budget_summary && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Budget Summary</Text>
-            {data.budget_summary.estimated_total_aud && (
+            {!!data.budget_summary.estimated_total_aud && (
               <Text style={styles.budgetTotal}>
                 Estimated Total: ${data.budget_summary.estimated_total_aud.toLocaleString()} AUD
               </Text>
@@ -358,10 +358,10 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
         )}
 
         {/* Packing */}
-        {data.packing_checklist.length > 0 && (
+        {(data.packing_checklist ?? []).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Packing Checklist</Text>
-            {data.packing_checklist.map((item, i) => (
+            {(data.packing_checklist ?? []).map((item, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={styles.bullet}>☐</Text>
                 <Text style={styles.listText}>{item}</Text>
@@ -371,10 +371,10 @@ export default function ItineraryPDF({ data, tripTitle, clientName, startDate, e
         )}
 
         {/* Risks */}
-        {data.risks_and_notes.length > 0 && (
+        {(data.risks_and_notes ?? []).length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Important Notes</Text>
-            {data.risks_and_notes.map((r, i) => (
+            {(data.risks_and_notes ?? []).map((r, i) => (
               <View key={i} style={styles.listItem}>
                 <Text style={styles.bullet}>·</Text>
                 <Text style={styles.listText}>{r}</Text>

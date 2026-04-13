@@ -67,6 +67,59 @@
         0%, 100% { opacity: 1; }
         50% { opacity: 0; }
       }
+
+      /* ── Shared component hover states ── */
+
+      /* Button */
+      .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; font-family: inherit; font-weight: 500; cursor: pointer; transition: background 0.15s, transform 0.1s, border-color 0.15s, color 0.15s; border-radius: var(--radius); white-space: nowrap; text-decoration: none; }
+      .btn:active { transform: scale(0.98); }
+      .btn-sm { padding: 6px 14px; font-size: 13px; }
+      .btn-md { padding: 9px 18px; font-size: 14px; }
+      .btn-lg { padding: 12px 24px; font-size: 15px; }
+      .btn-primary { background: var(--color-primary); color: white; }
+      .btn-primary:hover { background: var(--color-primary-dark); text-decoration: none; }
+      .btn-secondary { background: var(--color-secondary); color: white; }
+      .btn-secondary:hover { background: #3a5f73; text-decoration: none; }
+      .btn-ghost { background: transparent; color: var(--color-text); border: 1.5px solid var(--color-border); }
+      .btn-ghost:hover { border-color: var(--color-text-muted); background: var(--color-bg); text-decoration: none; }
+      .btn-danger { background: var(--color-error); color: white; }
+      .btn-danger:hover { background: #b91c2c; text-decoration: none; }
+      .btn:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+
+      /* Tab */
+      .papaya-tab { padding: 10px 20px; font-size: 14px; font-family: inherit; font-weight: 400; color: var(--color-text-muted); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -1.5px; cursor: pointer; transition: color 0.15s, border-color 0.15s; white-space: nowrap; }
+      .papaya-tab:hover { color: var(--color-text); }
+      .papaya-tab.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 500; }
+
+      /* Chip */
+      .papaya-chip { display: inline-flex; align-items: center; background: var(--color-accent); color: var(--color-primary-dark); border: 0.5px solid var(--color-border); border-radius: 20px; padding: 6px 12px; font-size: 12px; font-family: inherit; cursor: pointer; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+      .papaya-chip:hover { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+
+      /* HotelCard */
+      .hotel-card { transition: box-shadow 0.18s, transform 0.18s; cursor: pointer; }
+      .hotel-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.10); transform: translateY(-2px); }
+
+      /* Hero overlay buttons */
+      .hero-btn-delete { background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 4px 10px; color: rgba(255,255,255,0.5); font-size: 12px; font-family: inherit; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+      .hero-btn-delete:hover { border-color: var(--color-error); color: #FCA5A5; }
+      .hero-btn-icon { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 8px; color: rgba(255,255,255,0.5); cursor: pointer; display: flex; align-items: center; line-height: 1; transition: background 0.15s, color 0.15s; }
+      .hero-btn-icon:hover { background: rgba(255,255,255,0.18); color: white; }
+
+      /* Maya floating action button */
+      .maya-fab { display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%); color: white; border: none; border-radius: 100px; padding: 13px 22px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; box-shadow: 0 4px 20px rgba(240,115,50,0.45); transition: transform 0.15s, box-shadow 0.15s; }
+      .maya-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(240,115,50,0.55); }
+
+      /* Maya suggested prompt chips */
+      .maya-prompt { background: var(--color-surface); border: 1.5px solid var(--color-border); border-radius: 100px; padding: 5px 12px; font-size: 12px; color: var(--color-text-muted); cursor: pointer; font-family: inherit; transition: border-color 0.15s, color 0.15s; }
+      .maya-prompt:hover { border-color: var(--color-primary); color: var(--color-primary); }
+
+      /* Maya panel close/back icon buttons */
+      .maya-icon-btn { background: transparent; border: none; color: var(--color-text-muted); cursor: pointer; padding: 4px; display: flex; align-items: center; border-radius: 6px; transition: color 0.15s, background 0.15s; }
+      .maya-icon-btn:hover { color: var(--color-text); background: var(--color-bg); }
+
+      /* TabBar — hide scrollbar on overflow-x */
+      .papaya-tabbar { scrollbar-width: none; -ms-overflow-style: none; }
+      .papaya-tabbar::-webkit-scrollbar { display: none; }
     </style>
   </head>
   <body>

@@ -198,7 +198,7 @@ export default function HotelDetailPanel({ hotel, onClose }: Props) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    background: 'var(--color-primary)',
+                    background: '#1C2B3A',
                     color: 'white',
                     borderRadius: 10,
                     padding: '13px 20px',

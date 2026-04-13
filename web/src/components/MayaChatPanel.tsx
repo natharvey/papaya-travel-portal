@@ -28,6 +28,17 @@ function formatTime(dateStr: string): string {
     ' ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })
 }
 
+const MayaAvatar = () => (
+  <div style={{
+    width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(240,115,50,0.30)',
+  }}>
+    <span style={{ color: 'white', fontWeight: 800, fontSize: 13, fontFamily: 'inherit' }}>M</span>
+  </div>
+)
+
 export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onItineraryUpdated, hidden }: Props) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<'maya' | 'advisor'>('maya')
@@ -36,7 +47,7 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
   const [chatMessages, setChatMessages] = useState<{ role: string; content: string }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
-  const [greetingText, setGreetingText] = useState('')
+  const [visibleWords, setVisibleWords] = useState(0)
   const [greetingDone, setGreetingDone] = useState(false)
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
@@ -46,22 +57,29 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
   const advisorBottomRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = messages.filter(m => m.sender_type === 'ADMIN' && !m.is_read).length
+  const greetingWords = MAYA_GREETING.split(' ')
+  const greetingText = greetingWords.slice(0, visibleWords).join(' ')
 
-  // Typewriter greeting when panel opens in maya view
+  // Word-by-word greeting when panel opens
   useEffect(() => {
     if (!open || view !== 'maya') return
-    setGreetingText('')
+    setVisibleWords(0)
     setGreetingDone(false)
     let i = 0
-    const timer = setInterval(() => {
+    function revealNext() {
       i++
-      setGreetingText(MAYA_GREETING.slice(0, i))
-      if (i >= MAYA_GREETING.length) {
-        clearInterval(timer)
+      setVisibleWords(i)
+      if (i >= greetingWords.length) {
         setGreetingDone(true)
+        return
       }
-    }, 18)
-    return () => clearInterval(timer)
+      // Variable timing: short words faster, longer words slightly slower
+      const word = greetingWords[i - 1]
+      const delay = word.length <= 3 ? 55 : word.endsWith(',') || word.endsWith('.') ? 160 : 75
+      setTimeout(revealNext, delay)
+    }
+    const start = setTimeout(revealNext, 200)
+    return () => clearTimeout(start)
   }, [open, view])
 
   // Mark advisor messages read when switching to advisor view
@@ -116,35 +134,16 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
     }
   }
 
-  const MayaAvatar = () => (
-    <div style={{
-      width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-      background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 2px 8px rgba(240,115,50,0.35)',
-    }}>
-      <span style={{ color: 'white', fontWeight: 800, fontSize: 14, fontFamily: 'inherit' }}>M</span>
-    </div>
-  )
-
   return (
     <>
       {/* Floating button */}
       <button
         onClick={handleOpen}
+        className="maya-fab"
         style={{
           position: 'fixed', bottom: 28, right: 28, zIndex: 1000,
           opacity: hidden ? 0 : 1, pointerEvents: hidden ? 'none' : 'auto',
-          display: 'flex', alignItems: 'center', gap: 8,
-          background: 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)',
-          color: 'white', border: 'none', borderRadius: '100px',
-          padding: '13px 22px', fontSize: 14, fontWeight: 700,
-          cursor: 'pointer', fontFamily: 'inherit',
-          boxShadow: '0 4px 20px rgba(240,115,50,0.45)',
-          transition: 'opacity 0.2s, transform 0.15s, box-shadow 0.15s',
         }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(240,115,50,0.55)' }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(240,115,50,0.45)' }}
       >
         <Sparkles size={16} />
         Ask Maya
@@ -161,35 +160,37 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
       {open && (
         <div style={{
           position: 'fixed', bottom: 90, right: 28, zIndex: 1001,
-          width: 380, background: 'white',
-          borderRadius: 16, boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+          width: 360, background: 'var(--color-surface)',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--color-border)',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
           animation: 'slideUp 0.2s ease',
         }}>
-          {/* Header */}
+          {/* Header — always white */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
-            padding: '14px 16px', borderBottom: '1px solid var(--color-border)',
-            background: view === 'advisor' ? 'var(--color-secondary)' : 'linear-gradient(135deg, var(--color-primary) 0%, #D45E1E 100%)',
+            padding: '13px 14px',
+            borderBottom: '1.5px solid var(--color-border)',
+            background: 'var(--color-surface)',
           }}>
-            {view === 'advisor' && (
-              <button
-                onClick={() => setView('maya')}
-                style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
-              >
+            {view === 'advisor' ? (
+              <button onClick={() => setView('maya')} className="maya-icon-btn">
                 <ChevronLeft size={18} />
               </button>
+            ) : (
+              <MayaAvatar />
             )}
-            {view === 'maya' && <Sparkles size={16} color="white" />}
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 14, flex: 1 }}>
-              {view === 'maya' ? 'Ask Maya' : 'Your Travel Advisor'}
-            </span>
-            <button
-              onClick={() => setOpen(false)}
-              style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
-            >
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text)', lineHeight: 1.2 }}>
+                {view === 'maya' ? 'Maya' : 'Your Travel Advisor'}
+              </div>
+              {view === 'maya' && (
+                <div style={{ fontSize: 11, color: 'var(--color-success)', fontWeight: 600 }}>● Online</div>
+              )}
+            </div>
+            <button onClick={() => setOpen(false)} className="maya-icon-btn">
               <X size={18} />
             </button>
           </div>
@@ -200,38 +201,34 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
               <div style={{
                 flex: 1, overflowY: 'auto', padding: '14px',
                 display: 'flex', flexDirection: 'column', gap: 10,
-                height: 360, background: '#F8FAFC',
+                height: 360, background: 'var(--color-bg)',
               }}>
-                {/* Greeting */}
+                {/* Greeting bubble */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <MayaAvatar />
                   <div style={{
-                    maxWidth: '85%', padding: '10px 13px', fontSize: 13, lineHeight: 1.6,
-                    borderRadius: '16px 16px 16px 4px', background: 'white',
-                    border: '1px solid var(--color-border)', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                    minHeight: 40,
+                    maxWidth: '85%', padding: '10px 13px', fontSize: 13, lineHeight: 1.65,
+                    borderRadius: '4px 16px 16px 16px',
+                    background: 'var(--color-surface)',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-sm)',
+                    minHeight: 40, color: 'var(--color-text)',
                   }}>
                     {greetingText}
                     {!greetingDone && (
-                      <span style={{ display: 'inline-block', width: 2, height: '1em', background: 'var(--color-primary)', marginLeft: 1, verticalAlign: 'text-bottom', animation: 'blink 0.8s step-end infinite' }} />
+                      <span style={{ display: 'inline-block', width: 2, height: '1em', background: 'var(--color-primary)', marginLeft: 2, verticalAlign: 'text-bottom', animation: 'blink 0.8s step-end infinite' }} />
                     )}
                   </div>
                 </div>
 
                 {/* Suggested prompts */}
                 {greetingDone && chatMessages.length === 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 40 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 38 }}>
                     {SUGGESTED_PROMPTS.map(prompt => (
                       <button
                         key={prompt}
                         onClick={() => setChatInput(prompt)}
-                        style={{
-                          background: 'white', border: '1.5px solid var(--color-border)',
-                          borderRadius: '100px', padding: '5px 12px', fontSize: 12,
-                          color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'inherit',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.color = 'var(--color-primary)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
+                        className="maya-prompt"
                       >
                         {prompt}
                       </button>
@@ -244,12 +241,12 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
                   <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-start', gap: 8 }}>
                     {msg.role === 'assistant' && <MayaAvatar />}
                     <div style={{
-                      maxWidth: '80%', padding: '10px 13px', fontSize: 13, lineHeight: 1.5,
-                      borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                      background: msg.role === 'user' ? 'var(--color-primary)' : 'white',
+                      maxWidth: '80%', padding: '10px 13px', fontSize: 13, lineHeight: 1.6,
+                      borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                      background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-surface)',
                       color: msg.role === 'user' ? 'white' : 'var(--color-text)',
                       border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                      boxShadow: 'var(--shadow-sm)',
                     }}>
                       {msg.content}
                     </div>
@@ -259,14 +256,28 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
                 {chatLoading && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <MayaAvatar />
-                    <div style={{ padding: '10px 13px', borderRadius: '16px 16px 16px 4px', background: 'white', border: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: 13 }}>Thinking...</div>
+                    <div style={{
+                      padding: '10px 13px', borderRadius: '4px 16px 16px 16px',
+                      background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+                      boxShadow: 'var(--shadow-sm)',
+                      display: 'flex', gap: 5, alignItems: 'center',
+                    }}>
+                      {[0, 1, 2].map(n => (
+                        <span key={n} style={{
+                          width: 7, height: 7, borderRadius: '50%',
+                          background: 'var(--color-text-muted)',
+                          display: 'inline-block',
+                          animation: `blink 1.2s ease-in-out ${n * 0.2}s infinite`,
+                        }} />
+                      ))}
+                    </div>
                   </div>
                 )}
                 <div ref={chatBottomRef} />
               </div>
 
               {/* Maya input */}
-              <div style={{ padding: '10px 12px', borderTop: '1px solid var(--color-border)', background: 'white', display: 'flex', gap: 8 }}>
+              <div style={{ padding: '10px 12px', borderTop: '1.5px solid var(--color-border)', background: 'var(--color-surface)', display: 'flex', gap: 8 }}>
                 <input
                   type="text"
                   value={chatInput}
@@ -274,12 +285,23 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMaya() } }}
                   placeholder="Ask Maya to change your itinerary..."
                   disabled={chatLoading}
-                  style={{ flex: 1, border: '1.5px solid var(--color-border)', borderRadius: 9, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
+                  style={{
+                    flex: 1, border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius)',
+                    padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                    background: 'var(--color-bg)', color: 'var(--color-text)',
+                  }}
                 />
                 <button
                   onClick={handleSendMaya}
                   disabled={chatLoading || !chatInput.trim()}
-                  style={{ padding: '0 13px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 9, cursor: chatLoading || !chatInput.trim() ? 'default' : 'pointer', opacity: chatLoading || !chatInput.trim() ? 0.5 : 1, display: 'flex', alignItems: 'center' }}
+                  style={{
+                    padding: '0 13px', background: 'var(--color-primary)', color: 'white',
+                    border: 'none', borderRadius: 'var(--radius)',
+                    cursor: chatLoading || !chatInput.trim() ? 'default' : 'pointer',
+                    opacity: chatLoading || !chatInput.trim() ? 0.45 : 1,
+                    display: 'flex', alignItems: 'center',
+                    transition: 'opacity 0.15s',
+                  }}
                 >
                   <Send size={15} />
                 </button>
@@ -289,9 +311,15 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
               <div style={{ padding: '8px 14px 12px', textAlign: 'center' }}>
                 <button
                   onClick={() => setView('advisor')}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--color-text-muted)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textDecorationColor: 'transparent' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)'; e.currentTarget.style.textDecorationColor = 'var(--color-text)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.textDecorationColor = 'transparent' }}
+                  style={{
+                    background: 'transparent', border: 'none',
+                    color: 'var(--color-text-muted)', fontSize: 12,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    textDecoration: 'underline', textDecorationColor: 'var(--color-border)',
+                    transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--color-text)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-text-muted)' }}
                 >
                   Speak to your travel advisor →
                 </button>
@@ -305,11 +333,11 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
               <div style={{
                 flex: 1, overflowY: 'auto', padding: '14px',
                 display: 'flex', flexDirection: 'column', gap: 10,
-                height: 380, background: '#F8FAFC',
+                height: 380, background: 'var(--color-bg)',
               }}>
                 {messages.length === 0 && (
-                  <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13, padding: '40px 20px' }}>
-                    No messages yet. Send a message and your advisor will get back to you.
+                  <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 13, padding: '40px 20px', lineHeight: 1.6 }}>
+                    No messages yet. Send a note and your travel advisor will get back to you.
                   </div>
                 )}
                 {messages.map(msg => {
@@ -317,13 +345,13 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
                   return (
                     <div key={msg.id} style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start' }}>
                       <div style={{
-                        maxWidth: '80%', padding: '9px 13px', fontSize: 13, lineHeight: 1.5,
-                        borderRadius: isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                        maxWidth: '80%', padding: '9px 13px', fontSize: 13, lineHeight: 1.6,
+                        borderRadius: isOwn ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
                         background: isOwn ? 'var(--color-primary)' : 'var(--color-secondary)',
-                        color: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                        color: 'white', boxShadow: 'var(--shadow-sm)',
                       }}>
-                        <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.75, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          {isOwn ? 'You' : 'Papaya Team'} · {formatTime(msg.created_at)}
+                        <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.7, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {isOwn ? 'You' : 'Papaya'} · {formatTime(msg.created_at)}
                         </div>
                         {msg.body}
                       </div>
@@ -334,20 +362,31 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
               </div>
 
               {/* Advisor input */}
-              <div style={{ padding: '10px 12px 12px', borderTop: '1px solid var(--color-border)', background: 'white', display: 'flex', gap: 8 }}>
+              <div style={{ padding: '10px 12px 12px', borderTop: '1.5px solid var(--color-border)', background: 'var(--color-surface)', display: 'flex', gap: 8 }}>
                 <input
                   type="text"
                   value={advisorInput}
                   onChange={e => setAdvisorInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendAdvisor() } }}
-                  placeholder="Message your advisor..."
+                  placeholder="Message your travel advisor..."
                   disabled={advisorSending}
-                  style={{ flex: 1, border: '1.5px solid var(--color-border)', borderRadius: 9, padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit' }}
+                  style={{
+                    flex: 1, border: '1.5px solid var(--color-border)', borderRadius: 'var(--radius)',
+                    padding: '9px 12px', fontSize: 13, outline: 'none', fontFamily: 'inherit',
+                    background: 'var(--color-bg)', color: 'var(--color-text)',
+                  }}
                 />
                 <button
                   onClick={handleSendAdvisor}
                   disabled={advisorSending || !advisorInput.trim()}
-                  style={{ padding: '0 13px', background: 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: 9, cursor: advisorSending || !advisorInput.trim() ? 'default' : 'pointer', opacity: advisorSending || !advisorInput.trim() ? 0.5 : 1, display: 'flex', alignItems: 'center' }}
+                  style={{
+                    padding: '0 13px', background: 'var(--color-secondary)', color: 'white',
+                    border: 'none', borderRadius: 'var(--radius)',
+                    cursor: advisorSending || !advisorInput.trim() ? 'default' : 'pointer',
+                    opacity: advisorSending || !advisorInput.trim() ? 0.45 : 1,
+                    display: 'flex', alignItems: 'center',
+                    transition: 'opacity 0.15s',
+                  }}
                 >
                   <Send size={15} />
                 </button>

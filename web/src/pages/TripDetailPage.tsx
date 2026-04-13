@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import React, { lazy, Suspense, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import PDFDownloadButton from '../components/PDFDownloadButton'
 import Layout from '../components/Layout'
@@ -6,43 +6,26 @@ import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimelin
 import LoadingSpinner from '../components/LoadingSpinner'
 import MayaChatPanel from '../components/MayaChatPanel'
 import HotelDetailPanel from '../components/HotelDetailPanel'
-import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, Download, ExternalLink, Hotel, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
-import { usePlacePhoto } from '../hooks/usePlacePhoto'
+import HotelCard from '../components/HotelCard'
+import Button from '../components/Button'
+import Badge from '../components/Badge'
+import { TabBar, Tab } from '../components/TabBar'
+import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, ExternalLink, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
+import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
 import type { HotelSuggestion } from '../types'
 const FlightMap = lazy(() => import('../components/FlightMap'))
-const ItineraryMap = lazy(() => import('../components/ItineraryMap'))
+const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
 import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
-import type { TripDetail, Message, Itinerary } from '../types'
+import type { TripDetail, Message } from '../types'
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  GENERATING: { bg: '#F5F3FF', text: '#6D28D9' },
-  ACTIVE:     { bg: '#F0FDF6', text: '#166534' },
-  COMPLETED:  { bg: '#F8F8F8', text: '#6B7280' },
+const STATUS_BADGE: Record<string, 'active' | 'muted' | 'warning'> = {
+  ACTIVE:     'active',
+  COMPLETED:  'muted',
+  GENERATING: 'warning',
 }
 
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: 'transparent',
-        border: 'none',
-        borderBottom: active ? '3px solid var(--color-primary)' : '3px solid transparent',
-        padding: '12px 20px',
-        fontSize: '14px',
-        fontWeight: active ? 700 : 500,
-        color: active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-        cursor: 'pointer',
-        transition: 'all 0.15s',
-      }}
-    >
-      {label}
-    </button>
-  )
 }
 
 function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON }) {
@@ -60,80 +43,90 @@ function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON
     }
   }
   return (
-    <button onClick={handleCopy} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-text-muted)'; e.currentTarget.style.color = 'var(--color-text)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)' }}
-    >
+    <Button variant="ghost" size="sm" onClick={handleCopy}>
       {copied ? '✓ Copied' : 'Copy summary'}
-    </button>
+    </Button>
   )
 }
 
-function HotelCard({ hotel, onClick }: { hotel: HotelSuggestion; onClick: () => void }) {
-  const hasEnrichedData = hotel.photo_url !== undefined
-  const live = usePlacePhoto(
-    hasEnrichedData ? '' : hotel.name,
-    hasEnrichedData ? '' : hotel.destination,
-  )
-  const photoUrl = hotel.photo_url ?? live.photoUrl
-  const rating = hotel.rating ?? live.rating
-  const loading = hasEnrichedData ? false : live.loading
+
+
+const GENERATION_STEPS = [
+  { label: 'Researching your destination', duration: 4000 },
+  { label: 'Planning your day-by-day route', duration: 5000 },
+  { label: 'Finding the best activities', duration: 5000 },
+  { label: 'Sourcing hotel options', duration: 5000 },
+  { label: 'Checking flights and routes', duration: 5000 },
+  { label: 'Adding local tips and notes', duration: 4000 },
+  { label: 'Finalising your itinerary', duration: 0 },
+]
+
+function GeneratingAnimation() {
+  const [currentStep, setCurrentStep] = useState(0)
+
+  useEffect(() => {
+    const step = GENERATION_STEPS[currentStep]
+    if (!step || step.duration === 0) return
+    const timer = setTimeout(() => {
+      setCurrentStep(s => Math.min(s + 1, GENERATION_STEPS.length - 1))
+    }, step.duration)
+    return () => clearTimeout(timer)
+  }, [currentStep])
+
   return (
-    <div
-      onClick={onClick}
-      style={{
-        border: '1.5px solid var(--color-border)',
-        borderRadius: 14,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'box-shadow 0.18s, transform 0.18s',
-        background: 'var(--color-bg)',
-      }}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.boxShadow = '0 6px 24px rgba(0,0,0,0.10)'
-        el.style.transform = 'translateY(-1px)'
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLDivElement
-        el.style.boxShadow = 'none'
-        el.style.transform = 'none'
-      }}
-    >
-      {/* Photo */}
-      <div style={{ position: 'relative', width: '100%', height: 140, background: '#F3F4F6' }}>
-        {loading && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: 22, height: 22, border: '3px solid #E5E7EB', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          </div>
-        )}
-        {!loading && photoUrl && (
-          <img src={photoUrl} alt={hotel.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        )}
-        {!loading && !photoUrl && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🏨</div>
-        )}
-        {rating && (
-          <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-            ★ {rating.toFixed(1)}
-          </div>
-        )}
+    <div style={{ maxWidth: 480, margin: '48px auto', padding: '0 20px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🌴</div>
+        <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--color-text)' }}>
+          Building your itinerary…
+        </h3>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 14, lineHeight: 1.6 }}>
+          Usually takes 1–2 minutes. This page updates automatically.
+        </p>
       </div>
 
-      {/* Info */}
-      <div style={{ padding: '12px 14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text)', marginBottom: 2 }}>{hotel.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{hotel.area} · {hotel.style}</div>
-          </div>
-          {hotel.price_per_night_aud && (
-            <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              ~${hotel.price_per_night_aud}<span style={{ fontWeight: 400, fontSize: 11, color: 'var(--color-text-muted)' }}>/night</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {GENERATION_STEPS.map((step, i) => {
+          const done = i < currentStep
+          const active = i === currentStep
+          return (
+            <div
+              key={i}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px',
+                borderRadius: 'var(--radius)',
+                background: done ? 'var(--color-bg)' : active ? 'var(--color-accent)' : 'transparent',
+                border: `1px solid ${done ? 'var(--color-border)' : active ? '#FCD9B8' : 'transparent'}`,
+                transition: 'all 0.4s ease',
+                opacity: i > currentStep + 1 ? 0.35 : 1,
+              }}
+            >
+              <div style={{
+                width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: done ? 'var(--color-success)' : active ? 'var(--color-primary)' : 'var(--color-border)',
+                transition: 'background 0.4s ease',
+              }}>
+                {done ? (
+                  <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>✓</span>
+                ) : active ? (
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'blink 1s ease-in-out infinite' }} />
+                ) : (
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'white', display: 'inline-block', opacity: 0.5 }} />
+                )}
+              </div>
+              <span style={{
+                fontSize: 14, fontWeight: active ? 600 : 400,
+                color: done ? 'var(--color-text-muted)' : active ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
+                transition: 'color 0.4s ease',
+                textDecoration: done ? 'line-through' : 'none',
+              }}>
+                {step.label}
+              </span>
             </div>
-          )}
-        </div>
-        <p style={{ fontSize: 12, color: '#6B7280', margin: '8px 0 0', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{hotel.why_suits}</p>
+          )
+        })}
       </div>
     </div>
   )
@@ -145,12 +138,12 @@ export default function TripDetailPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'accommodation' | 'flights' | 'documents'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'accommodation' | 'flights' | 'notes' | 'documents'>('itinerary')
   const [documents, setDocuments] = useState<TripDocument[]>([])
   const [docUploading, setDocUploading] = useState(false)
   const [docError, setDocError] = useState('')
 
-  function switchTab(next: 'itinerary' | 'accommodation' | 'flights' | 'documents') {
+  function switchTab(next: 'itinerary' | 'accommodation' | 'flights' | 'notes' | 'documents') {
     setTab(next)
     // Auto-load accommodation suggestions when tab opens if itinerary has no hotel_suggestions
     if (next === 'accommodation' && !accommodation && !accommodationLoading) {
@@ -162,6 +155,9 @@ export default function TripDetailPage() {
       }
     }
   }
+
+  // Selected day — shared between UnifiedTripMap and ItineraryTimeline
+  const [selectedDay, setSelectedDay] = useState(1)
 
   // Hotel detail panel
   const [selectedHotel, setSelectedHotel] = useState<HotelSuggestion | null>(null)
@@ -292,12 +288,14 @@ export default function TripDetailPage() {
     }
   }
 
-  // Hero photo — must be called before early returns (Rules of Hooks)
+  // Hero photos — all hooks must be called before early returns (Rules of Hooks)
   const latestItineraryForHero = trip?.itineraries?.length
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
-  const heroQuery = latestItineraryForHero?.itinerary_json.destinations?.[0]?.name || trip?.title || ''
-  const { photoUrl: heroPhotoUrl } = usePlacePhoto(heroQuery, '')
+  const heroDests = latestItineraryForHero?.itinerary_json.destinations || []
+  const { photoUrl: heroPhoto0 } = useDestinationPhoto(heroDests[0]?.name || trip?.title || '')
+  const { photoUrl: heroPhoto1 } = useDestinationPhoto(heroDests[1]?.name || '')
+  const { photoUrl: heroPhoto2 } = useDestinationPhoto(heroDests[2]?.name || '')
 
   if (loading) {
     return (
@@ -327,7 +325,7 @@ export default function TripDetailPage() {
     )
   }
 
-  const statusColors = STATUS_COLORS[trip.status] || STATUS_COLORS.GENERATING
+  const statusBadgeVariant = STATUS_BADGE[trip.status] || 'warning'
   const latestItinerary = trip.itineraries.length > 0
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
@@ -336,157 +334,138 @@ export default function TripDetailPage() {
     (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
   )
 
+  const showMosaic = heroDests.length >= 2
+  const thumbDests = heroDests.slice(1, 3) // up to 2 right-side thumbnails
+  const thumbPhotos = [heroPhoto1, heroPhoto2]
+
   return (
     <Layout variant="client">
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 24px 60px' }}>
-        {/* Breadcrumb */}
-        <div style={{ marginBottom: '20px' }}>
-          <Link to="/portal" style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+      {/* ── HERO ── */}
+      <div style={{ position: 'relative', width: '100%', height: 400, overflow: 'hidden', flexShrink: 0, background: 'var(--color-secondary)' }}>
+
+        {showMosaic ? (
+          /* ── Mosaic layout: main photo left, thumbnails right ── */
+          <div style={{ display: 'grid', gridTemplateColumns: '62% 38%', gridTemplateRows: `repeat(${thumbDests.length === 1 ? 1 : 2}, 1fr)`, gap: 3, height: '100%' }}>
+            {/* Main photo */}
+            <div style={{ gridRow: `1 / ${thumbDests.length === 1 ? 2 : 3}`, position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
+              {heroPhoto0 && <img src={heroPhoto0} alt={heroDests[0]?.name || trip.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.25) 50%, rgba(0,0,0,0.05) 100%)' }} />
+            </div>
+            {/* Thumbnails */}
+            {thumbDests.map((dest, i) => (
+              <div key={dest.name} style={{ position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
+                {thumbPhotos[i] && <img src={thumbPhotos[i]!} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.0) 60%)' }} />
+                <div style={{
+                  position: 'absolute', bottom: 10, left: 12,
+                  background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(6px)',
+                  color: 'white', fontSize: 11, fontWeight: 700,
+                  padding: '3px 9px', borderRadius: 5,
+                }}>
+                  {dest.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* ── Single photo banner fallback ── */
+          <>
+            {heroPhoto0 && <img src={heroPhoto0} alt={trip.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.40) 55%, rgba(0,0,0,0.14) 100%)' }} />
+          </>
+        )}
+
+        {/* Top row: breadcrumb + status + delete */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '22px 40px', zIndex: 2 }}>
+          <Link to="/portal" style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>
             ← Your Trips
           </Link>
-        </div>
-
-        {/* Trip header */}
-        <div style={{
-          position: 'relative',
-          background: 'linear-gradient(135deg, var(--color-secondary) 0%, #1A3344 100%)',
-          color: 'white',
-          borderRadius: 'var(--radius-lg)',
-          padding: '28px 32px',
-          marginBottom: '24px',
-          overflow: 'hidden',
-        }}>
-          {/* Hero photo background */}
-          {heroPhotoUrl && (
-            <>
-              <div style={{
-                position: 'absolute', inset: 0,
-                backgroundImage: `url(${heroPhotoUrl})`,
-                backgroundSize: 'cover', backgroundPosition: 'center',
-                borderRadius: 'var(--radius-lg)',
-              }} />
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(135deg, rgba(15,31,61,0.82) 0%, rgba(26,51,68,0.78) 100%)',
-                borderRadius: 'var(--radius-lg)',
-              }} />
-            </>
-          )}
-          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ flex: 1 }}>
-              {/* Editable title */}
-              {editingTitle ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <input
-                    autoFocus
-                    value={titleInput}
-                    onChange={e => setTitleInput(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleSaveTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
-                    style={{
-                      fontSize: '22px', fontWeight: 800, background: 'rgba(255,255,255,0.15)',
-                      border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 8,
-                      padding: '4px 10px', color: 'white', outline: 'none', fontFamily: 'inherit', width: '100%', maxWidth: 400,
-                    }}
-                  />
-                  <button onClick={handleSaveTitle} disabled={titleSaving} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, padding: '5px 12px', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {titleSaving ? '...' : 'Save'}
-                  </button>
-                  <button onClick={() => setEditingTitle(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <h1 style={{ fontSize: '26px', fontWeight: 800, margin: 0 }}>{trip.title}</h1>
-                  <button
-                    onClick={() => { setTitleInput(trip.title); setEditingTitle(true) }}
-                    title="Edit title"
-                    style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, padding: '5px 7px', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', lineHeight: 1 }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'white' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
-                  >
-                    <Pencil size={13} strokeWidth={2} />
-                  </button>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                {[
-                  { Icon: PlaneTakeoff, label: `From ${trip.origin_city}` },
-                  { Icon: Calendar, label: `${formatDate(trip.start_date)} — ${formatDate(trip.end_date)}` },
-                  { Icon: Clock, label: `${tripDays} days` },
-                  { Icon: Wallet, label: `$${trip.budget_range}` },
-                ].map(({ Icon, label }) => (
-                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: 'rgba(255,255,255,0.6)' }}>
-                    <Icon size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
-                    {label}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-              <span style={{
-                background: statusColors.bg, color: statusColors.text,
-                padding: '6px 16px', borderRadius: '100px', fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
-              }}>
-                {trip.status}
-              </span>
-              {confirmDelete ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Delete trip?</span>
-                  <button onClick={handleDeleteTrip} disabled={deleting} style={{ background: '#EF4444', border: 'none', borderRadius: 6, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {deleting ? '...' : 'Yes, delete'}
-                  </button>
-                  <button onClick={() => setConfirmDelete(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, padding: '4px 10px', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#FCA5A5' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
-                >
-                  Delete trip
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Badge variant={statusBadgeVariant}>{trip.status}</Badge>
+            {confirmDelete ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Delete trip?</span>
+                <button onClick={handleDeleteTrip} disabled={deleting} className="hero-btn-delete" style={{ borderColor: 'var(--color-error)', color: '#FCA5A5', fontWeight: 700 }}>
+                  {deleting ? '...' : 'Yes, delete'}
                 </button>
-              )}
-            </div>
+                <button onClick={() => setConfirmDelete(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="hero-btn-delete"
+              >
+                Delete trip
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{
-          background: 'white',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-sm)',
-          overflow: 'hidden',
-        }}>
-          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', overflowX: 'auto' }}>
-            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
-            <TabButton label="Accommodation" active={tab === 'accommodation'} onClick={() => switchTab('accommodation')} />
-            <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
-            <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
+        {/* Bottom: title + meta — constrained to main photo area in mosaic */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: showMosaic ? '38%' : 0, padding: '0 40px 36px', zIndex: 2 }}>
+          {editingTitle ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <input
+                autoFocus
+                value={titleInput}
+                onChange={e => setTitleInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSaveTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
+                style={{
+                  fontSize: '36px', fontWeight: 900, background: 'rgba(255,255,255,0.1)',
+                  border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10,
+                  padding: '6px 14px', color: 'white', outline: 'none', fontFamily: 'inherit', width: 480,
+                }}
+              />
+              <button onClick={handleSaveTitle} disabled={titleSaving} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '8px 16px', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {titleSaving ? '...' : 'Save'}
+              </button>
+              <button onClick={() => setEditingTitle(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <h1 style={{ fontSize: showMosaic ? '36px' : '46px', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.05, letterSpacing: '-0.5px', textShadow: '0 2px 24px rgba(0,0,0,0.4)' }}>{trip.title}</h1>
+              <button
+                onClick={() => { setTitleInput(trip.title); setEditingTitle(true) }}
+                title="Edit title"
+                className="hero-btn-icon"
+              >
+                <Pencil size={13} strokeWidth={2} />
+              </button>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            {[
+              { Icon: PlaneTakeoff, label: `From ${trip.origin_city}` },
+              { Icon: Calendar, label: `${formatDate(trip.start_date)} — ${formatDate(trip.end_date)}` },
+              { Icon: Clock, label: `${tripDays} days` },
+              { Icon: Wallet, label: `$${trip.budget_range}` },
+            ].map(({ Icon, label }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'rgba(255,255,255,0.72)', fontWeight: 500 }}>
+                <Icon size={13} color="rgba(255,255,255,0.45)" strokeWidth={2} />
+                {label}
+              </span>
+            ))}
           </div>
+        </div>
+      </div>
 
-          <div style={{ padding: '28px' }}>
+      {/* ── CONTENT ── */}
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px 80px' }}>
+        {/* Tabs */}
+        <TabBar style={{ marginBottom: 36, marginTop: 8 }}>
+          <Tab label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
+          <Tab label="Accommodation" active={tab === 'accommodation'} onClick={() => switchTab('accommodation')} />
+          <Tab label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
+          <Tab label="Travel Notes" active={tab === 'notes'} onClick={() => switchTab('notes')} />
+          <Tab label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
+        </TabBar>
+        <div>
             {/* Itinerary Tab */}
             {tab === 'itinerary' && (
               <>
-                {trip.status === 'GENERATING' && (
-                  <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-                      <LoadingSpinner size={40} label="" />
-                    </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>
-                      Building your itinerary...
-                    </h3>
-                    <p style={{ color: 'var(--color-text-muted)', lineHeight: '1.6', maxWidth: '420px', margin: '0 auto' }}>
-                      Our AI is researching real places, hotels, and experiences tailored just for you.
-                      This usually takes 1–2 minutes — this page updates automatically.
-                    </p>
-                  </div>
-                )}
+                {trip.status === 'GENERATING' && <GeneratingAnimation />}
                 {!latestItinerary && trip.status !== 'GENERATING' && (
                   <div style={{ textAlign: 'center', padding: '48px 20px' }}>
                     <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
@@ -521,9 +500,9 @@ export default function TripDetailPage() {
                         />
                       </div>
                     </div>
-                    {/* Blurb: overview + destination pills */}
+                    {/* Blurb: overview + destination pills — match ItineraryTimeline's 820px width */}
                     {(latestItinerary.itinerary_json.overview || latestItinerary.itinerary_json.destinations?.length > 0) && (
-                      <div style={{ marginBottom: 24 }}>
+                      <div style={{ marginBottom: 24, maxWidth: 820 }}>
                         {latestItinerary.itinerary_json.overview && (
                           <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '14px' }}>
                             {latestItinerary.itinerary_json.overview}
@@ -532,7 +511,7 @@ export default function TripDetailPage() {
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
                           {latestItinerary.itinerary_json.destinations?.map((d: { name: string; nights: number }, i: number) => (
                             <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
-                              <MapPin size={11} strokeWidth={2.5} color="#FF6B35" />
+                              <MapPin size={11} strokeWidth={2.5} color="var(--color-primary)" />
                               {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
                             </span>
                           ))}
@@ -540,20 +519,27 @@ export default function TripDetailPage() {
                       </div>
                     )}
 
-                    {/* Journey map — only renders when transport_legs present */}
-                    {latestItinerary.itinerary_json.transport_legs && latestItinerary.itinerary_json.transport_legs.length > 0 && (
-                      <Suspense fallback={<div style={{ height: 300, background: '#e8f0f5', borderRadius: 12, marginBottom: 28 }} />}>
-                        <ItineraryMap
-                          itinerary={latestItinerary.itinerary_json}
-                          originCity={trip.origin_city}
-                          stays={trip.stays ?? []}
-                        />
-                      </Suspense>
+                    {/* Unified journey map — shows full trip routes + flies to selected day */}
+                    {((latestItinerary.itinerary_json.destinations?.length ?? 0) > 0 || (latestItinerary.itinerary_json.transport_legs?.length ?? 0) > 0) && (
+                      <div style={{ maxWidth: 820 }}>
+                        <Suspense fallback={<div style={{ height: 340, background: '#e8f0f5', borderRadius: 12, marginBottom: 28 }} />}>
+                          <UnifiedTripMap
+                            itinerary={latestItinerary.itinerary_json}
+                            originCity={trip.origin_city}
+                            stays={trip.stays ?? []}
+                            selectedDayNum={selectedDay}
+                            onDaySelect={setSelectedDay}
+                          />
+                        </Suspense>
+                      </div>
                     )}
 
                     <ItineraryTimeline
                       data={latestItinerary.itinerary_json}
                       hideOverview
+                      hideSections
+                      selectedDay={selectedDay}
+                      onDaySelect={setSelectedDay}
                       onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
                         if (!tripId) return
                         const res = await editItineraryBlock(tripId, {
@@ -742,7 +728,7 @@ export default function TripDetailPage() {
                 {trip.flights && trip.flights.length > 0 ? (
                   <div>
                     <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Your route</h3>
-                    <Suspense fallback={<div style={{ height: 260, background: '#0f1f3d', borderRadius: 'var(--radius-lg)' }} />}>
+                    <Suspense fallback={<div style={{ height: 260, background: 'var(--color-secondary)', borderRadius: 'var(--radius-lg)' }} />}>
                       <FlightMap flights={trip.flights} originCity={trip.origin_city} />
                     </Suspense>
                   </div>
@@ -843,7 +829,7 @@ export default function TripDetailPage() {
                         </div>
                       </div>
                       {/* Mini route map for looked-up flight */}
-                      <Suspense fallback={<div style={{ height: 180, background: '#0f1f3d', borderRadius: 8 }} />}>
+                      <Suspense fallback={<div style={{ height: 180, background: 'var(--color-secondary)', borderRadius: 8 }} />}>
                         <FlightMap
                           flights={[{
                             id: 'lookup',
@@ -880,24 +866,83 @@ export default function TripDetailPage() {
                     </div>
                   )}
                   {flightSuggestions && flightSuggestions.length > 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {flightSuggestions.map((f, i) => (
-                        <div key={i} style={{ border: '1.5px solid var(--color-border)', borderRadius: 12, padding: 18 }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Leg {i + 1}</div>
-                          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{f.route}</div>
-                          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-primary)', marginBottom: 6 }}>{f.typical_price_aud}</div>
-                          <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 6 }}>{f.airlines.join(' · ')} · {f.flight_time}</div>
-                          <p style={{ fontSize: 13, color: '#374151', marginBottom: 12 }}>{f.tips}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      {flightSuggestions.map((f, i) => {
+                        const iatas = [...f.route.matchAll(/\(([A-Z]{3})\)/g)].map((m: RegExpMatchArray) => m[1])
+                        const fromCode = iatas[0] || ''
+                        const toCode = iatas[1] || ''
+
+                        // Parse flight_time: take only the first option (before ';'), strip parenthetical airline names
+                        const primaryFlightTime = (f.flight_time || '')
+                          .split(/;/)[0]
+                          .replace(/\s*\([^)]*\)/g, '')
+                          .trim()
+
+                        // Parse price: extract the first price range (e.g. "$300–$700") from potentially verbose AI prose
+                        const priceMatch = (f.typical_price_aud || '').match(/~?\$[\d,]+(?:[–\-]~?\$[\d,]+)?/)
+                        const displayPrice = priceMatch ? priceMatch[0] : f.typical_price_aud
+
+                        // Detect summary legs (no parseable IATA codes — AI generated a multi-leg summary)
+                        const isSummaryLeg = !fromCode && !toCode
+
+                        // For summary legs, parse pipe-separated segments into individual rows
+                        const summarySegments = isSummaryLeg
+                          ? (f.flight_time || '').split('|').map(s => s.trim()).filter(Boolean)
+                          : []
+
+                        return (
+                        <div key={i} style={{ border: '1px solid var(--color-border)', borderRadius: 16, padding: '24px 28px', background: 'white' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 18 }}>Leg {i + 1}</div>
+
+                          {isSummaryLeg ? (
+                            /* Summary leg: no IATA codes, show price + segment breakdown */
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 24 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {summarySegments.map((seg, si) => (
+                                  <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-muted)' }}>
+                                    <Plane size={12} color="var(--color-text-muted)" strokeWidth={2} style={{ flexShrink: 0 }} />
+                                    <span>{seg}</span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{displayPrice}</div>
+                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>est. total</div>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Standard leg: IATA route row */
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 6 }}>
+                              <div style={{ fontSize: 34, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.5px', lineHeight: 1 }}>{fromCode}</div>
+                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                                  <Plane size={15} color="var(--color-text-muted)" strokeWidth={2} />
+                                  <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                                </div>
+                                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{primaryFlightTime}</span>
+                              </div>
+                              <div style={{ fontSize: 34, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.5px', lineHeight: 1 }}>{toCode}</div>
+                              <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{displayPrice}</div>
+                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>est. one-way</div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 16 }}>{f.airlines.join(' · ')}</div>
+                          {f.tips && <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 18, lineHeight: 1.65, borderTop: '1px solid var(--color-border)', paddingTop: 14 }}>{f.tips}</p>}
                           <div style={{ display: 'flex', gap: 10 }}>
-                            <a href={f.google_flights_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-primary)', padding: '7px 14px', borderRadius: 8, textDecoration: 'none' }}>
-                              <ExternalLink size={12} /> Google Flights
+                            <a href={f.google_flights_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-secondary)', padding: '11px 16px', borderRadius: 10, textDecoration: 'none' }}>
+                              <ExternalLink size={13} /> Google Flights
                             </a>
-                            <a href={f.skyscanner_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none', border: '1.5px solid var(--color-primary)', padding: '7px 14px', borderRadius: 8 }}>
-                              <ExternalLink size={12} /> Skyscanner
+                            <a href={f.skyscanner_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none', border: '1.5px solid var(--color-border)', padding: '11px 16px', borderRadius: 10 }}>
+                              <ExternalLink size={13} /> Skyscanner
                             </a>
                           </div>
                         </div>
-                      ))}
+                        )
+                      })}
                       <button onClick={() => { setFlightSuggestions(null); setFlightSuggestionsLoading(true); getFlightSuggestions(tripId!).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false)) }}
                         style={{ alignSelf: 'flex-start', background: 'white', border: '1.5px solid var(--color-border)', padding: '8px 16px', borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}>
                         Refresh suggestions
@@ -907,6 +952,21 @@ export default function TripDetailPage() {
                 </div>
 
               </div>
+            )}
+
+            {/* Travel Notes Tab */}
+            {tab === 'notes' && (
+              latestItinerary ? (
+                <ItineraryTimeline
+                  data={latestItinerary.itinerary_json}
+                  sectionsOnly
+                  hideOverview
+                />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--color-text-muted)' }}>
+                  <p style={{ fontSize: 14 }}>Travel notes will appear here once your itinerary is ready.</p>
+                </div>
+              )
             )}
 
             {tab === 'documents' && (
@@ -958,7 +1018,7 @@ export default function TripDetailPage() {
                           {doc.uploaded_by === 'client' && (
                             <button
                               onClick={() => handleClientDeleteDocument(doc.key)}
-                              style={{ background: 'white', color: '#EF4444', border: '1px solid #FECACA', borderRadius: 'var(--radius)', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}
+                              style={{ background: 'white', color: 'var(--color-error)', border: '1px solid #FECACA', borderRadius: 'var(--radius)', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}
                             >
                               ✕
                             </button>
@@ -970,7 +1030,6 @@ export default function TripDetailPage() {
                 )}
               </div>
             )}
-          </div>
         </div>
       </div>
 

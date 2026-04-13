@@ -592,6 +592,65 @@ def client_lookup_flight(
 
 PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 PLACES_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
+UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
+
+
+@router.get("/destination-photo")
+def destination_photo(
+    destination: str = Query(..., description="Destination name, e.g. 'Kyoto, Japan'"),
+    _client=Depends(get_current_client),
+):
+    """Return a high-quality hero photo URL for a travel destination.
+    Uses Unsplash API if UNSPLASH_ACCESS_KEY is set, otherwise falls back to Google Places."""
+    if UNSPLASH_ACCESS_KEY:
+        try:
+            resp = httpx.get(
+                "https://api.unsplash.com/search/photos",
+                params={
+                    "query": f"{destination} travel landscape",
+                    "per_page": 3,
+                    "orientation": "landscape",
+                    "content_filter": "high",
+                    "order_by": "relevant",
+                },
+                headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+                timeout=8,
+            )
+            resp.raise_for_status()
+            results = resp.json().get("results", [])
+            if results:
+                # Prefer the photo with the highest resolution
+                best = max(results, key=lambda p: p.get("width", 0) * p.get("height", 0))
+                url = best.get("urls", {}).get("full") or best.get("urls", {}).get("regular")
+                if url:
+                    return {"photo_url": url, "source": "unsplash"}
+        except Exception:
+            pass  # fall through to Places
+
+    # Fallback: Google Places at maximum resolution
+    if PLACES_API_KEY:
+        try:
+            resp = httpx.post(
+                PLACES_SEARCH_URL,
+                json={"textQuery": f"{destination} landmark scenic", "maxResultCount": 1},
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Goog-Api-Key": PLACES_API_KEY,
+                    "X-Goog-FieldMask": "places.id,places.photos",
+                },
+                timeout=8,
+            )
+            resp.raise_for_status()
+            place = (resp.json().get("places") or [None])[0]
+            if place:
+                photo_ref = (place.get("photos") or [{}])[0].get("name")
+                if photo_ref:
+                    url = f"https://places.googleapis.com/v1/{photo_ref}/media?maxHeightPx=4800&maxWidthPx=4800&key={PLACES_API_KEY}"
+                    return {"photo_url": url, "source": "places"}
+        except Exception:
+            pass
+
+    return {"photo_url": None, "source": None}
 
 
 @router.get("/place-lookup")

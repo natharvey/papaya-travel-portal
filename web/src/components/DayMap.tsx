@@ -47,15 +47,21 @@ export default function DayMap({ dayPlans }: Props) {
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return
+    if (!mapboxgl.accessToken) { setLoading(false); return }
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
-      zoom: 2,
-      center: [100, 10],
-      interactive: true,
-      attributionControl: false,
-    })
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/light-v11',
+        zoom: 2,
+        center: [100, 10],
+        interactive: true,
+        attributionControl: false,
+      })
+    } catch (e) {
+      console.warn('DayMap: failed to init Mapbox:', e)
+      return
+    }
     map.current.addControl(new mapboxgl.AttributionControl({ compact: true }))
 
     map.current.on('load', async () => {

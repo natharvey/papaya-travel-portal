@@ -4,6 +4,7 @@ import { User, Mail, MapPin, Calendar, Wallet, Users, ArrowRight, ArrowLeft, Sen
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
 import LoadingSpinner from '../components/LoadingSpinner'
+import Button from '../components/Button'
 import { submitIntake, intakeChat, getApiError } from '../api/client'
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -13,9 +14,21 @@ const labelStyle: React.CSSProperties = {
   fontSize: '13px',
   fontWeight: 600,
   marginBottom: '6px',
-  color: '#374151',
+  color: 'var(--color-text)',
   letterSpacing: '0.2px',
 }
+
+const MayaAvatar = () => (
+  <div style={{
+    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+    background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(240,115,50,0.30)',
+    marginRight: 8, marginTop: 2,
+  }}>
+    <span style={{ color: 'white', fontWeight: 800, fontSize: 14, fontFamily: 'inherit' }}>M</span>
+  </div>
+)
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -154,33 +167,42 @@ function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2D
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-          <div>
-            <label style={labelStyle}>Budget (AUD)</label>
-            <div style={{ position: 'relative' }}>
-              <Wallet size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="text"
-                value={data.budget_range}
-                onChange={e => onChange('budget_range', e.target.value)}
-                placeholder="e.g. $5,000–$8,000"
-                style={{ ...inputStyle, paddingLeft: '36px' }}
-              />
-            </div>
+        <div>
+          <label style={labelStyle}>Budget (AUD)</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['Under $3,000', '$3,000–$6,000', '$6,000–$10,000', '$10,000–$15,000', '$15,000+'].map(opt => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => onChange('budget_range', opt)}
+                style={{
+                  padding: '8px 16px', borderRadius: 100, fontSize: 13, fontWeight: 500,
+                  border: `1.5px solid ${data.budget_range === opt ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                  background: data.budget_range === opt ? 'var(--color-accent)' : 'white',
+                  color: data.budget_range === opt ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                }}
+              >{opt}</button>
+            ))}
           </div>
-          <div>
-            <label style={labelStyle}>Travellers</label>
-            <div style={{ position: 'relative' }}>
-              <Users size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={data.travellers_count}
-                onChange={e => onChange('travellers_count', parseInt(e.target.value) || 1)}
-                style={{ ...inputStyle, paddingLeft: '36px' }}
-              />
-            </div>
+        </div>
+
+        <div>
+          <label style={labelStyle}>Travellers</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              type="button"
+              onClick={() => onChange('travellers_count', Math.max(1, data.travellers_count - 1))}
+              style={{ width: 38, height: 38, borderRadius: '50%', border: '1.5px solid var(--color-border)', background: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text)', fontFamily: 'inherit', flexShrink: 0 }}
+            >−</button>
+            <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-text)', minWidth: 60, textAlign: 'center' }}>
+              {data.travellers_count} {data.travellers_count === 1 ? 'person' : 'people'}
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange('travellers_count', Math.min(20, data.travellers_count + 1))}
+              style={{ width: 38, height: 38, borderRadius: '50%', border: '1.5px solid var(--color-border)', background: 'white', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text)', fontFamily: 'inherit', flexShrink: 0 }}
+            >+</button>
           </div>
         </div>
       </div>
@@ -283,7 +305,7 @@ function Step3({ seedData, onComplete }: Step3Props) {
         border: '1.5px solid var(--color-border)',
         borderRadius: '12px',
         padding: '16px',
-        background: '#F8FAFC',
+        background: 'var(--color-bg)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
@@ -300,32 +322,16 @@ function Step3({ seedData, onComplete }: Step3Props) {
             display: 'flex',
             justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
           }}>
-            {msg.role === 'assistant' && (
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: 'var(--color-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                flexShrink: 0,
-                marginRight: '8px',
-                marginTop: '2px',
-              }}>
-                🌴
-              </div>
-            )}
+            {msg.role === 'assistant' && <MayaAvatar />}
             <div style={{
               maxWidth: '80%',
               padding: '10px 14px',
-              borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-              background: msg.role === 'user' ? 'var(--color-primary)' : 'white',
+              borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+              background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-surface)',
               color: msg.role === 'user' ? 'white' : 'var(--color-text)',
-              fontSize: '14px',
-              lineHeight: '1.5',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              fontSize: '13px',
+              lineHeight: '1.65',
+              boxShadow: 'var(--shadow-sm)',
               border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
             }}>
               {msg.content}
@@ -335,21 +341,17 @@ function Step3({ seedData, onComplete }: Step3Props) {
 
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MayaAvatar />
             <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: 'var(--color-primary)', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0,
-            }}>🌴</div>
-            <div style={{
-              padding: '10px 14px', borderRadius: '16px 16px 16px 4px',
-              background: 'white', border: '1px solid var(--color-border)',
-              display: 'flex', gap: '4px', alignItems: 'center',
+              padding: '10px 14px', borderRadius: '4px 16px 16px 16px',
+              background: 'var(--color-surface)', border: '1px solid var(--color-border)',
+              boxShadow: 'var(--shadow-sm)', display: 'flex', gap: 5, alignItems: 'center',
             }}>
               {[0, 1, 2].map(i => (
-                <div key={i} style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  background: 'var(--color-text-muted)',
-                  animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
+                <span key={i} style={{
+                  width: 7, height: 7, borderRadius: '50%',
+                  background: 'var(--color-text-muted)', display: 'inline-block',
+                  animation: `blink 1.2s ease-in-out ${i * 0.2}s infinite`,
                 }} />
               ))}
             </div>
@@ -358,14 +360,10 @@ function Step3({ seedData, onComplete }: Step3Props) {
 
         {complete && (
           <div style={{
-            textAlign: 'center',
-            padding: '12px',
-            background: '#F0FDF4',
-            border: '1px solid #BBF7D0',
-            borderRadius: '10px',
-            fontSize: '13px',
-            color: '#15803D',
-            fontWeight: 600,
+            textAlign: 'center', padding: '12px',
+            background: '#EBF7F1', border: '1px solid #A7F3D0',
+            borderRadius: 'var(--radius)', fontSize: '13px',
+            color: 'var(--color-success)', fontWeight: 600,
           }}>
             ✓ All set! Click "Generate My Itinerary" below.
           </div>
@@ -413,14 +411,7 @@ function Step3({ seedData, onComplete }: Step3Props) {
       )}
 
       <style>{`
-        @keyframes bounce {
-          0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-          40% { transform: scale(1.2); opacity: 1; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   )
@@ -612,55 +603,33 @@ export default function IntakePage() {
           {/* Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '28px', gap: '12px' }}>
             {step > 1 ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => { setError(''); setStep(s => s - 1) }}
                 disabled={step === 3}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'white', border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-text-muted)', padding: '11px 20px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 600,
-                  cursor: step === 3 ? 'default' : 'pointer',
-                  opacity: step === 3 ? 0.4 : 1,
-                }}
               >
                 <ArrowLeft size={15} /> Back
-              </button>
+              </Button>
             ) : <div />}
 
             {step < 3 ? (
-              <button
-                type="button"
-                onClick={goNext}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '6px',
-                  background: 'var(--color-primary)', color: 'white',
-                  border: 'none', padding: '11px 24px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
+              <Button variant="primary" size="md" onClick={goNext}>
                 Continue <ArrowRight size={15} />
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="md"
                 onClick={handleSubmit}
                 disabled={!chatComplete || submitting}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                  background: !chatComplete || submitting ? 'var(--color-border)' : 'var(--color-primary)',
-                  color: 'white', border: 'none', padding: '11px 24px',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 700,
-                  cursor: !chatComplete || submitting ? 'default' : 'pointer',
-                }}
               >
                 {submitting ? (
                   <><LoadingSpinner size={16} color="white" label="" /> Generating...</>
                 ) : (
                   <>Generate My Itinerary <ArrowRight size={15} /></>
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>

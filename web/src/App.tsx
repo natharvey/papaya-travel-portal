@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import LoadingSpinner from './components/LoadingSpinner'
+import ErrorBoundary from './components/ErrorBoundary'
 
 const IntakePage = lazy(() => import('./pages/IntakePage'))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -64,7 +65,9 @@ export default function App() {
             path="/portal/trips/:tripId"
             element={
               <ProtectedRoute role="client">
-                <TripDetailPage />
+                <ErrorBoundary>
+                  <TripDetailPage />
+                </ErrorBoundary>
               </ProtectedRoute>
             }
           />
@@ -74,7 +77,9 @@ export default function App() {
             path="/trip/:tripId"
             element={
               <ProtectedRoute role="client">
-                <TripDetailPage />
+                <ErrorBoundary>
+                  <TripDetailPage />
+                </ErrorBoundary>
               </ProtectedRoute>
             }
           />
