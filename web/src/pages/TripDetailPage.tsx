@@ -479,16 +479,18 @@ export default function TripDetailPage() {
                 )}
                 {latestItinerary && (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-                        Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {trip.itineraries.length > 1 && (
-                          <span style={{ marginLeft: '8px', color: 'var(--color-primary)' }}>
-                            · {trip.itineraries.length} revisions
-                          </span>
-                        )}
-                      </span>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    {/* Overview block — constrained to 820px so everything aligns */}
+                    <div style={{ maxWidth: 820, marginBottom: 24 }}>
+                      {/* Generated date + action buttons */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginRight: 'auto' }}>
+                          Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {trip.itineraries.length > 1 && (
+                            <span style={{ marginLeft: '8px', color: 'var(--color-primary)' }}>
+                              · {trip.itineraries.length} revisions
+                            </span>
+                          )}
+                        </span>
                         <ItineraryCopySummary data={latestItinerary.itinerary_json} />
                         <PDFDownloadButton
                           data={latestItinerary.itinerary_json}
@@ -499,25 +501,26 @@ export default function TripDetailPage() {
                           originCity={trip.origin_city}
                         />
                       </div>
+
+                      {/* Overview paragraph + destination pills */}
+                      {(latestItinerary.itinerary_json.overview || latestItinerary.itinerary_json.destinations?.length > 0) && (
+                        <>
+                          {latestItinerary.itinerary_json.overview && (
+                            <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '14px' }}>
+                              {latestItinerary.itinerary_json.overview}
+                            </p>
+                          )}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                            {latestItinerary.itinerary_json.destinations?.map((d: { name: string; nights: number }, i: number) => (
+                              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
+                                <MapPin size={11} strokeWidth={2.5} color="var(--color-primary)" />
+                                {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
+                              </span>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                    {/* Blurb: overview + destination pills — match ItineraryTimeline's 820px width */}
-                    {(latestItinerary.itinerary_json.overview || latestItinerary.itinerary_json.destinations?.length > 0) && (
-                      <div style={{ marginBottom: 24, maxWidth: 820 }}>
-                        {latestItinerary.itinerary_json.overview && (
-                          <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '14px' }}>
-                            {latestItinerary.itinerary_json.overview}
-                          </p>
-                        )}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                          {latestItinerary.itinerary_json.destinations?.map((d: { name: string; nights: number }, i: number) => (
-                            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
-                              <MapPin size={11} strokeWidth={2.5} color="var(--color-primary)" />
-                              {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Unified journey map — shows full trip routes + flies to selected day */}
                     {((latestItinerary.itinerary_json.destinations?.length ?? 0) > 0 || (latestItinerary.itinerary_json.transport_legs?.length ?? 0) > 0) && (
