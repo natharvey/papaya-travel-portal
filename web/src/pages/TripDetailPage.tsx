@@ -157,7 +157,7 @@ export default function TripDetailPage() {
   }
 
   // Selected day — shared between UnifiedTripMap and ItineraryTimeline
-  const [selectedDay, setSelectedDay] = useState(1)
+  const [selectedDay, setSelectedDay] = useState(0)
 
   // Hotel detail panel
   const [selectedHotel, setSelectedHotel] = useState<HotelSuggestion | null>(null)

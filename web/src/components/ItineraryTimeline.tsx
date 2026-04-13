@@ -304,7 +304,7 @@ const PERIOD_KEYS: Record<Period, 'morning' | 'afternoon' | 'evening'> = {
 }
 
 export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hideSections, sectionsOnly, selectedDay: externalDay, onDaySelect }: Props) {
-  const [internalDayNum, setInternalDayNum] = useState(1)
+  const [internalDayNum, setInternalDayNum] = useState(0)
   const [copied, setCopied] = useState(false)
   const [view, setView] = useState<'detail' | 'overview'>('detail')
   const [editState, setEditState] = useState<EditState | null>(null)
@@ -316,6 +316,7 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hid
     setInternalDayNum(next)
     onDaySelect?.(next)
   }
+  const hasSelection = selectedDayNum > 0
 
   const locationMap = buildLocationMap(data.day_plans ?? [])
   const weeks = buildCalendarWeeks(data.day_plans ?? [])
@@ -542,6 +543,13 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hid
                   })}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Empty state — no day selected yet */}
+          {!hasSelection && (
+            <div style={{ textAlign: 'center', padding: '28px 16px', color: 'var(--color-text-muted)', fontSize: 13 }}>
+              Select a day above to see the plan
             </div>
           )}
 
