@@ -452,7 +452,7 @@ export default function TripDetailPage() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 40px 80px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 40px 80px' }}>
         {/* Tabs */}
         <TabBar style={{ marginBottom: 36, marginTop: 8 }}>
           <Tab label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />

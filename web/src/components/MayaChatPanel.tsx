@@ -75,7 +75,7 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
       }
       // Variable timing: short words faster, longer words slightly slower
       const word = greetingWords[i - 1]
-      const delay = word.length <= 3 ? 55 : word.endsWith(',') || word.endsWith('.') ? 160 : 75
+      const delay = word.length <= 3 ? 100 : word.endsWith(',') || word.endsWith('.') ? 320 : 150
       setTimeout(revealNext, delay)
     }
     const start = setTimeout(revealNext, 200)
@@ -187,7 +187,7 @@ export default function MayaChatPanel({ tripId, messages, onMessagesUpdated, onI
                 {view === 'maya' ? 'Maya' : 'Your Travel Advisor'}
               </div>
               {view === 'maya' && (
-                <div style={{ fontSize: 11, color: 'var(--color-success)', fontWeight: 600 }}>● Online</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>AI travel consultant</div>
               )}
             </div>
             <button onClick={() => setOpen(false)} className="maya-icon-btn">

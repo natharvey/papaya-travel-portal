@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Mail, MapPin, Calendar, Wallet, Users, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
 import Layout from '../components/Layout'
@@ -40,6 +40,103 @@ const inputStyle: React.CSSProperties = {
   background: 'white',
   color: 'var(--color-text)',
   boxSizing: 'border-box',
+}
+
+// ─── City autocomplete ────────────────────────────────────────────────────────
+
+interface CitySuggestion { place_name: string; text: string }
+
+function CityAutocomplete({ value, onChange, placeholder }: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}) {
+  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([])
+  const [open, setOpen] = useState(false)
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) { setSuggestions([]); setOpen(false); return }
+    const token = import.meta.env.VITE_MAPBOX_TOKEN
+    if (!token) return
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?types=place,locality,region&limit=5&access_token=${token}`
+      )
+      const data = await res.json()
+      const results: CitySuggestion[] = (data.features ?? []).map((f: { place_name: string; text: string }) => ({
+        place_name: f.place_name,
+        text: f.text,
+      }))
+      setSuggestions(results)
+      setOpen(results.length > 0)
+    } catch { /* ignore */ }
+  }, [])
+
+  function handleInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value
+    onChange(v)
+    if (debounce.current) clearTimeout(debounce.current)
+    debounce.current = setTimeout(() => fetchSuggestions(v), 220)
+  }
+
+  function pick(s: CitySuggestion) {
+    onChange(s.place_name)
+    setSuggestions([])
+    setOpen(false)
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none', zIndex: 1 }} />
+      <input
+        type="text"
+        value={value}
+        onChange={handleInput}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        placeholder={placeholder}
+        style={{ ...inputStyle, paddingLeft: '36px' }}
+        autoComplete="off"
+      />
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 50,
+          background: 'white', border: '1.5px solid var(--color-border)',
+          borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', overflow: 'hidden',
+        }}>
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              type="button"
+              onMouseDown={() => pick(s)}
+              style={{
+                width: '100%', textAlign: 'left', padding: '10px 14px',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 14, color: 'var(--color-text)', fontFamily: 'inherit',
+                borderBottom: i < suggestions.length - 1 ? '1px solid var(--color-border)' : 'none',
+                display: 'flex', flexDirection: 'column', gap: 2,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--color-bg)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+            >
+              <span style={{ fontWeight: 600 }}>{s.text}</span>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{s.place_name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Step 1: Personal details ─────────────────────────────────────────────────
@@ -112,7 +209,7 @@ function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2D
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
         <div>
-          <label style={labelStyle}>Destination</label>
+          <label style={labelStyle}>Destinations</label>
           <div style={{ position: 'relative' }}>
             <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
             <input
@@ -128,16 +225,11 @@ function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2D
 
         <div>
           <label style={labelStyle}>Departing from</label>
-          <div style={{ position: 'relative' }}>
-            <MapPin size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={data.origin_city}
-              onChange={e => onChange('origin_city', e.target.value)}
-              placeholder="e.g. Sydney, Melbourne, Brisbane"
-              style={{ ...inputStyle, paddingLeft: '36px' }}
-            />
-          </div>
+          <CityAutocomplete
+            value={data.origin_city}
+            onChange={v => onChange('origin_city', v)}
+            placeholder="e.g. Sydney, Melbourne, Brisbane"
+          />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
