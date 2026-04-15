@@ -204,7 +204,7 @@ Concierge Maya is the post-generation assistant. Once a client has their itinera
 - **Direct and concise.** This Maya is not in sales mode — the trip is sold. Replies are 2 sentences maximum, no emojis, no bullet points.
 - **Knows the full itinerary.** The current itinerary JSON is injected into the system prompt so Maya can answer specific questions ("what's the restaurant on day 3?") without asking the client to re-explain.
 - **Knows the client.** A persistent `client_memory` string (extracted and updated by the `extract_client_memory()` function) is injected alongside the itinerary. Maya knows what this client has said across multiple conversations.
-- **Detects regeneration intent.** The system detects phrases like "redo this", "can you change the whole thing", "make it more adventurous" and triggers a full `generate_itinerary()` call rather than trying to patch the JSON conversationally.
+- **Intent classifier.** A dedicated Claude Haiku call (`_classify_intent()`) categorises each message as `targeted_edit`, `full_regeneration`, `question`, or `general_chat` before any response is generated. This replaces fragile keyword matching and correctly handles nuanced phrasing.
 - **Block-level editing.** For targeted changes ("swap the afternoon on day 4"), Maya can call `edit_block()` to surgically update a single itinerary block without regenerating the whole thing.
 
 ### Inputs
@@ -233,15 +233,21 @@ Concierge Maya is the post-generation assistant. Once a client has their itinera
         │
         │  Full transcript
         ▼
-[Analyser]  ─── one synthesis call ───▶  ClientProfile JSON
+[Analyser]  ─── one synthesis call (tool_use) ───▶  ClientProfile JSON
         │
         │  ClientProfile + trip data
         ▼
 [Generator]  ─── web search loop (≤8 turns) ───▶  Itinerary JSON saved to DB
-        │
-        │  Itinerary JSON + client memory
-        ▼
-[Concierge Maya]  ─── ongoing refinement ───▶  edits / regen triggers / answers
+        │                                                    │
+        │  Itinerary JSON + client memory          [Background threads]
+        ▼                                          Hotel coords (Google Places)
+[Concierge Maya]  ─── intent classifier ──────▶  Activity coords (Google Places)
+    (Haiku intent → targeted_edit /                        │
+     full_regen / question / chat)                         ▼
+        │                                         [Activity photos]
+        ▼                                         Unsplash candidates → Claude
+   edits / regen / answers                        Haiku vision gate → verified
+                                                  photo or none
 ```
 
 ---
@@ -290,6 +296,6 @@ Future agents that could be added to the pipeline:
 | Agent | Purpose |
 |---|---|
 | **Flight Scout** | Autonomous agent that researches real flight options with live pricing, rather than generating placeholder suggestions |
-| **Hotel Validator** | Currently a background thread verifying hotel names against Google Places; could be promoted to a full agent that also scrapes pricing |
+| **Hotel Validator** | Currently a background thread verifying hotel names against Google Places (returns coords, photo, rating, address, website); could be promoted to a full agent that also scrapes live pricing |
 | **Personalised Intro** | A short generative pass that writes a custom "letter from Maya" to accompany the itinerary, referencing specific things the client mentioned |
 | **Budget Optimiser** | Reviews the draft itinerary and suggests trade-offs to fit within budget constraints |

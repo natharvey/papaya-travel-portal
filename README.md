@@ -48,9 +48,12 @@ GENERATING → REVIEW → CONFIRMED → ARCHIVED
 - **Conversational intake** — Maya guides clients through trip planning via natural chat before submitting
 - **AI itinerary generation** — Claude Sonnet 4.6 produces structured day-by-day itineraries with activities, costs, transport notes, packing lists, and risk notes
 - **Ask Maya** — Clients refine their itinerary post-generation via AI chat directly in the portal
+- **Activity map** — Per-day map view: click a day to zoom in and see geocoded activity markers (AM/PM/EVE colour-coded). Click an activity pin to zoom in further and see travel time from that night's accommodation
+- **Walk/drive routes** — Activity pins show a route line from the stay to the activity; toggle between walking and driving time with a single click
+- **Accommodation flow** — AI-suggested hotels include Google Places coords; clients add them to the trip with date selection, or manually enter their own. Added stays appear on the map and in the day timeline
+- **Photo quality gate** — Activity photos are verified by Claude Haiku vision before display; only photos that actually depict the activity are shown
 - **Flight lookup** — Clients enter a flight number and date to see route details, times, terminals, and a live route map
 - **Flight route map** — Visual route map showing all booked flights
-- **Accommodation tab** — AI-suggested stays for each destination with booking links
 - **PDF export** — Clients download a branded PDF of their full itinerary
 - **Document uploads** — Clients and admins upload trip documents (PDFs, images) stored in S3
 - **Magic link login** — Single-use login links sent by email; no passwords for clients
@@ -159,9 +162,10 @@ See the live interactive version at [travel-papaya.com/architecture](https://www
 - `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, Flight, Stay
 - `app/routes/auth.py` — Magic link login, admin login, JWT issuance
 - `app/routes/intake.py` — Intake chat endpoint + intake submission; fires AI generation as a background task
-- `app/routes/client.py` — Client portal: trip detail, itinerary, messages, confirm, Ask Maya, flight lookup, document uploads
-- `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, document uploads
-- `app/services/ai.py` — Multi-agent Maya pipeline: intake, analyser, itinerary generator, concierge chat
+- `app/routes/client.py` — Client portal: trip detail, itinerary, messages, confirm, Ask Maya, flight lookup, accommodation CRUD, activity photos (with vision quality gate), document uploads
+- `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, screenshot parsing (Claude Haiku vision), document uploads
+- `app/services/ai.py` — Multi-agent Maya pipeline: intake, analyser (tool_use), itinerary generator, concierge chat (intent classifier)
+- `app/services/places.py` — Google Places: hotel verification (coords + photo), activity geocoding (background thread), place lookup proxy
 - `app/services/email.py` — Gmail SMTP with branded HTML templates
 - `app/services/s3.py` — S3 upload, list, delete and presigned URL helpers
 
@@ -174,6 +178,8 @@ See the live interactive version at [travel-papaya.com/architecture](https://www
 - `pages/AdminDashboardPage.tsx` — Admin trip list with unread badges
 - `pages/AdminTripPage.tsx` — Admin trip detail, messaging, flight/stay management
 - `pages/ArchitecturePage.tsx` — Interactive Reactflow architecture diagram
+- `components/UnifiedTripMap.tsx` — Mapbox map: destination labels, transport routes, per-day activity markers, stay markers, walk/drive route lines with time toggle
+- `components/ItineraryTimeline.tsx` — Day-by-day timeline with activity photos (quality-gated), costs, booking flags, and per-night accommodation footer
 - Lucide React icons, `@react-pdf/renderer` for PDF export
 
 ---
@@ -256,6 +262,11 @@ Full interactive docs at http://localhost:8000/docs
 | POST | `/client/trips/{id}/documents` | Client JWT | Upload document |
 | DELETE | `/client/trips/{id}/documents` | Client JWT | Delete own document |
 | GET | `/client/flights/lookup` | Client JWT | Look up flight by number + date |
+| GET | `/client/trips/{id}/stays` | Client JWT | List confirmed stays |
+| POST | `/client/trips/{id}/stays` | Client JWT | Add stay (suggestion or manual) |
+| DELETE | `/client/trips/{id}/stays/{sid}` | Client JWT | Remove stay |
+| GET | `/client/activity-photo` | Client JWT | Verified activity photo (Haiku vision gate) |
+| GET | `/client/place-lookup` | Client JWT | Google Places search proxy |
 | GET | `/admin/trips` | Admin JWT | All trips (filterable by status) |
 | GET | `/admin/trips/{id}` | Admin JWT | Trip detail |
 | PATCH | `/admin/trips/{id}` | Admin JWT | Update trip status or admin notes |
