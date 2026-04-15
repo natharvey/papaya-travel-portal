@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { api, storeToken, getApiError } from '../api/client'
 import type { TokenResponse } from '../types'
 import PapayaLogo from '../components/PapayaLogo'
@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 export default function MagicLoginPage() {
   const { token } = useParams<{ token: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -18,7 +19,8 @@ export default function MagicLoginPage() {
     api.get<TokenResponse>(`/auth/magic/${token}`)
       .then(res => {
         storeToken(res.data.access_token, res.data.role)
-        navigate('/portal', { replace: true })
+        const next = searchParams.get('next') || '/portal'
+        navigate(next, { replace: true })
       })
       .catch(e => {
         setError(getApiError(e))

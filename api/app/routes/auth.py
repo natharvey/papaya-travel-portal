@@ -38,7 +38,7 @@ def decode_token(token: str) -> dict:
 def create_magic_token(db: Session, client_id) -> str:
     """Generate a one-time login token valid for 1 hour."""
     token_str = secrets.token_urlsafe(32)
-    expires = datetime.now(timezone.utc) + timedelta(hours=1)
+    expires = datetime.now(timezone.utc) + timedelta(hours=24)
     record = LoginToken(client_id=client_id, token=token_str, expires_at=expires)
     db.add(record)
     db.commit()

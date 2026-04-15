@@ -101,16 +101,25 @@ def _run_generation(trip_id, conversation_transcript: str, seed_data: dict = Non
             conversation_transcript=conversation_transcript if not client_profile else "",
             client_profile=client_profile,
         )
-        # Send "ready" email
+        # Send "ready" email with a fresh magic link deep-linked to the trip
         trip = db.query(Trip).filter(Trip.id == trip_id).first()
         if trip:
             client = db.query(Client).filter(Client.id == trip.client_id).first()
             if client:
+                try:
+                    from app.routes.auth import create_magic_token
+                    import os
+                    magic_token = create_magic_token(db, client.id)
+                    portal_url = os.getenv("PORTAL_URL", "http://localhost:5173")
+                    magic_link = f"{portal_url}/magic/{magic_token}?next=/portal/trips/{trip_id}"
+                except Exception:
+                    magic_link = None
                 send_itinerary_ready(
                     to=client.email,
                     client_name=client.name,
                     trip_title=trip.title,
                     trip_id=str(trip_id),
+                    magic_link=magic_link,
                 )
     except Exception as e:
         log.error("Background generation failed for trip %s: %s", trip_id, e)

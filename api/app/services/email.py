@@ -101,7 +101,7 @@ Here is your one-click login link for the Travel Papaya portal:
 
 {magic_link}
 
-This link expires in 1 hour and can only be used once.
+This link expires in 24 hours and can only be used once.
 
 If you didn't request this, you can safely ignore this email.
 
@@ -111,7 +111,7 @@ Travel Papaya
     body = f"""<p>Hi {client_name},</p>
   <p>Click below to log in to your Travel Papaya portal.</p>
   {_primary_button(magic_link, "Log in to your portal")}
-  <p style="margin-top:16px;font-size:13px;color:{BRAND_MUTED};">This link expires in 1 hour and can only be used once. If you didn't request this, you can safely ignore this email.</p>"""
+  <p style="margin-top:16px;font-size:13px;color:{BRAND_MUTED};">This link expires in 24 hours and can only be used once. If you didn't request this, you can safely ignore this email.</p>"""
 
     _send(to, subject, _base_html(subject, body), plain)
 
@@ -127,7 +127,7 @@ def send_intake_confirmation(
 
     login_url = magic_link or f"{PORTAL_URL}/login"
     button_label = "View your portal" if magic_link else "Log in to your portal"
-    expiry_note = f'<p style="margin-top:8px;font-size:13px;color:{BRAND_MUTED};">This link expires in 1 hour. To log in later, visit <a href="{PORTAL_URL}/login" style="color:{BRAND_ORANGE};">{PORTAL_URL}/login</a>.</p>' if magic_link else ""
+    expiry_note = f'<p style="margin-top:8px;font-size:13px;color:{BRAND_MUTED};">This link expires in 24 hours. To log in later, visit <a href="{PORTAL_URL}/login" style="color:{BRAND_ORANGE};">{PORTAL_URL}/login</a>.</p>' if magic_link else ""
 
     plain = f"""Hi {client_name},
 
@@ -279,17 +279,23 @@ def send_itinerary_ready(
     client_name: str,
     trip_title: str,
     trip_id: str,
+    magic_link: Optional[str] = None,
 ) -> None:
     subject = f"Your itinerary is ready — {trip_title}"
     trip_url = f"{PORTAL_URL}/portal/trips/{trip_id}"
+    button_url = magic_link or trip_url
+    expiry_note = (
+        f'<p style="margin-top:8px;font-size:13px;color:{BRAND_MUTED};">This link logs you in automatically and expires in 24 hours. '
+        f'To access later, visit <a href="{PORTAL_URL}/login" style="color:{BRAND_ORANGE};">{PORTAL_URL}/login</a>.</p>'
+    ) if magic_link else ""
 
     plain = f"""Hi {client_name},
 
 Your personalised itinerary for "{trip_title}" is ready.
 
-Log in to view your full day-by-day plan. If you'd like any changes, you can chat with Maya directly from within the portal.
+Click below to view your full day-by-day plan. If you'd like any changes, you can chat with Maya directly from within the portal.
 
-{trip_url}
+{button_url}
 
 Travel Papaya
 """
@@ -297,7 +303,8 @@ Travel Papaya
     body = f"""<p>Hi {client_name},</p>
   <p>Your personalised itinerary for <strong>{trip_title}</strong> is ready to view.</p>
   <p>If you'd like any changes, chat with Maya directly from within the portal — she'll update your itinerary in real time.</p>
-  {_primary_button(trip_url, "View your itinerary")}"""
+  {_primary_button(button_url, "View your itinerary")}
+  {expiry_note}"""
 
     _send(to, subject, _base_html(subject, body), plain)
 
