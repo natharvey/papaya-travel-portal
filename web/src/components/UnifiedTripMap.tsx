@@ -28,6 +28,10 @@ const PERIOD_LABELS: Record<string, string> = {
   evening: 'EVE',
 }
 
+// Fixed IDs for the activity-to-stay route layer (only one active at a time)
+const ROUTE_SOURCE_ID = 'activity-route'
+const ROUTE_LAYER_ID  = 'activity-route'
+
 async function geocodeCity(name: string): Promise<[number, number] | null> {
   const token = import.meta.env.VITE_MAPBOX_TOKEN
   if (!token) return null
@@ -41,15 +45,26 @@ async function geocodeCity(name: string): Promise<[number, number] | null> {
   return null
 }
 
-async function getDrivingRoute(from: [number, number], to: [number, number]): Promise<[number, number][] | null> {
+interface RouteData { coords: [number, number][]; durationSecs: number }
+
+async function getRouteData(
+  from: [number, number],
+  to: [number, number],
+  profile: 'walking' | 'driving',
+): Promise<RouteData | null> {
   const token = import.meta.env.VITE_MAPBOX_TOKEN
   if (!token) return null
   try {
     const res = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${from[0]},${from[1]};${to[0]},${to[1]}?geometries=geojson&access_token=${token}`
+      `https://api.mapbox.com/directions/v5/mapbox/${profile}/${from[0]},${from[1]};${to[0]},${to[1]}?geometries=geojson&access_token=${token}`
     )
     const data = await res.json()
-    if (data.routes?.length > 0) return data.routes[0].geometry.coordinates as [number, number][]
+    if (data.routes?.length > 0) {
+      return {
+        coords: data.routes[0].geometry.coordinates as [number, number][],
+        durationSecs: data.routes[0].duration as number,
+      }
+    }
   } catch { /* ignore */ }
   return null
 }
@@ -110,6 +125,14 @@ function makeStayMarkerEl(): HTMLDivElement {
   return el
 }
 
+function formatMinutes(secs: number): string {
+  const mins = Math.round(secs / 60)
+  if (mins < 60) return `${mins} min`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m > 0 ? `${h}h ${m}m` : `${h}h`
+}
+
 interface Props {
   itinerary: ItineraryJSON
   originCity: string
@@ -136,10 +159,91 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   // day_number → bounding coords for fitBounds
   const dayBoundsCoords = useRef<Map<number, [number, number][]>>(new Map())
 
+  // ── Route state ─────────────────────────────────────────────────────────────
+  const [routeMode, setRouteMode] = useState<'walking' | 'driving'>('walking')
+  const [routeTimes, setRouteTimes] = useState<{ walking: number | null; driving: number | null } | null>(null)
+  // When a marker is clicked, store stay + activity coords to trigger route fetch
+  const [activeRoute, setActiveRoute] = useState<{ stay: [number, number]; activity: [number, number] } | null>(null)
+  // Cache both route results so mode toggle doesn't refetch
+  const routeDataCache = useRef<{ walking: RouteData | null; driving: RouteData | null } | null>(null)
+  // Latest stays accessible from inside map click handlers
+  const staysRef = useRef(stays)
+
+  // Keep staysRef in sync so click handlers always use latest stays
+  useEffect(() => { staysRef.current = stays }, [stays])
+
   const clearDestMarkers = useCallback(() => {
     destMarkersRef.current.forEach(m => m.remove())
     destMarkersRef.current = []
   }, [])
+
+  // Clear the activity-to-stay route layer from the map
+  function clearRouteLayer() {
+    if (!map.current) return
+    if (map.current.getLayer(ROUTE_LAYER_ID))   map.current.removeLayer(ROUTE_LAYER_ID)
+    if (map.current.getSource(ROUTE_SOURCE_ID)) map.current.removeSource(ROUTE_SOURCE_ID)
+  }
+
+  // Draw the route layer for a given set of coords + mode
+  function addRouteLayer(coords: [number, number][], mode: 'walking' | 'driving') {
+    if (!map.current) return
+    const color = mode === 'walking' ? '#10b981' : '#3b82f6'
+    map.current.addSource(ROUTE_SOURCE_ID, {
+      type: 'geojson',
+      data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } },
+    })
+    map.current.addLayer({
+      id: ROUTE_LAYER_ID, type: 'line', source: ROUTE_SOURCE_ID,
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': color,
+        'line-width': 3,
+        'line-opacity': 0.9,
+        ...(mode === 'walking' ? { 'line-dasharray': [1.5, 2.5] } : {}),
+      },
+    })
+  }
+
+  // ── Fetch both routes when activeRoute changes ───────────────────────────────
+  useEffect(() => {
+    if (!ready || !map.current) return
+    clearRouteLayer()
+    routeDataCache.current = null
+
+    if (!activeRoute) {
+      setRouteTimes(null)
+      return
+    }
+
+    const { stay, activity } = activeRoute
+    Promise.all([
+      getRouteData(stay, activity, 'walking'),
+      getRouteData(stay, activity, 'driving'),
+    ]).then(([walkData, driveData]) => {
+      routeDataCache.current = { walking: walkData, driving: driveData }
+      setRouteTimes({
+        walking:  walkData?.durationSecs  ?? null,
+        driving:  driveData?.durationSecs ?? null,
+      })
+      // Draw whichever mode is currently selected (read from DOM state — use callback form)
+      setRouteMode(current => {
+        const data = current === 'walking' ? walkData : driveData
+        clearRouteLayer()
+        if (data) addRouteLayer(data.coords, current)
+        return current
+      })
+    })
+  }, [activeRoute, ready]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Redraw from cache when mode toggle changes ───────────────────────────────
+  useEffect(() => {
+    if (!ready || !map.current || !routeDataCache.current) return
+    clearRouteLayer()
+    const data = routeMode === 'walking'
+      ? routeDataCache.current.walking
+      : routeDataCache.current.driving
+    if (data) addRouteLayer(data.coords, routeMode)
+  }, [routeMode, ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Initialize map ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -253,11 +357,21 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
             .setPopup(popup)
             .addTo(map.current!)
 
-          // Click: fly in close
           el.addEventListener('click', (e) => {
             e.stopPropagation()
             map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
             marker.togglePopup()
+
+            // Trigger route draw if there's a stay for this night
+            const currentStay = getStayForDay(dp, staysRef.current)
+            if (currentStay?.latitude && currentStay?.longitude) {
+              setActiveRoute({
+                stay: [currentStay.longitude, currentStay.latitude],
+                activity: coords,
+              })
+            } else {
+              setActiveRoute(null)
+            }
           })
 
           dayMarkers.push(marker)
@@ -265,7 +379,6 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
 
         activityMarkersRef.current.set(dp.day_number, dayMarkers)
 
-        // Bounds for this day: activity coords + stay coords (added below)
         if (dayCoords.length > 0) {
           dayBoundsCoords.current.set(dp.day_number, dayCoords)
         }
@@ -329,8 +442,8 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         const sourceId = `route-${leg.from}-${leg.to}`.replace(/[\s/]/g, '-')
         let coordinates: [number, number][]
         if (leg.mode === 'drive') {
-          const route = await getDrivingRoute(fromStop.coords, toStop.coords)
-          coordinates = route || [fromStop.coords, toStop.coords]
+          const route = await getRouteData(fromStop.coords, toStop.coords, 'driving')
+          coordinates = route?.coords || [fromStop.coords, toStop.coords]
         } else if (leg.mode === 'flight') {
           coordinates = buildArc(fromStop.coords, toStop.coords)
         } else {
@@ -408,6 +521,12 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   useEffect(() => {
     if (!ready || !map.current) return
 
+    // Clear any active route when the day changes
+    clearRouteLayer()
+    routeDataCache.current = null
+    setActiveRoute(null)
+    setRouteTimes(null)
+
     // Hide all activity markers
     activityMarkersRef.current.forEach(markers => {
       markers.forEach(m => {
@@ -480,6 +599,11 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   function handleResetView() {
     if (!map.current || allCoords.current.length === 0) return
 
+    clearRouteLayer()
+    routeDataCache.current = null
+    setActiveRoute(null)
+    setRouteTimes(null)
+
     // Hide activity + stay markers
     activityMarkersRef.current.forEach(markers => markers.forEach(m => {
       if (m) (m.getElement() as HTMLElement).style.display = 'none'
@@ -504,11 +628,53 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   return (
     <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)', marginBottom: 24 }}>
       <div ref={mapContainer} style={{ height: 340, width: '100%' }} />
+
       {loading && (
         <div style={{ position: 'absolute', inset: 0, background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#6b7280' }}>
           Loading map…
         </div>
       )}
+
+      {/* Route travel time toggle — appears when an activity with a stay is clicked */}
+      {ready && routeTimes && (
+        <div style={{
+          position: 'absolute', top: 12, right: 12,
+          background: 'white', borderRadius: 10, padding: '6px 8px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          display: 'flex', gap: 4, alignItems: 'center',
+          fontFamily: 'inherit',
+        }}>
+          <button
+            onClick={() => setRouteMode('walking')}
+            style={{
+              border: routeMode === 'walking' ? '1.5px solid #10b981' : '1.5px solid #e5e7eb',
+              background: routeMode === 'walking' ? '#f0fdf4' : 'white',
+              borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+              color: routeMode === 'walking' ? '#10b981' : '#6b7280',
+              display: 'flex', alignItems: 'center', gap: 4,
+              transition: 'all 0.15s',
+            }}
+          >
+            🚶 {routeTimes.walking != null ? formatMinutes(routeTimes.walking) : '—'}
+          </button>
+          <button
+            onClick={() => setRouteMode('driving')}
+            style={{
+              border: routeMode === 'driving' ? '1.5px solid #3b82f6' : '1.5px solid #e5e7eb',
+              background: routeMode === 'driving' ? '#eff6ff' : 'white',
+              borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+              cursor: 'pointer', fontFamily: 'inherit',
+              color: routeMode === 'driving' ? '#3b82f6' : '#6b7280',
+              display: 'flex', alignItems: 'center', gap: 4,
+              transition: 'all 0.15s',
+            }}
+          >
+            🚗 {routeTimes.driving != null ? formatMinutes(routeTimes.driving) : '—'}
+          </button>
+        </div>
+      )}
+
       {ready && (
         <button
           onClick={handleResetView}
@@ -524,6 +690,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
           ↙ Full trip view
         </button>
       )}
+
       {ready && (
         <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 6 }}>
           {Object.entries(PERIOD_COLORS).map(([period, color]) => (
