@@ -11,7 +11,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session, joinedload
 from jose import jwt, JWTError
 import os
+import base64
 import httpx
+import anthropic as anthropic_sdk
 
 from app.db import get_db
 from app.models import Client, Trip, Itinerary, Message, Flight, Stay
@@ -654,6 +656,52 @@ def destination_photo(
     return {"photo_url": None, "source": None}
 
 
+def _verify_activity_photo(url: str, title: str, location: str) -> bool:
+    """Use Claude Haiku vision to confirm a photo actually depicts the activity.
+    Returns True only if the image clearly matches. Falls back to False on any error."""
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return True  # no key → skip gate, show photo
+    try:
+        # Download image and encode as base64 so we don't rely on URL passthrough
+        img_resp = httpx.get(url, timeout=8, follow_redirects=True)
+        img_resp.raise_for_status()
+        content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        if content_type not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+            content_type = "image/jpeg"
+        b64 = base64.standard_b64encode(img_resp.content).decode()
+
+        client = anthropic_sdk.Anthropic(api_key=anthropic_key)
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=5,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": content_type, "data": b64},
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            f"Does this photo accurately and specifically depict '{title}' "
+                            f"in or around {location}? "
+                            "Answer YES if it clearly shows the activity, landmark, or scene. "
+                            "Answer NO if it is generic, unrelated, or could be anywhere. "
+                            "Reply with YES or NO only."
+                        ),
+                    },
+                ],
+            }],
+        )
+        answer = resp.content[0].text.strip().upper()
+        return answer.startswith("YES")
+    except Exception as exc:
+        logger.warning("Photo verify failed for %s: %s", url, exc)
+        return False
+
+
 def _unsplash_candidates(query: str, n: int = 8) -> list[str]:
     """Search Unsplash and return up to n landscape photo URLs, best quality first."""
     try:
@@ -694,21 +742,23 @@ def activity_photo(
     location: str = Query(..., description="Location/city, e.g. 'Los Angeles'"),
     _client=Depends(get_current_client),
 ):
-    """Return a pool of candidate landscape photo URLs for an itinerary activity block.
-    The frontend picks the first candidate not already shown by another block on the same day,
-    preventing duplicate photos across morning/afternoon/evening."""
+    """Return a single verified landscape photo URL for an itinerary activity block.
+    Candidates are drawn from Unsplash and filtered by Claude Haiku vision — only a photo
+    that clearly depicts the specific activity is returned. Returns an empty list if no
+    candidate passes the quality gate, which causes the frontend to show no photo."""
     if not UNSPLASH_ACCESS_KEY:
         return {"candidates": []}
-    candidates: list[str] = []
     seen: set[str] = set()
     for query in _activity_search_queries(title, location):
         for url in _unsplash_candidates(query):
-            if url not in seen:
-                seen.add(url)
-                candidates.append(url)
-        if len(candidates) >= 8:
-            break
-    return {"candidates": candidates[:8]}
+            if url in seen:
+                continue
+            seen.add(url)
+            if _verify_activity_photo(url, title, location):
+                logger.info("Photo verified for '%s' @ %s: %s", title, location, url)
+                return {"candidates": [url]}
+    logger.info("No verified photo found for '%s' @ %s", title, location)
+    return {"candidates": []}
 
 
 @router.get("/place-lookup")
