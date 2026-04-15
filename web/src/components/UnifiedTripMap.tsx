@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import type { ItineraryJSON, Stay } from '../types'
+import type { ItineraryJSON, Stay, DayPlan, DayBlock } from '../types'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || ''
 
@@ -16,6 +16,17 @@ const TRANSPORT_COLORS: Record<string, string> = {
 }
 
 const DEST_COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b', '#06b6d4', '#ec4899']
+
+const PERIOD_COLORS: Record<string, string> = {
+  morning:   '#f59e0b',
+  afternoon: '#3b82f6',
+  evening:   '#6d28d9',
+}
+const PERIOD_LABELS: Record<string, string> = {
+  morning: 'AM',
+  afternoon: 'PM',
+  evening: 'EVE',
+}
 
 async function geocodeCity(name: string): Promise<[number, number] | null> {
   const token = import.meta.env.VITE_MAPBOX_TOKEN
@@ -54,6 +65,51 @@ function buildArc(from: [number, number], to: [number, number], steps = 80): [nu
   return pts
 }
 
+function getStayForDay(day: DayPlan, stays: Stay[]): Stay | null {
+  if (!day.date) return null
+  const dayDate = new Date(day.date + 'T12:00:00Z')
+  return stays.find(stay => {
+    const checkIn = new Date(stay.check_in)
+    const checkOut = new Date(stay.check_out)
+    return checkIn <= dayDate && dayDate < checkOut
+  }) ?? null
+}
+
+function makeActivityMarkerEl(period: string): HTMLDivElement {
+  const el = document.createElement('div')
+  const color = PERIOD_COLORS[period] || '#6b7280'
+  const label = PERIOD_LABELS[period] || period.slice(0, 3).toUpperCase()
+  el.style.cssText = `
+    background: ${color}; color: white;
+    border: 2px solid white; border-radius: 12px;
+    padding: 2px 7px; font-size: 10px; font-weight: 700;
+    white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.28);
+    cursor: pointer; font-family: inherit; letter-spacing: 0.03em;
+    transition: transform 0.12s, box-shadow 0.12s;
+    display: none;
+  `
+  el.textContent = label
+  el.onmouseenter = () => { el.style.transform = 'scale(1.12)'; el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.35)' }
+  el.onmouseleave = () => { el.style.transform = ''; el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.28)' }
+  return el
+}
+
+function makeStayMarkerEl(): HTMLDivElement {
+  const el = document.createElement('div')
+  el.style.cssText = `
+    background: white; border: 2.5px solid #10b981; border-radius: 8px;
+    width: 26px; height: 26px; display: none;
+    align-items: center; justify-content: center;
+    font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.22); cursor: pointer;
+    transition: transform 0.12s;
+  `
+  el.style.display = 'none'
+  el.textContent = '🏨'
+  el.onmouseenter = () => { el.style.transform = 'scale(1.15)' }
+  el.onmouseleave = () => { el.style.transform = '' }
+  return el
+}
+
 interface Props {
   itinerary: ItineraryJSON
   originCity: string
@@ -65,20 +121,24 @@ interface Props {
 export default function UnifiedTripMap({ itinerary, originCity, stays, selectedDayNum, onDaySelect }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const map = useRef<mapboxgl.Map | null>(null)
-  const markersRef = useRef<mapboxgl.Marker[]>([])
+  const destMarkersRef = useRef<mapboxgl.Marker[]>([])
+  // day_number → [morning, afternoon, evening] markers (null if no coords)
+  const activityMarkersRef = useRef<Map<number, (mapboxgl.Marker | null)[]>>(new Map())
+  // stay.id → marker
+  const stayMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
+
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
 
-  // location name → coords (populated after geocoding)
   const locationCoords = useRef<Map<string, [number, number]>>(new Map())
-  // day number → location name
   const dayLocation = useRef<Map<number, string>>(new Map())
-  // all stop coords for fitBounds
   const allCoords = useRef<[number, number][]>([])
+  // day_number → bounding coords for fitBounds
+  const dayBoundsCoords = useRef<Map<number, [number, number][]>>(new Map())
 
-  const clearMarkers = useCallback(() => {
-    markersRef.current.forEach(m => m.remove())
-    markersRef.current = []
+  const clearDestMarkers = useCallback(() => {
+    destMarkersRef.current.forEach(m => m.remove())
+    destMarkersRef.current = []
   }, [])
 
   // ── Initialize map ──────────────────────────────────────────────────────────
@@ -106,6 +166,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       if (!map.current) return
       const legs = itinerary.transport_legs || []
       const destinations = itinerary.destinations || []
+      const dayPlans = itinerary.day_plans || []
 
       // ── Geocode origin + destinations ──
       const originCoords = await geocodeCity(originCity)
@@ -118,15 +179,24 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       }
 
       // Build day → location mapping
-      let dayCount = 1
-      resolvedDests.forEach(d => {
-        for (let i = 0; i < d.nights; i++) {
-          dayLocation.current.set(dayCount + i, d.name)
-        }
-        dayCount += d.nights
+      dayPlans.forEach(dp => {
+        dayLocation.current.set(dp.day_number, dp.location_base)
       })
 
-      // Build stops list
+      // Compute day ranges per location
+      const locationDayRange = new Map<string, { min: number; max: number }>()
+      dayPlans.forEach(dp => {
+        const key = dp.location_base.toLowerCase()
+        const existing = locationDayRange.get(key)
+        if (!existing) {
+          locationDayRange.set(key, { min: dp.day_number, max: dp.day_number })
+        } else {
+          existing.min = Math.min(existing.min, dp.day_number)
+          existing.max = Math.max(existing.max, dp.day_number)
+        }
+      })
+
+      // Build stops
       interface Stop { name: string; coords: [number, number]; color: string; dayRange: string; firstDay: number; isOrigin: boolean }
       const stops: Stop[] = []
       stops.push({ name: originCity, coords: originCoords, color: '#2d4a5a', dayRange: 'Home', firstDay: 0, isOrigin: true })
@@ -135,27 +205,100 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       let dc = 1
       resolvedDests.forEach((dest, i) => {
         if (!dest.coords) { dc += dest.nights; return }
-        const endDay = dc + dest.nights - 1
+        const range = locationDayRange.get(dest.name.toLowerCase())
+        const firstDay = range?.min ?? dc
+        const lastDay = range?.max ?? (dc + dest.nights - 1)
         stops.push({
           name: dest.name,
           coords: dest.coords,
           color: DEST_COLORS[i % DEST_COLORS.length],
-          dayRange: dest.nights === 1 ? `Day ${dc}` : `Days ${dc}–${endDay}`,
-          firstDay: dc,
+          dayRange: firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`,
+          firstDay,
           isOrigin: false,
         })
         locationCoords.current.set(dest.name.toLowerCase(), dest.coords)
         dc += dest.nights
       })
 
-      // Fit bounds to destination coords only (not origin, which may be on a different continent)
       const destCoords = stops.filter(s => !s.isOrigin).map(s => s.coords)
       allCoords.current = destCoords.length > 0 ? destCoords : stops.map(s => s.coords)
-      const stayPins = stays.filter(s => s.latitude && s.longitude)
-      stayPins.forEach(s => allCoords.current.push([s.longitude!, s.latitude!]))
 
-      // ── Draw transport routes ──
-      // Auto-add origin → first destination flight arc if no leg covers that route
+      // ── Activity markers (hidden initially) ──────────────────────────────
+      dayPlans.forEach(dp => {
+        const periods: Array<'morning' | 'afternoon' | 'evening'> = ['morning', 'afternoon', 'evening']
+        const dayMarkers: (mapboxgl.Marker | null)[] = []
+        const dayCoords: [number, number][] = []
+
+        periods.forEach(period => {
+          const block: DayBlock | null = dp[period] as DayBlock | null
+          if (!block?.lat || !block?.lng) { dayMarkers.push(null); return }
+
+          const coords: [number, number] = [block.lng, block.lat]
+          dayCoords.push(coords)
+
+          const el = makeActivityMarkerEl(period)
+          const costStr = block.est_cost_aud != null ? ` · ~A$${block.est_cost_aud}` : ''
+          const popup = new mapboxgl.Popup({ offset: 14, closeButton: false, maxWidth: '240px' })
+            .setHTML(`
+              <div style="font-family:inherit;padding:4px 2px">
+                <div style="font-size:10px;font-weight:700;color:${PERIOD_COLORS[period]};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">${period}${costStr}</div>
+                <div style="font-weight:700;font-size:13px;color:#1a2a3a;margin-bottom:4px">${block.title}</div>
+                <div style="font-size:11px;color:#6b7280;line-height:1.4">${block.details?.slice(0, 100)}${(block.details?.length || 0) > 100 ? '…' : ''}</div>
+                ${block.place_id ? `<a href="https://www.google.com/maps/place/?q=place_id:${block.place_id}" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;text-decoration:none;display:block;margin-top:6px">View on Google Maps →</a>` : ''}
+              </div>
+            `)
+
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+            .setLngLat(coords)
+            .setPopup(popup)
+            .addTo(map.current!)
+
+          // Click: fly in close
+          el.addEventListener('click', (e) => {
+            e.stopPropagation()
+            map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
+            marker.togglePopup()
+          })
+
+          dayMarkers.push(marker)
+        })
+
+        activityMarkersRef.current.set(dp.day_number, dayMarkers)
+
+        // Bounds for this day: activity coords + stay coords (added below)
+        if (dayCoords.length > 0) {
+          dayBoundsCoords.current.set(dp.day_number, dayCoords)
+        }
+      })
+
+      // ── Stay markers (hidden initially, one per confirmed stay) ───────────
+      stays.forEach(stay => {
+        if (!stay.latitude || !stay.longitude) return
+        const coords: [number, number] = [stay.longitude, stay.latitude]
+        const el = makeStayMarkerEl()
+        const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
+        const popup = new mapboxgl.Popup({ offset: 14, closeButton: false, maxWidth: '220px' })
+          .setHTML(`
+            <div style="font-family:inherit;padding:4px 2px">
+              <div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Accommodation</div>
+              <div style="font-weight:700;font-size:13px;color:#1a2a3a;margin-bottom:4px">${stay.name}</div>
+              <div style="font-size:11px;color:#6b7280">${nights} night${nights !== 1 ? 's' : ''}</div>
+              ${stay.website ? `<a href="${stay.website}" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;text-decoration:none;display:block;margin-top:6px">View hotel →</a>` : ''}
+            </div>
+          `)
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat(coords)
+          .setPopup(popup)
+          .addTo(map.current!)
+        el.addEventListener('click', (e) => {
+          e.stopPropagation()
+          map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
+          marker.togglePopup()
+        })
+        stayMarkersRef.current.set(stay.id, marker)
+      })
+
+      // ── Draw transport routes ────────────────────────────────────────────
       const firstDest = stops.find(s => !s.isOrigin)
       const hasOriginLeg = legs.some(l =>
         l.from.toLowerCase() === originCity.toLowerCase() ||
@@ -211,8 +354,8 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         })
       }
 
-      // ── Markers: day-range pill labels for destinations, dot for origin ──
-      clearMarkers()
+      // ── Destination markers ──────────────────────────────────────────────
+      clearDestMarkers()
       stops.forEach(stop => {
         if (!map.current) return
         const el = document.createElement('div')
@@ -236,23 +379,10 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
           .setLngLat(stop.coords)
           .setPopup(popup)
           .addTo(map.current!)
-        markersRef.current.push(marker)
+        destMarkersRef.current.push(marker)
       })
 
-      // Hotel pins
-      stayPins.forEach(stay => {
-        if (!map.current) return
-        const el = document.createElement('div')
-        el.style.cssText = `background:white;border:2px solid #10b981;border-radius:6px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,0.2);cursor:pointer;`
-        el.textContent = '🏨'
-        new mapboxgl.Marker({ element: el })
-          .setLngLat([stay.longitude!, stay.latitude!])
-          .setPopup(new mapboxgl.Popup({ offset: 12, closeButton: false })
-            .setHTML(`<div style="font-family:inherit;padding:4px 2px"><div style="font-weight:700;font-size:13px">${stay.name}</div></div>`))
-          .addTo(map.current!)
-      })
-
-      // Fit bounds to full trip
+      // Fit to full trip on load
       if (allCoords.current.length > 1) {
         const bounds = allCoords.current.reduce(
           (b, c) => b.extend(c),
@@ -266,24 +396,98 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
     })
 
     return () => {
-      clearMarkers()
+      clearDestMarkers()
+      activityMarkersRef.current.forEach(markers => markers.forEach(m => m?.remove()))
+      stayMarkersRef.current.forEach(m => m.remove())
       map.current?.remove()
       map.current = null
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Fly to selected day's location ─────────────────────────────────────────
+  // ── Day selection: show/hide activity + stay markers, zoom ─────────────────
   useEffect(() => {
-    if (!ready || !map.current || selectedDayNum < 1) return
-    const locName = dayLocation.current.get(selectedDayNum)
-    if (!locName) return
-    const coords = locationCoords.current.get(locName.toLowerCase())
-    if (!coords) return
-    map.current.flyTo({ center: coords, zoom: 8, duration: 900, essential: true })
-  }, [selectedDayNum, ready])
+    if (!ready || !map.current) return
+
+    // Hide all activity markers
+    activityMarkersRef.current.forEach(markers => {
+      markers.forEach(m => {
+        if (m) (m.getElement() as HTMLElement).style.display = 'none'
+      })
+    })
+
+    // Hide all stay markers
+    stayMarkersRef.current.forEach(m => {
+      ;(m.getElement() as HTMLElement).style.display = 'none'
+    })
+
+    if (selectedDayNum < 1) {
+      // Reset to full trip view
+      if (allCoords.current.length > 1) {
+        const bounds = allCoords.current.reduce(
+          (b, c) => b.extend(c),
+          new mapboxgl.LngLatBounds(allCoords.current[0], allCoords.current[0])
+        )
+        map.current.fitBounds(bounds, { padding: 60, maxZoom: 7, duration: 900 })
+      }
+      return
+    }
+
+    // Show activity markers for selected day
+    const dayMarkers = activityMarkersRef.current.get(selectedDayNum) || []
+    dayMarkers.forEach(m => {
+      if (m) (m.getElement() as HTMLElement).style.display = 'flex'
+    })
+
+    // Find stay for this night and show its marker
+    const dayPlan = (itinerary.day_plans || []).find(dp => dp.day_number === selectedDayNum)
+    const stayForNight = dayPlan ? getStayForDay(dayPlan, stays) : null
+    let stayCoords: [number, number] | null = null
+    if (stayForNight) {
+      const stayMarker = stayMarkersRef.current.get(stayForNight.id)
+      if (stayMarker) {
+        ;(stayMarker.getElement() as HTMLElement).style.display = 'flex'
+        if (stayForNight.longitude && stayForNight.latitude) {
+          stayCoords = [stayForNight.longitude, stayForNight.latitude]
+        }
+      }
+    }
+
+    // Compute bounds: activity coords + stay coords
+    const boundsCoords: [number, number][] = [...(dayBoundsCoords.current.get(selectedDayNum) || [])]
+    if (stayCoords) boundsCoords.push(stayCoords)
+
+    if (boundsCoords.length === 0) {
+      // No geocoded activities — fall back to fly to destination city
+      const locName = dayLocation.current.get(selectedDayNum)
+      if (locName) {
+        const coords = locationCoords.current.get(locName.toLowerCase())
+        if (coords) map.current.flyTo({ center: coords, zoom: 13, duration: 900, essential: true })
+      }
+      return
+    }
+
+    if (boundsCoords.length === 1) {
+      map.current.flyTo({ center: boundsCoords[0], zoom: 14, duration: 900, essential: true })
+    } else {
+      const bounds = boundsCoords.reduce(
+        (b, c) => b.extend(c),
+        new mapboxgl.LngLatBounds(boundsCoords[0], boundsCoords[0])
+      )
+      map.current.fitBounds(bounds, { padding: 70, maxZoom: 14, duration: 900 })
+    }
+  }, [selectedDayNum, ready]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleResetView() {
     if (!map.current || allCoords.current.length === 0) return
+
+    // Hide activity + stay markers
+    activityMarkersRef.current.forEach(markers => markers.forEach(m => {
+      if (m) (m.getElement() as HTMLElement).style.display = 'none'
+    }))
+    stayMarkersRef.current.forEach(m => {
+      ;(m.getElement() as HTMLElement).style.display = 'none'
+    })
+
     if (allCoords.current.length === 1) {
       map.current.flyTo({ center: allCoords.current[0], zoom: 5, duration: 900 })
     } else {
@@ -319,6 +523,18 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         >
           ↙ Full trip view
         </button>
+      )}
+      {ready && (
+        <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 6 }}>
+          {Object.entries(PERIOD_COLORS).map(([period, color]) => (
+            <div key={period} style={{ background: 'white', border: `1.5px solid ${color}`, borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700, color, fontFamily: 'inherit', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+              {PERIOD_LABELS[period]} {period.charAt(0).toUpperCase() + period.slice(1)}
+            </div>
+          ))}
+          <div style={{ background: 'white', border: '1.5px solid #10b981', borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700, color: '#10b981', fontFamily: 'inherit', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+            🏨 Stay
+          </div>
+        </div>
       )}
     </div>
   )

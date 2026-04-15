@@ -48,9 +48,9 @@ The JSON must match this exact schema — no extra fields, no missing fields:
     "day_number": integer,
     "date": "YYYY-MM-DD",
     "location_base": "string",
-    "morning": {"title": "string", "details": "string (2-3 sentences)", "booking_needed": boolean, "est_cost_aud": number|null} | null,
-    "afternoon": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null} | null,
-    "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null} | null,
+    "morning": {"title": "string", "details": "string (2-3 sentences)", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string"} | null,
+    "afternoon": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string"} | null,
+    "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string"} | null,
     "notes": ["string"]
   }],
   "transport_legs": [
@@ -80,6 +80,13 @@ The JSON must match this exact schema — no extra fields, no missing fields:
   "risks_and_notes": ["string"]
 }
 
+PHOTO QUERY RULES:
+- Each morning/afternoon/evening block must include a "photo_query" field: 2-4 words for an Unsplash image search
+- Pick the most visually recognisable element of the activity — a landmark, scenery type, or cuisine style
+- Generic enough to return results, specific enough to not mislead. Never use people's names or niche venue names
+- CRITICAL: The three queries within a single day (morning/afternoon/evening) must be visually distinct from each other — different subjects, not just different words. A hiking trail, a luxury shopping street, and a candlelit restaurant should produce completely different images
+- Examples: "Runyon Canyon trail" · "Italian restaurant dinner" · "Shibuya crossing night" · "Tsukiji fish market" · "Kyoto bamboo grove" · "French pastry cafe" · "coastal cliff walk" · "rooftop bar city" · "museum art gallery" · "street food market"
+
 HOTEL SUGGESTIONS RULES:
 - Include 6-8 hotel suggestions per destination (we verify against Google Places and need enough candidates to land 3 confirmed results per destination)
 - CRITICAL: Use the EXACT official hotel name as it appears on Google Maps and Booking.com — not a paraphrase, not a shortened version. For example "Park Hyatt Tokyo" not "Park Hyatt" or "Tokyo Park Hyatt". Precision here is essential.
@@ -101,31 +108,243 @@ TRANSPORT LEGS RULES:
 - Keep "transport_notes" for general destination transport tips only (e.g. "Get a Suica card for Tokyo transit")
   not for advice that belongs to a specific leg"""
 
-INTAKE_CHAT_SYSTEM = """You are Maya, a friendly and knowledgeable travel consultant at Papaya Travel.
-Your job is to have a warm, natural conversation to understand a client's travel needs.
+INTAKE_CHAT_SYSTEM = """You are Maya, a travel consultant at Papaya Travel — a boutique Australian travel agency.
 
-You must collect the following information — but do it conversationally, not like a form.
-Ask 1-2 things at a time maximum. Use yes/no and multiple-choice questions where possible.
+PERSONA:
+You're the well-travelled friend who happens to be a professional. You've been everywhere, you give advice like someone who genuinely loves travel, not someone reading from a brochure. You're warm, occasionally dry, never salesy. You make clients feel like they're getting insider knowledge, not a packaged service.
 
-REQUIRED information to collect:
+Your humour is situational and dry — a knowing observation about a destination, a mild aside that slips out naturally. Never performed, never emoji-driven, never a setup-and-punchline joke. One light touch every few messages at most. If a client is typing short answers or seems in a hurry, read the room and drop it entirely.
+
+You never say things like:
+- "Ooh how exciting!" / "That sounds amazing!" / "Great choice!"
+- "I'd be happy to help with that"
+- "Certainly!" / "Absolutely!"
+- "Embarking on a journey"
+
+You do say things like:
+- "Good timing — [specific observation about destination/season]"
+- "First time in [place]?" (then a real insight, not a generic one)
+- Short, confident questions that assume you know what you're doing
+
+CONVERSATION RULES:
+- Ask 1-2 things per message maximum. Never more.
+- Prefer closed questions over open ones. Give options rather than asking them to invent an answer.
+- You already know destination, dates, origin city, and budget — never ask about these.
+- Keep replies to 2-4 sentences. You're having a conversation, not writing an email.
+- Never number your questions or use bullet points. This is a chat.
+- If someone gives a short answer, match their pace. If they're chatty, you can be too.
+
+REQUIRED information to collect (work through these naturally, not in order):
 1. Travel companions — who's coming? (solo, couple, family with kids ages, friends group)
 2. Purpose/vibe — honeymoon, adventure, relaxation, culture, family holiday, bucket list?
 3. Pace — packed schedule vs slow travel?
-4. Accommodation style — luxury resort, boutique local, mid-range hotel, budget/backpacker, unique stays (treehouses, ryokans)?
-5. Food — any dietary restrictions? Adventurous or prefer familiar? Street food or fine dining?
+4. Accommodation style — luxury resort, boutique local, mid-range hotel, budget/backpacker, unique stays?
+5. Food — dietary restrictions? Adventurous or prefer familiar? Street food or fine dining?
 6. Activity profile — outdoors/hiking, beaches, cultural sites, nightlife, markets, cooking classes, wildlife?
-7. Fitness/mobility — will they do strenuous hikes? Long walks OK?
+7. Fitness/mobility — strenuous hikes OK? Long walking days fine?
 8. Experience level — first time in this region or well-travelled there?
 9. Non-negotiables — anything already booked, or absolute must-includes?
 10. Must-avoids — tourist traps, certain foods, party areas?
 11. Budget split — prefer to spend on accommodation or experiences?
 
-Start with a warm greeting. You already know their destination, dates, origin city, and budget from the booking form.
+EXAMPLES OF GOOD vs BAD OPENINGS:
 
-When you have collected all required information, end your FINAL message with exactly this marker on its own line:
-[INTAKE_COMPLETE]
+BAD: "Hello! I'm Maya, your travel consultant. I'm so excited to help plan your trip to Bali! Could you tell me who will be travelling with you?"
 
-Keep responses concise — 2-4 sentences max per message. Be warm, not robotic."""
+GOOD (for a couple going to Bali): "Bali in July — solid choice, that's peak dry season so you'll get the best weather. Are you heading over as a couple, or is there a group involved?"
+
+GOOD (for a family going to Japan): "Japan with kids is genuinely one of the best family trips you can do — they go absolutely feral for it. How old are yours?"
+
+GOOD (for solo traveller going to Portugal): "Portugal is having a moment right now, though thankfully Lisbon's not quite as overrun as it was two summers ago. Travelling solo?"
+
+EXAMPLES OF GOOD FOLLOW-UP QUESTIONS:
+
+BAD: "Great! Now, what kind of accommodation do you prefer? We have many options available."
+
+GOOD: "Are you more of a nice hotel person, or do you like something with a bit more local character — boutique guesthouse, that kind of thing?"
+
+BAD: "What activities are you interested in? Please list your preferences."
+
+GOOD: "When you picture a good day there — are you out doing stuff, or is half the plan just finding a good spot to sit?"
+
+WHEN WRAPPING UP:
+When you have collected all required information, send a warm closing message that briefly reflects back what you've gathered (1-2 sentences — make them feel heard, not summarised). End that message with exactly this marker on its own line:
+[INTAKE_COMPLETE]"""
+
+
+# ─── Analyser ─────────────────────────────────────────────────────────────────
+
+ANALYSER_SYSTEM = """You are a client profile analyst for Papaya Travel.
+
+Your job is to read an intake conversation between Maya (travel consultant) and a client,
+then extract a structured profile of the client's travel preferences and personality.
+
+RULES:
+- Do NOT infer or assume facts the client did not state. If something is unclear, add it to "gaps".
+- "personality_type" is 1-2 sentences describing how this person travels — their mindset, priorities,
+  and what makes a trip feel successful to them. Write it as context for an itinerary generator.
+- "key_insights" are 3-5 specific, actionable points the generator should act on.
+- Call the extract_client_profile tool with your findings. Do not output anything else."""
+
+# Tool schema — Claude must call this, guaranteeing valid structured output
+_ANALYSER_TOOL = {
+    "name": "extract_client_profile",
+    "description": "Extract and structure a client's travel preferences from their intake conversation.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "travel_companions": {"type": "string", "description": "Who is travelling, e.g. 'couple', 'family with 2 kids aged 6 and 9', 'solo'"},
+            "group_size": {"type": "integer"},
+            "trip_purpose": {"type": "string", "description": "Primary intent e.g. honeymoon, adventure, relaxation, culture, family holiday"},
+            "pace": {"type": "string", "enum": ["relaxed", "moderate", "packed"]},
+            "accommodation_style": {"type": "string", "enum": ["luxury", "boutique", "mid-range", "budget", "unique"]},
+            "accommodation_priority": {"type": "string", "enum": ["high", "medium", "low"]},
+            "food_profile": {
+                "type": "object",
+                "properties": {
+                    "dietary_restrictions": {"type": "array", "items": {"type": "string"}},
+                    "adventurousness": {"type": "string", "enum": ["adventurous", "moderate", "familiar"]},
+                    "dining_style": {"type": "string", "enum": ["street food", "casual", "mid-range", "fine dining", "mix"]},
+                },
+                "required": ["dietary_restrictions", "adventurousness", "dining_style"],
+            },
+            "activity_profile": {
+                "type": "object",
+                "properties": {
+                    "interests": {"type": "array", "items": {"type": "string"}, "description": "From: outdoors, beaches, culture, nightlife, markets, cooking, wildlife, shopping, art, sport"},
+                    "fitness_level": {"type": "string", "enum": ["low", "moderate", "high"]},
+                    "avoid": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["interests", "fitness_level", "avoid"],
+            },
+            "experience_level": {"type": "string", "enum": ["first-timer", "some experience", "well-travelled"]},
+            "must_dos": {"type": "array", "items": {"type": "string"}},
+            "must_avoids": {"type": "array", "items": {"type": "string"}},
+            "non_negotiables": {"type": "array", "items": {"type": "string"}, "description": "Already booked items or hard constraints"},
+            "budget_priority": {"type": "string", "enum": ["accommodation", "experiences", "balanced"]},
+            "personality_type": {"type": "string", "description": "1-2 sentences on how this person travels — for the itinerary generator"},
+            "key_insights": {"type": "array", "items": {"type": "string"}, "description": "3-5 actionable points for the generator"},
+            "gaps": {"type": "array", "items": {"type": "string"}, "description": "Things unclear or not covered — generator should make safe assumptions"},
+        },
+        "required": [
+            "travel_companions", "group_size", "trip_purpose", "pace",
+            "accommodation_style", "accommodation_priority", "food_profile",
+            "activity_profile", "experience_level", "must_dos", "must_avoids",
+            "non_negotiables", "budget_priority", "personality_type", "key_insights", "gaps",
+        ],
+    },
+}
+
+
+def analyse_intake(
+    transcript: str,
+    seed_data: dict,
+) -> dict:
+    """
+    Analyse a completed intake conversation and return a structured ClientProfile dict.
+    Uses tool_use to guarantee valid structured output — no regex parsing.
+
+    transcript: formatted conversation text (e.g. "Maya: ...\nClient: ...")
+    seed_data: {destination, origin_city, start_date, end_date, budget_range, travellers_count}
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    context = (
+        f"BOOKING FORM DATA:\n"
+        f"- Destination: {seed_data.get('destination', 'Not specified')}\n"
+        f"- Departing from: {seed_data.get('origin_city', 'Not specified')}\n"
+        f"- Dates: {seed_data.get('start_date')} to {seed_data.get('end_date')}\n"
+        f"- Budget: {seed_data.get('budget_range', 'Not specified')}\n"
+        f"- Number of travellers: {seed_data.get('travellers_count', 1)}\n\n"
+        f"INTAKE CONVERSATION:\n{transcript}"
+    )
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=2048,
+        system=ANALYSER_SYSTEM,
+        tools=[_ANALYSER_TOOL],
+        tool_choice={"type": "any"},  # force a tool call
+        messages=[{"role": "user", "content": context}],
+    )
+
+    # Extract the tool call input — guaranteed to match the schema
+    for block in response.content:
+        if block.type == "tool_use" and block.name == "extract_client_profile":
+            profile = block.input
+            logger.info(
+                "Analyser ClientProfile: companions=%s purpose=%s pace=%s insights=%s gaps=%s",
+                profile.get("travel_companions"),
+                profile.get("trip_purpose"),
+                profile.get("pace"),
+                profile.get("key_insights"),
+                profile.get("gaps"),
+            )
+            return profile
+
+    raise ValueError("Analyser did not return a tool call — unexpected response")
+
+
+def format_transcript(messages: list[dict]) -> str:
+    """Format a role/content message list into a readable transcript string."""
+    lines = []
+    for m in messages:
+        role = "Maya" if m["role"] == "assistant" else "Client"
+        lines.append(f"{role}: {m['content']}")
+    return "\n\n".join(lines)
+
+
+def client_profile_to_prompt(profile: dict, seed_data: dict) -> str:
+    """Convert a ClientProfile dict into a concise generator prompt block."""
+    food = profile.get("food_profile") or {}
+    activity = profile.get("activity_profile") or {}
+
+    parts = [
+        f"CLIENT PROFILE:",
+        f"- Companions: {profile.get('travel_companions', 'Not specified')} ({profile.get('group_size', '?')} people)",
+        f"- Trip purpose: {profile.get('trip_purpose', 'Not specified')}",
+        f"- Pace: {profile.get('pace', 'moderate')}",
+        f"- Accommodation: {profile.get('accommodation_style', 'mid-range')} (priority: {profile.get('accommodation_priority', 'medium')})",
+        f"- Food: {food.get('dining_style', 'mix')} — {food.get('adventurousness', 'moderate')}",
+    ]
+
+    if food.get("dietary_restrictions"):
+        parts.append(f"- Dietary restrictions: {', '.join(food['dietary_restrictions'])}")
+
+    if activity.get("interests"):
+        parts.append(f"- Interests: {', '.join(activity['interests'])}")
+    if activity.get("avoid"):
+        parts.append(f"- Activity avoids: {', '.join(activity['avoid'])}")
+
+    parts.append(f"- Fitness level: {activity.get('fitness_level', 'moderate')}")
+    parts.append(f"- Experience level: {profile.get('experience_level', 'some experience')}")
+    parts.append(f"- Budget priority: {profile.get('budget_priority', 'balanced')}")
+
+    if profile.get("must_dos"):
+        parts.append(f"- Must-dos: {'; '.join(profile['must_dos'])}")
+    if profile.get("must_avoids"):
+        parts.append(f"- Must-avoids: {'; '.join(profile['must_avoids'])}")
+    if profile.get("non_negotiables"):
+        parts.append(f"- Non-negotiables: {'; '.join(profile['non_negotiables'])}")
+
+    if profile.get("personality_type"):
+        parts.append(f"\nTRAVEL PERSONALITY:\n{profile['personality_type']}")
+
+    if profile.get("key_insights"):
+        parts.append(f"\nKEY INSIGHTS FOR THIS ITINERARY:")
+        for insight in profile["key_insights"]:
+            parts.append(f"- {insight}")
+
+    if profile.get("gaps"):
+        parts.append(f"\nNOTED GAPS (make reasonable assumptions):")
+        for gap in profile["gaps"]:
+            parts.append(f"- {gap}")
+
+    return "\n".join(parts)
 
 
 # ─── Intake chat ─────────────────────────────────────────────────────────────
@@ -181,6 +400,7 @@ def build_generation_prompt(
     conversation_transcript: str = "",
     confirmed_flights: list = None,
     confirmed_stays: list = None,
+    client_profile: dict = None,
 ) -> str:
     days = (trip.end_date - trip.start_date).days
     parts = [
@@ -190,18 +410,7 @@ def build_generation_prompt(
         f"DESTINATION: {trip.title}",
         f"DATES: {trip.start_date.isoformat()} to {trip.end_date.isoformat()} ({days} days)",
         f"BUDGET: {trip.budget_range}",
-        f"PACE: {trip.pace}",
-        f"TRAVELLERS: {intake.travellers_count}",
-        f"ACCOMMODATION STYLE: {intake.accommodation_style}",
-        f"INTERESTS: {', '.join(intake.interests) if intake.interests else 'General'}",
     ]
-
-    if intake.must_dos:
-        parts.append(f"MUST INCLUDE: {intake.must_dos}")
-    if intake.must_avoid:
-        parts.append(f"MUST AVOID: {intake.must_avoid}")
-    if intake.constraints:
-        parts.append(f"CONSTRAINTS: {intake.constraints}")
 
     if confirmed_flights:
         parts.append("\nCONFIRMED FLIGHTS (already booked — structure itinerary around these exact dates and times):")
@@ -213,16 +422,40 @@ def build_generation_prompt(
         for s in confirmed_stays:
             parts.append(f"  - {s.name}: check-in {s.check_in.date()}, check-out {s.check_out.date()}")
 
-    if conversation_transcript:
-        # Cap transcript to ~3000 chars to avoid bloating token count
+    if client_profile:
+        # Prefer structured ClientProfile from Analyser agent
+        seed_data = {
+            "destination": trip.title,
+            "origin_city": trip.origin_city,
+            "start_date": trip.start_date.isoformat(),
+            "end_date": trip.end_date.isoformat(),
+            "budget_range": trip.budget_range,
+        }
+        parts.append(f"\n{client_profile_to_prompt(client_profile, seed_data)}")
+    elif conversation_transcript:
+        # Fallback: raw transcript (pre-Analyser path)
         transcript = conversation_transcript[:3000]
         if len(conversation_transcript) > 3000:
             transcript += "\n[truncated]"
         parts.append(
             f"\nDETAILED CLIENT PROFILE (from intake conversation):\n{transcript}"
         )
-    elif intake.notes:
-        parts.append(f"ADDITIONAL NOTES: {intake.notes}")
+    else:
+        # Fallback: structured intake fields only
+        parts.extend([
+            f"PACE: {trip.pace}",
+            f"TRAVELLERS: {intake.travellers_count}",
+            f"ACCOMMODATION STYLE: {intake.accommodation_style}",
+            f"INTERESTS: {', '.join(intake.interests) if intake.interests else 'General'}",
+        ])
+        if intake.must_dos:
+            parts.append(f"MUST INCLUDE: {intake.must_dos}")
+        if intake.must_avoid:
+            parts.append(f"MUST AVOID: {intake.must_avoid}")
+        if intake.constraints:
+            parts.append(f"CONSTRAINTS: {intake.constraints}")
+        if intake.notes:
+            parts.append(f"ADDITIONAL NOTES: {intake.notes}")
 
     parts.append(
         "\nUsing your knowledge of real, currently-operating establishments, "
@@ -306,6 +539,7 @@ def generate_itinerary(
     trip_id: uuid.UUID,
     additional_instructions: str = "",
     conversation_transcript: str = "",
+    client_profile: dict = None,
 ) -> Itinerary:
     trip = db.query(Trip).filter(Trip.id == trip_id).first()
     if not trip:
@@ -327,6 +561,7 @@ def generate_itinerary(
         trip, intake, client_obj, conversation_transcript,
         confirmed_flights=confirmed_flights or None,
         confirmed_stays=confirmed_stays or None,
+        client_profile=client_profile,
     )
     if additional_instructions:
         user_prompt += f"\n\nSPECIAL INSTRUCTIONS FOR THIS VERSION:\n{additional_instructions}"
@@ -380,16 +615,25 @@ def generate_itinerary(
     db.commit()
     db.refresh(itinerary)
 
-    # Verify hotel suggestions against Google Places in the background
+    itinerary_id = itinerary.id
+
+    # ── Background: hotel verification ──────────────────────────────────────
     raw_suggestions = itinerary_data.get("hotel_suggestions") or []
     if raw_suggestions:
-        itinerary_id = itinerary.id
         t = threading.Thread(
             target=_enrich_hotel_suggestions_background,
             args=(itinerary_id, raw_suggestions),
             daemon=True,
         )
         t.start()
+
+    # ── Background: activity geocoding ───────────────────────────────────────
+    t2 = threading.Thread(
+        target=_geocode_activities_background,
+        args=(itinerary_id, itinerary_data),
+        daemon=True,
+    )
+    t2.start()
 
     return itinerary
 
@@ -420,9 +664,41 @@ def _enrich_hotel_suggestions_background(itinerary_id: uuid.UUID, raw_suggestion
         db.close()
 
 
+def _geocode_activities_background(itinerary_id: uuid.UUID, itinerary_data: dict) -> None:
+    """Geocode all activity blocks and write coordinates back to the itinerary."""
+    from app.services.places import geocode_itinerary_activities
+    from app.db import SessionLocal
+
+    try:
+        enriched = geocode_itinerary_activities(itinerary_data)
+    except Exception as e:
+        logger.warning("Activity geocoding failed for itinerary %s: %s", itinerary_id, e)
+        return
+
+    db = SessionLocal()
+    try:
+        itinerary = db.query(Itinerary).filter(Itinerary.id == itinerary_id).first()
+        if not itinerary:
+            return
+        updated_json = dict(itinerary.itinerary_json)
+        updated_json["day_plans"] = enriched["day_plans"]
+        itinerary.itinerary_json = updated_json
+        db.commit()
+        logger.info("Activity coordinates saved for itinerary %s", itinerary_id)
+    except Exception as e:
+        logger.warning("Failed to save activity coordinates for %s: %s", itinerary_id, e)
+        db.rollback()
+    finally:
+        db.close()
+
+
 # ─── Chat refinement ─────────────────────────────────────────────────────────
 
 CHAT_SYSTEM = """You are Maya, a travel consultant at Papaya Travel. You help clients adjust their itinerary.
+
+PERSONA:
+Same as intake — the well-travelled friend who's also a professional. Direct, warm, occasionally dry.
+The trip is planned. You're in problem-solving mode now, not sales mode. Be efficient.
 
 RULES:
 - Be direct and concise. Maximum 2 sentences for conversational replies.
@@ -430,6 +706,7 @@ RULES:
 - Never ask multiple questions at once. If you need clarification, ask one specific question.
 - Act on requests immediately — do not ask for permission or confirmation before making changes.
 - Never explain what you *could* do. Just do it.
+- Never say "Certainly!", "Absolutely!", "Great question!" or similar filler openers.
 
 If the client asks a travel question, answer it in 1-2 sentences.
 
@@ -442,16 +719,67 @@ When outputting updated JSON:
 
 Only include the ```json block when making actual changes."""
 
-# Keywords that indicate the user wants a full regeneration
-_REGEN_PHRASES = [
-    "regenerate", "regeneration", "start over", "start fresh", "rebuild",
-    "redo the itinerary", "redo my itinerary", "full new itinerary", "completely new",
-    "from scratch",
-]
 
-def _is_regeneration_request(message: str) -> bool:
-    lower = message.lower()
-    return any(phrase in lower for phrase in _REGEN_PHRASES)
+# ─── Intent classifier ────────────────────────────────────────────────────────
+
+_INTENT_TOOL = {
+    "name": "classify_intent",
+    "description": "Classify the user's message intent to route it correctly.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "intent": {
+                "type": "string",
+                "enum": ["targeted_edit", "full_regeneration", "question", "general_chat"],
+                "description": (
+                    "targeted_edit: wants a specific change to one or a few parts of the itinerary. "
+                    "full_regeneration: wants the entire itinerary rebuilt from scratch or with major new direction. "
+                    "question: asking for information or advice without wanting changes. "
+                    "general_chat: small talk or feedback not requiring action."
+                ),
+            },
+            "reasoning": {"type": "string", "description": "One sentence explaining the classification."},
+        },
+        "required": ["intent", "reasoning"],
+    },
+}
+
+_INTENT_SYSTEM = (
+    "You classify a travel client's message into one of four intents: "
+    "targeted_edit, full_regeneration, question, or general_chat. "
+    "Call the classify_intent tool with your answer."
+)
+
+
+def _classify_intent(message: str) -> str:
+    """
+    Classify the user's last message intent using a lightweight Haiku call.
+    Returns one of: 'targeted_edit', 'full_regeneration', 'question', 'general_chat'.
+    Falls back to 'targeted_edit' on any error.
+    """
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return "targeted_edit"
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=256,
+            system=_INTENT_SYSTEM,
+            tools=[_INTENT_TOOL],
+            tool_choice={"type": "any"},
+            messages=[{"role": "user", "content": message}],
+        )
+        for block in response.content:
+            if block.type == "tool_use" and block.name == "classify_intent":
+                intent = block.input.get("intent", "targeted_edit")
+                logger.info("Intent classifier: %s — %s", intent, block.input.get("reasoning", ""))
+                return intent
+    except Exception as e:
+        logger.warning("Intent classifier failed, defaulting to targeted_edit: %s", e)
+
+    return "targeted_edit"
 
 
 def chat_with_itinerary(
@@ -466,11 +794,12 @@ def chat_with_itinerary(
     updated_itinerary_json is set only when Claude made targeted changes.
     regeneration_requested is True when the user wants a full rebuild.
     """
-    # Check last user message for regeneration intent before calling Claude
     last_user_msg = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
-    if _is_regeneration_request(last_user_msg):
+    intent = _classify_intent(last_user_msg)
+
+    if intent == "full_regeneration":
         return (
-            "Regenerating your itinerary now — this usually takes about 30 seconds.",
+            "On it — rebuilding your itinerary now. Give me about 30 seconds.",
             None,
             True,
         )

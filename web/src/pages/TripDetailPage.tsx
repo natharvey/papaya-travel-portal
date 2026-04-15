@@ -15,8 +15,8 @@ import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
 import type { HotelSuggestion } from '../types'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
-import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
-import type { TripDetail, Message } from '../types'
+import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, addClientStay, removeClientStay, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
+import type { TripDetail, Message, HotelSuggestion as HotelSuggestionType, Stay } from '../types'
 
 const STATUS_BADGE: Record<string, 'active' | 'muted' | 'warning'> = {
   ACTIVE:     'active',
@@ -192,6 +192,85 @@ export default function TripDetailPage() {
     }
   }
 
+
+  // Stay management
+  const [addingStayFrom, setAddingStayFrom] = useState<HotelSuggestionType | null>(null)
+  const [manualStayOpen, setManualStayOpen] = useState(false)
+  const [stayCheckIn, setStayCheckIn] = useState('')
+  const [stayCheckOut, setStayCheckOut] = useState('')
+  const [stayName, setStayName] = useState('')
+  const [stayAddress, setStayAddress] = useState('')
+  const [stayConfirmation, setStayConfirmation] = useState('')
+  const [staySaving, setStaySaving] = useState(false)
+  const [stayError, setStayError] = useState('')
+  const [removingStayId, setRemovingStayId] = useState<string | null>(null)
+
+  async function handleAddStayFromSuggestion() {
+    if (!tripId || !addingStayFrom || !stayCheckIn || !stayCheckOut) return
+    setStaySaving(true)
+    setStayError('')
+    try {
+      const payload = {
+        name: addingStayFrom.name,
+        address: addingStayFrom.address ?? undefined,
+        check_in: new Date(stayCheckIn).toISOString(),
+        check_out: new Date(stayCheckOut).toISOString(),
+        latitude: addingStayFrom.lat ?? undefined,
+        longitude: addingStayFrom.lng ?? undefined,
+        google_place_id: addingStayFrom.place_id ?? undefined,
+        website: addingStayFrom.website ?? undefined,
+        rating: addingStayFrom.rating ?? undefined,
+        photo_reference: addingStayFrom.photo_url ?? undefined,
+      }
+      await addClientStay(tripId, payload)
+      const refreshed = await getClientTrip(tripId)
+      setTrip(refreshed)
+      setAddingStayFrom(null)
+      setStayCheckIn('')
+      setStayCheckOut('')
+    } catch (e) {
+      setStayError(getApiError(e))
+    } finally {
+      setStaySaving(false)
+    }
+  }
+
+  async function handleAddManualStay() {
+    if (!tripId || !stayName || !stayCheckIn || !stayCheckOut) return
+    setStaySaving(true)
+    setStayError('')
+    try {
+      await addClientStay(tripId, {
+        name: stayName,
+        address: stayAddress || undefined,
+        check_in: new Date(stayCheckIn).toISOString(),
+        check_out: new Date(stayCheckOut).toISOString(),
+        confirmation_number: stayConfirmation || undefined,
+      })
+      const refreshed = await getClientTrip(tripId)
+      setTrip(refreshed)
+      setManualStayOpen(false)
+      setStayName(''); setStayAddress(''); setStayCheckIn(''); setStayCheckOut(''); setStayConfirmation('')
+    } catch (e) {
+      setStayError(getApiError(e))
+    } finally {
+      setStaySaving(false)
+    }
+  }
+
+  async function handleRemoveStay(stayId: string) {
+    if (!tripId) return
+    setRemovingStayId(stayId)
+    try {
+      await removeClientStay(tripId, stayId)
+      const refreshed = await getClientTrip(tripId)
+      setTrip(refreshed)
+    } catch (e) {
+      alert(getApiError(e))
+    } finally {
+      setRemovingStayId(null)
+    }
+  }
 
   // Title editing
   const [editingTitle, setEditingTitle] = useState(false)
@@ -538,6 +617,7 @@ export default function TripDetailPage() {
 
                     <ItineraryTimeline
                       data={latestItinerary.itinerary_json}
+                      stays={trip.stays ?? []}
                       hideOverview
                       hideSections
                       selectedDay={selectedDay}
@@ -598,6 +678,73 @@ export default function TripDetailPage() {
             {tab === 'accommodation' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
+                {/* Add-stay-from-suggestion modal */}
+                {addingStayFrom && (
+                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'white', borderRadius: 16, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+                      <h3 style={{ margin: '0 0 6px 0', fontSize: 18, fontWeight: 700 }}>Add to trip</h3>
+                      <p style={{ margin: '0 0 20px 0', fontSize: 14, color: 'var(--color-text-muted)' }}>{addingStayFrom.name}</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-in date</label>
+                          <input type="date" value={stayCheckIn} onChange={e => setStayCheckIn(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-out date</label>
+                          <input type="date" value={stayCheckOut} onChange={e => setStayCheckOut(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        </div>
+                        {stayError && <p style={{ margin: 0, color: '#dc2626', fontSize: 13 }}>{stayError}</p>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                        <button onClick={() => { setAddingStayFrom(null); setStayCheckIn(''); setStayCheckOut(''); setStayError('') }} style={{ flex: 1, background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                        <button onClick={handleAddStayFromSuggestion} disabled={staySaving || !stayCheckIn || !stayCheckOut} style={{ flex: 1, background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: staySaving || !stayCheckIn || !stayCheckOut ? 0.6 : 1 }}>
+                          {staySaving ? 'Adding…' : 'Add to trip'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual add stay modal */}
+                {manualStayOpen && (
+                  <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'white', borderRadius: 16, padding: 32, width: '100%', maxWidth: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+                      <h3 style={{ margin: '0 0 20px 0', fontSize: 18, fontWeight: 700 }}>Add accommodation manually</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Property name *</label>
+                          <input value={stayName} onChange={e => setStayName(e.target.value)} placeholder="e.g. Park Hyatt Tokyo" style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Address (optional)</label>
+                          <input value={stayAddress} onChange={e => setStayAddress(e.target.value)} placeholder="e.g. 3-1-1 Nishi-Shinjuku, Tokyo" style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-in *</label>
+                            <input type="date" value={stayCheckIn} onChange={e => setStayCheckIn(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-out *</label>
+                            <input type="date" value={stayCheckOut} onChange={e => setStayCheckOut(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Confirmation number (optional)</label>
+                          <input value={stayConfirmation} onChange={e => setStayConfirmation(e.target.value)} placeholder="e.g. HYA-28491" style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                        </div>
+                        {stayError && <p style={{ margin: 0, color: '#dc2626', fontSize: 13 }}>{stayError}</p>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                        <button onClick={() => { setManualStayOpen(false); setStayName(''); setStayAddress(''); setStayCheckIn(''); setStayCheckOut(''); setStayConfirmation(''); setStayError('') }} style={{ flex: 1, background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                        <button onClick={handleAddManualStay} disabled={staySaving || !stayName || !stayCheckIn || !stayCheckOut} style={{ flex: 1, background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 8, padding: '11px', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', opacity: staySaving || !stayName || !stayCheckIn || !stayCheckOut ? 0.6 : 1 }}>
+                          {staySaving ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Confirmed stays */}
                 {trip.stays && trip.stays.length > 0 && (
                   <div>
@@ -631,9 +778,16 @@ export default function TripDetailPage() {
                                 {new Date(stay.check_in).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} → {new Date(stay.check_out).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
                                 {stay.confirmation_number && <span style={{ marginLeft: 10 }}>· Ref: <strong>{stay.confirmation_number}</strong></span>}
                               </div>
-                              <div style={{ display: 'flex', gap: 10 }}>
+                              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                                 {stay.website && <a href={stay.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#15803D', textDecoration: 'none' }}><ExternalLink size={12} /> Website</a>}
                                 {stay.google_place_id && <a href={`https://www.google.com/maps/place/?q=place_id:${stay.google_place_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#15803D', textDecoration: 'none' }}><ExternalLink size={12} /> Maps</a>}
+                                <button
+                                  onClick={() => handleRemoveStay(stay.id)}
+                                  disabled={removingStayId === stay.id}
+                                  style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fca5a5', borderRadius: 6, color: '#dc2626', fontSize: 11, fontWeight: 600, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}
+                                >
+                                  {removingStayId === stay.id ? 'Removing…' : 'Remove'}
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -643,9 +797,17 @@ export default function TripDetailPage() {
                   </div>
                 )}
 
+                {/* Manual add button */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => setManualStayOpen(true)} style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--color-text)', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    + Add accommodation manually
+                  </button>
+                </div>
+
                 {/* Hotel suggestions from itinerary */}
                 {latestItinerary?.itinerary_json.hotel_suggestions && latestItinerary.itinerary_json.hotel_suggestions.length > 0 && (() => {
                   const suggestions = latestItinerary.itinerary_json.hotel_suggestions!
+                  const confirmedNames = new Set((trip?.stays ?? []).map((s: Stay) => s.name.toLowerCase()))
                   const grouped: Record<string, typeof suggestions> = {}
                   suggestions.forEach(h => {
                     if (!grouped[h.destination]) grouped[h.destination] = []
@@ -662,9 +824,31 @@ export default function TripDetailPage() {
                           <div key={dest}>
                             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dest}</div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-                              {grouped[dest].map((h, i) => (
-                                <HotelCard key={i} hotel={h} onClick={() => setSelectedHotel(h)} />
-                              ))}
+                              {grouped[dest].map((h, i) => {
+                                const isAdded = confirmedNames.has(h.name.toLowerCase())
+                                return (
+                                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                                    <HotelCard hotel={h} onClick={() => setSelectedHotel(h)} />
+                                    <button
+                                      onClick={() => { setAddingStayFrom(h); setStayCheckIn(''); setStayCheckOut(''); setStayError('') }}
+                                      disabled={isAdded}
+                                      style={{
+                                        border: isAdded ? '1.5px solid #bbf7d0' : '1.5px solid var(--color-primary)',
+                                        borderTop: 'none',
+                                        borderRadius: '0 0 10px 10px',
+                                        background: isAdded ? '#f0fdf4' : 'var(--color-primary)',
+                                        color: isAdded ? '#15803d' : 'white',
+                                        fontSize: 12, fontWeight: 700, padding: '9px',
+                                        cursor: isAdded ? 'default' : 'pointer',
+                                        fontFamily: 'inherit',
+                                        transition: 'opacity 0.15s',
+                                      }}
+                                    >
+                                      {isAdded ? '✓ Added to trip' : '+ Add to trip'}
+                                    </button>
+                                  </div>
+                                )
+                              })}
                             </div>
                           </div>
                         ))}

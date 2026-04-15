@@ -70,9 +70,12 @@ def _verify_hotel(suggestion: dict) -> dict | None:
     )
     maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
 
+    location = place.get("location", {})
     return {
         **suggestion,
         "place_id": place_id,
+        "lat": location.get("latitude"),
+        "lng": location.get("longitude"),
         "photo_url": photo_url,
         "rating": place.get("rating") or suggestion.get("rating"),
         "address": place.get("formattedAddress"),
@@ -107,6 +110,65 @@ def verify_hotel_suggestions(suggestions: list[dict], max_results: int = 8) -> l
     verified.sort(key=lambda s: (dest_order.get(s["destination"], 99), s["destination"]))
 
     return verified[:max_results]
+
+
+def geocode_itinerary_activities(itinerary_data: dict) -> dict:
+    """
+    Geocode every activity block in the itinerary using Google Places Text Search.
+    Adds lat, lng, place_id to each morning/afternoon/evening block that has a title.
+    Returns updated itinerary_data dict (does not mutate in-place).
+    Runs in a background thread — failures are silently skipped per block.
+    """
+    import copy
+    data = copy.deepcopy(itinerary_data)
+    day_plans = data.get("day_plans", [])
+
+    def _geocode_block(block: dict, location_base: str) -> dict:
+        if not block or not block.get("title"):
+            return block
+        query = f"{block['title']} {location_base}"
+        place = _search_place(query)
+        if place:
+            location = place.get("location", {})
+            lat = location.get("latitude")
+            lng = location.get("longitude")
+            place_id = place.get("id")
+            if lat and lng:
+                block = {**block, "lat": lat, "lng": lng, "place_id": place_id}
+        return block
+
+    # Geocode all blocks in parallel
+    tasks = []  # (day_idx, period, block, location_base)
+    for di, day in enumerate(day_plans):
+        loc = day.get("location_base", "")
+        for period in ("morning", "afternoon", "evening"):
+            block = day.get(period)
+            if block and block.get("title"):
+                tasks.append((di, period, block, loc))
+
+    if not tasks:
+        return data
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        future_map = {
+            executor.submit(_geocode_block, task[2], task[3]): (task[0], task[1])
+            for task in tasks
+        }
+        for future in as_completed(future_map):
+            di, period = future_map[future]
+            try:
+                result = future.result()
+                data["day_plans"][di][period] = result
+            except Exception as e:
+                log.warning("Activity geocode failed for day %d %s: %s", di, period, e)
+
+    geocoded = sum(
+        1 for day in data["day_plans"]
+        for period in ("morning", "afternoon", "evening")
+        if day.get(period) and day[period].get("lat")
+    )
+    log.info("Activity geocoding: %d/%d blocks geocoded", geocoded, len(tasks))
+    return data
 
 
 def enrich_stay(stay, db) -> None:

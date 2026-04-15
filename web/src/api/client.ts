@@ -10,6 +10,7 @@ import type {
   AdminTripListItem,
   Flight,
   Stay,
+  ClientStayCreate,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
@@ -389,6 +390,22 @@ export async function updateTripTitle(tripId: string, title: string): Promise<vo
 
 export async function deleteTrip(tripId: string): Promise<void> {
   await api.delete(`/client/trips/${tripId}`)
+}
+
+// ─── Stays ───────────────────────────────────────────────────────────────────
+
+export async function listClientStays(tripId: string): Promise<Stay[]> {
+  const res = await api.get<Stay[]>(`/client/trips/${tripId}/stays`)
+  return res.data
+}
+
+export async function addClientStay(tripId: string, payload: ClientStayCreate): Promise<Stay> {
+  const res = await api.post<Stay>(`/client/trips/${tripId}/stays`, payload)
+  return res.data
+}
+
+export async function removeClientStay(tripId: string, stayId: string): Promise<void> {
+  await api.delete(`/client/trips/${tripId}/stays/${stayId}`)
 }
 
 // ─── Utilities ───────────────────────────────────────────────────────────────

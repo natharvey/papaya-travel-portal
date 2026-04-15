@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { fetchActivityCandidates } from '../hooks/useActivityPhoto'
 import {
   Sunrise, Sun, Moon, MapPin, Copy, Check,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
@@ -7,10 +8,11 @@ import {
   Plane, Car, Ship, Train, Utensils, Hotel, Shield, Ticket,
   Thermometer, Calendar, Heart, Info, DollarSign, Shirt, Footprints, Camera,
 } from 'lucide-react'
-import type { ItineraryJSON, DayPlan, DayBlock } from '../types'
+import type { ItineraryJSON, DayPlan, DayBlock, Stay } from '../types'
 
 interface Props {
   data: ItineraryJSON
+  stays?: Stay[]
   onBlockEdit?: (dayNum: number, period: string, blockTitle: string, prompt: string) => Promise<void>
   hideOverview?: boolean
   hideSections?: boolean   // hide transport/budget/packing/risks (shown separately in Travel Notes tab)
@@ -178,55 +180,125 @@ function EditPanel({
 // ─── Time block ───────────────────────────────────────────────────────────────
 
 function TimeBlock({
-  period, block, isEditing, onToggleEdit,
+  period, block, photoUrl, isEditing, onToggleEdit,
 }: {
   period: Period
   block: DayBlock
+  photoUrl: string | null
   isEditing: boolean
   onToggleEdit: () => void
 }) {
   const { Icon, border, label, textColor, mutedColor } = PERIOD_CONFIG[period]
+  const [photoOpen, setPhotoOpen] = useState(false)
 
   return (
     <div
-      onClick={onToggleEdit}
       style={{
+        display: 'flex',
+        alignItems: 'stretch',
         background: 'white',
         border: isEditing ? `2px solid ${border}` : '1px solid var(--color-border)',
         borderLeft: `3px solid ${border}`,
         borderRadius: '0 8px 8px 0',
-        padding: '14px 16px',
         marginBottom: isEditing ? 0 : '10px',
-        cursor: 'pointer',
-        transition: 'all 0.15s',
-        position: 'relative',
+        overflow: 'hidden',
+        transition: 'box-shadow 0.15s',
+        boxShadow: photoOpen ? '0 4px 16px rgba(0,0,0,0.1)' : undefined,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Icon size={13} color={border} strokeWidth={2.5} />
-            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: border }}>
-              {label}
-            </span>
+      {/* ── Text content ── */}
+      <div
+        onClick={onToggleEdit}
+        style={{ flex: 1, padding: '14px 16px', cursor: 'pointer', minWidth: 0 }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Icon size={13} color={border} strokeWidth={2.5} />
+              <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', color: border }}>
+                {label}
+              </span>
+            </div>
+            {block.est_cost_aud && (
+              <span style={{ background: '#F0FDF4', color: '#15803D', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px', border: '1px solid #DCFCE7' }}>
+                ~${block.est_cost_aud} AUD
+              </span>
+            )}
+            {block.booking_needed && (
+              <span style={{ background: 'var(--color-accent)', color: 'var(--color-primary-dark)', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px', border: '1px solid #FCD9B8' }}>
+                Book ahead
+              </span>
+            )}
           </div>
-          {block.est_cost_aud && (
-            <span style={{ background: '#F0FDF4', color: '#15803D', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px', border: '1px solid #DCFCE7' }}>
-              ~${block.est_cost_aud} AUD
-            </span>
+          <Pencil size={13} color={isEditing ? border : 'var(--color-border)'} strokeWidth={2} style={{ flexShrink: 0 }} />
+        </div>
+        <div style={{ fontWeight: 600, fontSize: '15px', color: textColor, marginBottom: '6px', lineHeight: '1.4', marginTop: 8 }}>
+          {block.title}
+        </div>
+        <DetailsAsBullets text={block.details} color={mutedColor} />
+      </div>
+
+      {/* ── Photo panel ── */}
+      {photoUrl && (
+        <div
+          onClick={() => setPhotoOpen(o => !o)}
+          style={{
+            width: photoOpen ? 220 : 52,
+            flexShrink: 0,
+            position: 'relative',
+            backgroundImage: `url(${photoUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            cursor: 'pointer',
+            transition: 'width 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Expand hint */}
+          {!photoOpen && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <div style={{
+                width: 22, height: 22,
+                background: 'rgba(255,255,255,0.9)',
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, color: '#2d4a5a',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+              }}>›</div>
+            </div>
           )}
-          {block.booking_needed && (
-            <span style={{ background: 'var(--color-accent)', color: 'var(--color-primary-dark)', fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '100px', border: '1px solid #FCD9B8' }}>
-              Book ahead
-            </span>
+
+          {/* Close button */}
+          {photoOpen && (
+            <div
+              onClick={e => { e.stopPropagation(); setPhotoOpen(false) }}
+              style={{
+                position: 'absolute', top: 8, right: 8,
+                width: 24, height: 24,
+                background: 'rgba(0,0,0,0.45)',
+                borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 12, cursor: 'pointer',
+              }}
+            >✕</div>
+          )}
+
+          {/* Caption */}
+          {photoOpen && (
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              padding: '20px 10px 8px',
+              background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
+              fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 500,
+            }}>
+              {block.photo_query ?? block.title}
+            </div>
           )}
         </div>
-        <Pencil size={13} color={isEditing ? border : 'var(--color-border)'} strokeWidth={2} style={{ flexShrink: 0 }} />
-      </div>
-      <div style={{ fontWeight: 600, fontSize: '15px', color: textColor, marginBottom: '6px', lineHeight: '1.4', marginTop: 8 }}>
-        {block.title}
-      </div>
-      <DetailsAsBullets text={block.details} color={mutedColor} />
+      )}
     </div>
   )
 }
@@ -303,7 +375,7 @@ const PERIOD_KEYS: Record<Period, 'morning' | 'afternoon' | 'evening'> = {
   Morning: 'morning', Afternoon: 'afternoon', Evening: 'evening',
 }
 
-export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hideSections, sectionsOnly, selectedDay: externalDay, onDaySelect }: Props) {
+export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideOverview, hideSections, sectionsOnly, selectedDay: externalDay, onDaySelect }: Props) {
   const [internalDayNum, setInternalDayNum] = useState(0)
   const [copied, setCopied] = useState(false)
   const [view, setView] = useState<'detail' | 'overview'>('detail')
@@ -322,6 +394,33 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hid
   const weeks = buildCalendarWeeks(data.day_plans ?? [])
   const selectedDay = data.day_plans?.find(d => d.day_number === selectedDayNum) ?? null
   const totalDays = data.day_plans?.length ?? 0
+
+  // Fetch photo candidates for all blocks of the selected day in parallel,
+  // then assign greedily to avoid showing the same image twice in one day.
+  const [dayPhotos, setDayPhotos] = useState<Record<string, string | null>>({})
+  useEffect(() => {
+    if (!selectedDay) return
+    const location = selectedDay.location_base
+    const blocks = PERIODS
+      .map(p => ({ period: p, block: selectedDay[PERIOD_KEYS[p]] as DayBlock | null }))
+      .filter((b): b is { period: Period; block: DayBlock } => b.block !== null)
+
+    Promise.all(
+      blocks.map(({ period, block }) =>
+        fetchActivityCandidates(block.title, location, block.photo_query)
+          .then(candidates => ({ period, candidates }))
+      )
+    ).then(results => {
+      const used = new Set<string>()
+      const resolved: Record<string, string | null> = {}
+      for (const { period, candidates } of results) {
+        const url = candidates.find(u => !used.has(u)) ?? null
+        if (url) used.add(url)
+        resolved[period] = url
+      }
+      setDayPhotos(resolved)
+    })
+  }, [selectedDay?.day_number]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleEdit(dayNum: number, period: Period, title: string) {
     if (editState?.dayNum === dayNum && editState.period === period) {
@@ -576,6 +675,7 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hid
                       <TimeBlock
                         period={period}
                         block={block}
+                        photoUrl={dayPhotos[period] ?? null}
                         isEditing={isEditing}
                         onToggleEdit={() => toggleEdit(selectedDay.day_number, period, block.title)}
                       />
@@ -599,6 +699,31 @@ export default function ItineraryTimeline({ data, onBlockEdit, hideOverview, hid
                     ))}
                   </div>
                 )}
+
+                {/* Accommodation for this night */}
+                {(() => {
+                  if (!selectedDay.date || stays.length === 0) return null
+                  const dayDate = new Date(selectedDay.date + 'T12:00:00Z')
+                  const stayTonight = stays.find(s => {
+                    const ci = new Date(s.check_in)
+                    const co = new Date(s.check_out)
+                    return ci <= dayDate && dayDate < co
+                  })
+                  if (!stayTonight) return null
+                  const nights = Math.round((new Date(stayTonight.check_out).getTime() - new Date(stayTonight.check_in).getTime()) / 86400000)
+                  return (
+                    <div style={{ marginTop: 8, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Hotel size={15} color="#15803d" strokeWidth={2} style={{ flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>{stayTonight.name}</span>
+                        <span style={{ fontSize: 12, color: '#16a34a', marginLeft: 8 }}>{nights} night{nights !== 1 ? 's' : ''}</span>
+                      </div>
+                      {stayTonight.google_place_id && (
+                        <a href={`https://www.google.com/maps/place/?q=place_id:${stayTonight.google_place_id}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#15803d', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>Maps →</a>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderTop: '1px solid var(--color-border)', background: 'white' }}>

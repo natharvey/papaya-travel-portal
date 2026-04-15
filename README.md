@@ -46,7 +46,7 @@ GENERATING → REVIEW → CONFIRMED → ARCHIVED
 ## Features
 
 - **Conversational intake** — Maya guides clients through trip planning via natural chat before submitting
-- **AI itinerary generation** — GPT-4o produces structured day-by-day itineraries with activities, costs, transport notes, packing lists, and risk notes
+- **AI itinerary generation** — Claude Sonnet 4.6 produces structured day-by-day itineraries with activities, costs, transport notes, packing lists, and risk notes
 - **Ask Maya** — Clients refine their itinerary post-generation via AI chat directly in the portal
 - **Flight lookup** — Clients enter a flight number and date to see route details, times, terminals, and a live route map
 - **Flight route map** — Visual route map showing all booked flights
@@ -86,7 +86,47 @@ docker-compose up --build
 
 ---
 
-## Architecture
+## Maya — AI Agent Architecture
+
+Maya is not a single chatbot. It is a pipeline of four cooperating agents, each with a narrow, well-defined role. Agents pass structured data between them so each stage can operate with precision.
+
+```
+Client fills booking form
+        │
+        ▼
+┌─────────────────────┐
+│  1. Intake Maya     │  Collects preferences through warm, natural conversation
+└──────────┬──────────┘
+           │  Full conversation transcript
+           ▼
+┌─────────────────────┐
+│  2. Analyser        │  Synthesises transcript → structured ClientProfile JSON
+└──────────┬──────────┘
+           │  ClientProfile
+           ▼
+┌─────────────────────┐
+│  3. Generator       │  Builds day-by-day plan using real venues + web search
+└──────────┬──────────┘
+           │  Itinerary JSON
+           ▼
+┌─────────────────────┐
+│  4. Concierge Maya  │  Handles post-generation questions, edits, refinement
+└─────────────────────┘
+```
+
+**Agent 1 — Intake Maya:** Runs a real-time conversation with the client. Collects 11 categories of preference data one or two questions at a time. Signals completion with `[INTAKE_COMPLETE]`, which triggers the backend pipeline. Designed to feel like a travel consultant, not a form.
+
+**Agent 2 — Analyser:** A pure synthesis agent. Reads the full intake transcript and produces a structured `ClientProfile` JSON — travel companions, pace, food profile, activity interests, personality type, key generator insights, and explicitly flagged gaps. The Generator receives clean structured facts, not raw chat.
+
+**Agent 3 — Generator:** The most knowledge-intensive agent. Runs in an agentic loop with web search enabled (up to 8 Claude turns) to verify real venues, opening hours, and booking requirements. Generates photo queries per activity at creation time for higher-quality Unsplash results.
+
+**Agent 4 — Concierge Maya:** Post-generation assistant. Has access to the full itinerary JSON and a persistent `client_memory` string updated after each session. Detects regeneration intent and triggers a full rebuild; handles surgical block edits for targeted changes.
+
+Full technical detail — agent inputs/outputs, design decisions, data schemas: [`docs/agent-architecture.md`](docs/agent-architecture.md)
+
+---
+
+## Infrastructure Architecture
 
 ```
                     ┌─────────────────────────────────────────────┐
@@ -106,11 +146,9 @@ docker-compose up --build
                     │  ECR — Docker image registry                │
                     │  CloudWatch — Logs + monitoring             │
                     └─────────────────────────────────────────────┘
-                         │              │              │
-                   OpenAI GPT-4o   Anthropic       Gmail SMTP
-                   Screenshot      Claude 4.6      Transactional
-                   scanning +      All AI features email
-                   fallback
+                              │                    │
+                    Anthropic Claude 4.6       Gmail SMTP
+                    All AI features            Transactional email
 ```
 
 See the live interactive version at [travel-papaya.com/architecture](https://www.travel-papaya.com/architecture).
@@ -123,7 +161,7 @@ See the live interactive version at [travel-papaya.com/architecture](https://www
 - `app/routes/intake.py` — Intake chat endpoint + intake submission; fires AI generation as a background task
 - `app/routes/client.py` — Client portal: trip detail, itinerary, messages, confirm, Ask Maya, flight lookup, document uploads
 - `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, document uploads
-- `app/services/ai.py` — GPT-4o itinerary generation, Maya chat, block editing, accommodation/flight suggestions
+- `app/services/ai.py` — Multi-agent Maya pipeline: intake, analyser, itinerary generator, concierge chat
 - `app/services/email.py` — Gmail SMTP with branded HTML templates
 - `app/services/s3.py` — S3 upload, list, delete and presigned URL helpers
 

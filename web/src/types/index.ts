@@ -55,6 +55,11 @@ export interface DayBlock {
   details: string
   booking_needed: boolean
   est_cost_aud: number | null
+  photo_query?: string
+  // Populated by background geocoding pass after generation
+  lat?: number | null
+  lng?: number | null
+  place_id?: string | null
 }
 
 export interface DayPlan {
@@ -109,6 +114,23 @@ export interface HotelSuggestion {
   rating?: number | null
   address?: string | null
   website?: string | null
+  lat?: number | null
+  lng?: number | null
+}
+
+export interface ClientStayCreate {
+  name: string
+  address?: string
+  check_in: string   // ISO datetime string
+  check_out: string  // ISO datetime string
+  confirmation_number?: string
+  notes?: string
+  latitude?: number
+  longitude?: number
+  google_place_id?: string
+  website?: string
+  rating?: number
+  photo_reference?: string
 }
 
 export interface ItineraryJSON {

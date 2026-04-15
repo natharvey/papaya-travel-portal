@@ -1,4 +1,5 @@
 import uuid
+import re
 import threading
 import logging
 from datetime import datetime
@@ -15,7 +16,7 @@ import httpx
 from app.db import get_db
 from app.models import Client, Trip, Itinerary, Message, Flight, Stay
 from app.schemas import (
-    TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut, FlightOut
+    TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut, FlightOut, StayOut
 )
 from app.services.email import send_trip_confirmed_client, send_trip_confirmed_admin, send_changes_requested_admin, send_new_message_to_admin
 from app.services.s3 import upload_document, list_documents, delete_document, get_download_url
@@ -653,6 +654,63 @@ def destination_photo(
     return {"photo_url": None, "source": None}
 
 
+def _unsplash_candidates(query: str, n: int = 8) -> list[str]:
+    """Search Unsplash and return up to n landscape photo URLs, best quality first."""
+    try:
+        resp = httpx.get(
+            "https://api.unsplash.com/search/photos",
+            params={"query": query, "per_page": n, "orientation": "landscape", "content_filter": "high", "order_by": "relevant"},
+            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        results = resp.json().get("results", [])
+        # Sort by resolution descending so the best image is first
+        results.sort(key=lambda p: p.get("width", 0) * p.get("height", 0), reverse=True)
+        return [url for r in results if (url := r.get("urls", {}).get("regular"))]
+    except Exception:
+        pass
+    return []
+
+
+def _activity_search_queries(title: str, location: str) -> list[str]:
+    """Break a compound activity title into focused Unsplash queries.
+
+    'Runyon Canyon & Breakfast in Los Feliz' + 'Los Angeles'
+      → ['Runyon Canyon Los Angeles', 'Breakfast Los Angeles']
+    """
+    parts = re.split(r"\s*&\s*|\s+and\s+", title, flags=re.IGNORECASE)
+    queries = []
+    for part in parts[:2]:
+        clean = re.sub(r"\s+(?:in|at|near)\s+.+$", "", part, flags=re.IGNORECASE).strip()
+        if clean:
+            queries.append(f"{clean} {location}")
+    return queries or [f"{title} {location}"]
+
+
+@router.get("/activity-photo")
+def activity_photo(
+    title: str = Query(..., description="Activity block title, e.g. 'Runyon Canyon & Breakfast in Los Feliz'"),
+    location: str = Query(..., description="Location/city, e.g. 'Los Angeles'"),
+    _client=Depends(get_current_client),
+):
+    """Return a pool of candidate landscape photo URLs for an itinerary activity block.
+    The frontend picks the first candidate not already shown by another block on the same day,
+    preventing duplicate photos across morning/afternoon/evening."""
+    if not UNSPLASH_ACCESS_KEY:
+        return {"candidates": []}
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for query in _activity_search_queries(title, location):
+        for url in _unsplash_candidates(query):
+            if url not in seen:
+                seen.add(url)
+                candidates.append(url)
+        if len(candidates) >= 8:
+            break
+    return {"candidates": candidates[:8]}
+
+
 @router.get("/place-lookup")
 def place_lookup(
     query: str = Query(..., description="Hotel name + destination, e.g. 'Park Hyatt Tokyo'"),
@@ -697,3 +755,104 @@ def place_lookup(
         "website": place.get("websiteUri"),
         "address": place.get("formattedAddress"),
     }
+
+
+# ─── Client Stay CRUD ─────────────────────────────────────────────────────────
+
+class ClientStayCreate(PydanticBaseModel):
+    name: str
+    address: Optional[str] = None
+    check_in: datetime
+    check_out: datetime
+    confirmation_number: Optional[str] = None
+    notes: Optional[str] = None
+    # Pre-populated from hotel suggestion (optional)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    google_place_id: Optional[str] = None
+    website: Optional[str] = None
+    rating: Optional[float] = None
+    photo_reference: Optional[str] = None
+
+
+def _trip_belongs_to_client(trip_id: uuid.UUID, client_id: uuid.UUID, db: Session) -> Trip:
+    trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return trip
+
+
+@router.get("/trips/{trip_id}/stays", response_model=list[StayOut])
+def list_stays(trip_id: uuid.UUID, db: Session = Depends(get_db), client=Depends(get_current_client)):
+    _trip_belongs_to_client(trip_id, client.id, db)
+    return db.query(Stay).filter(Stay.trip_id == trip_id).order_by(Stay.stay_order).all()
+
+
+@router.post("/trips/{trip_id}/stays", response_model=StayOut, status_code=201)
+def add_stay(
+    trip_id: uuid.UUID,
+    body: ClientStayCreate,
+    db: Session = Depends(get_db),
+    client=Depends(get_current_client),
+):
+    trip = _trip_belongs_to_client(trip_id, client.id, db)
+
+    if body.check_out <= body.check_in:
+        raise HTTPException(status_code=422, detail="check_out must be after check_in")
+
+    # Determine stay_order (append after existing stays)
+    existing = db.query(Stay).filter(Stay.trip_id == trip_id).order_by(Stay.stay_order).all()
+    next_order = (existing[-1].stay_order + 1) if existing else 1
+
+    stay = Stay(
+        trip_id=trip_id,
+        stay_order=next_order,
+        name=body.name,
+        address=body.address,
+        check_in=body.check_in,
+        check_out=body.check_out,
+        confirmation_number=body.confirmation_number,
+        notes=body.notes,
+        latitude=body.latitude,
+        longitude=body.longitude,
+        google_place_id=body.google_place_id,
+        website=body.website,
+        rating=body.rating,
+        photo_reference=body.photo_reference,
+    )
+    db.add(stay)
+    db.commit()
+    db.refresh(stay)
+
+    # If no coordinates yet, enrich in background via Google Places
+    if not stay.latitude:
+        from app.services.places import enrich_stay
+        stay_id = stay.id
+        def _enrich():
+            from app.db import SessionLocal
+            _db = SessionLocal()
+            try:
+                _stay = _db.query(Stay).filter(Stay.id == stay_id).first()
+                if _stay:
+                    enrich_stay(_stay, _db)
+            finally:
+                _db.close()
+        threading.Thread(target=_enrich, daemon=True).start()
+
+    logger.info("Client added stay '%s' to trip %s", stay.name, trip_id)
+    return stay
+
+
+@router.delete("/trips/{trip_id}/stays/{stay_id}", status_code=204)
+def remove_stay(
+    trip_id: uuid.UUID,
+    stay_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    client=Depends(get_current_client),
+):
+    _trip_belongs_to_client(trip_id, client.id, db)
+    stay = db.query(Stay).filter(Stay.id == stay_id, Stay.trip_id == trip_id).first()
+    if not stay:
+        raise HTTPException(status_code=404, detail="Stay not found")
+    db.delete(stay)
+    db.commit()

@@ -12,7 +12,7 @@ from jose import jwt, JWTError
 import os
 
 import httpx
-from openai import OpenAI
+import anthropic as anthropic_sdk
 
 from app.db import get_db
 from app.models import Trip, Client, Itinerary, Message, Flight, Stay, IntakeResponse
@@ -344,9 +344,9 @@ async def parse_screenshot(
     file: UploadFile = File(...),
     type: str = Form(...),
 ):
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured")
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
 
     if type not in ("flight", "stay"):
         raise HTTPException(status_code=400, detail="type must be 'flight' or 'stay'")
@@ -356,20 +356,20 @@ async def parse_screenshot(
     mime = file.content_type or "image/png"
     prompt = FLIGHT_PARSE_PROMPT if type == "flight" else STAY_PARSE_PROMPT
 
-    client = OpenAI(api_key=api_key)
-    response = client.chat.completions.create(
-        model="gpt-4o",
+    client = anthropic_sdk.Anthropic(api_key=api_key)
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=500,
         messages=[{
             "role": "user",
             "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": mime, "data": b64}},
                 {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
             ],
         }],
-        max_tokens=500,
     )
 
-    raw = response.choices[0].message.content or ""
+    raw = response.content[0].text or ""
     # Strip markdown code fences if present
     raw = raw.strip()
     if raw.startswith("```"):

@@ -10,7 +10,7 @@ from app.db import get_db, SessionLocal
 from app.models import Client, Trip, IntakeResponse as IntakeResponseModel
 from app.schemas import IntakeCreate, IntakeResponse
 from app.services.email import send_intake_confirmation
-from app.services.ai import intake_chat_turn, generate_itinerary
+from app.services.ai import intake_chat_turn, generate_itinerary, analyse_intake, format_transcript
 from app.limiter import limiter
 from app.routes.auth import create_magic_token
 
@@ -73,10 +73,11 @@ def intake_chat(request: Request, body: IntakeChatRequest):
 
 class IntakeCreateExtended(IntakeCreate):
     conversation_transcript: str = ""
+    seed_data: dict = {}
 
 
-def _run_generation(trip_id, conversation_transcript: str):
-    """Background task: generate itinerary, then email the client when ready."""
+def _run_generation(trip_id, conversation_transcript: str, seed_data: dict = None):
+    """Background task: run Analyser then Generator, then email the client when ready."""
     from app.models import Trip, Client
     from app.services.email import send_itinerary_ready
     import logging
@@ -84,10 +85,21 @@ def _run_generation(trip_id, conversation_transcript: str):
 
     db = SessionLocal()
     try:
+        # ── Agent 2: Analyser ────────────────────────────────────────────────
+        client_profile = None
+        if conversation_transcript and seed_data:
+            try:
+                client_profile = analyse_intake(conversation_transcript, seed_data)
+                log.info("Analyser produced ClientProfile for trip %s", trip_id)
+            except Exception as ae:
+                log.warning("Analyser failed for trip %s, falling back to transcript: %s", trip_id, ae)
+
+        # ── Agent 3: Generator ───────────────────────────────────────────────
         itinerary = generate_itinerary(
             db,
             trip_id,
-            conversation_transcript=conversation_transcript,
+            conversation_transcript=conversation_transcript if not client_profile else "",
+            client_profile=client_profile,
         )
         # Send "ready" email
         trip = db.query(Trip).filter(Trip.id == trip_id).first()
@@ -150,8 +162,16 @@ def create_intake(
     db.commit()
     db.refresh(trip)
 
-    # Fire-and-forget itinerary generation
-    background_tasks.add_task(_run_generation, trip.id, payload.conversation_transcript)
+    # Fire-and-forget: Analyser → Generator pipeline
+    seed = payload.seed_data or {
+        "destination": payload.trip_title,
+        "origin_city": payload.origin_city,
+        "start_date": str(payload.start_date),
+        "end_date": str(payload.end_date),
+        "budget_range": payload.budget_range,
+        "travellers_count": payload.travellers_count,
+    }
+    background_tasks.add_task(_run_generation, trip.id, payload.conversation_transcript, seed)
 
     # Send confirmation email with magic link
     magic_token = create_magic_token(db, client.id)
