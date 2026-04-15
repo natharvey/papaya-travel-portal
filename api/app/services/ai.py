@@ -147,6 +147,9 @@ REQUIRED information to collect (work through these naturally, not in order):
 10. Must-avoids — tourist traps, certain foods, party areas?
 11. Budget split — prefer to spend on accommodation or experiences?
 
+OPENING MESSAGE:
+When the conversation starts with [START_CONVERSATION], send your opening message. Use the destination and context above to make it specific — reference the destination, season, or something real. Ask one focused first question (who's travelling, or first time there, etc.). Do NOT introduce yourself as "Maya, your Papaya travel consultant" — just dive in like a person who knows what they're doing.
+
 EXAMPLES OF GOOD vs BAD OPENINGS:
 
 BAD: "Hello! I'm Maya, your travel consultant. I'm so excited to help plan your trip to Bali! Could you tell me who will be travelling with you?"
@@ -376,11 +379,15 @@ def intake_chat_turn(
 
     system = f"{INTAKE_CHAT_SYSTEM}\n\n{context}"
 
+    # Anthropic requires at least one message. On the first turn inject a silent
+    # starter so Claude produces a proper Maya-style opening using the seed data above.
+    api_messages = messages if messages else [{"role": "user", "content": "[START_CONVERSATION]"}]
+
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
         system=system,
-        messages=messages,
+        messages=api_messages,
     )
 
     text = response.content[0].text
