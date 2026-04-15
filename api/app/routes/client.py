@@ -598,20 +598,70 @@ PLACES_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 
 
+def _verify_hero_photo(url: str, destination: str) -> bool:
+    """Use Claude Haiku vision to verify a destination hero photo is scenic and people-free.
+    Accepts: landscapes, skylines, landmarks, nature, architecture with no people prominent.
+    Rejects: markets, crowds, street scenes with people, generic/unrelated images."""
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return True  # no key → skip gate
+    try:
+        img_resp = httpx.get(url, timeout=8, follow_redirects=True)
+        img_resp.raise_for_status()
+        content_type = img_resp.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+        if content_type not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+            content_type = "image/jpeg"
+        b64 = base64.standard_b64encode(img_resp.content).decode()
+
+        client = anthropic_sdk.Anthropic(api_key=anthropic_key)
+        resp = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=5,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": content_type, "data": b64},
+                    },
+                    {
+                        "type": "text",
+                        "text": (
+                            f"This photo will be used as a full-width hero image for a trip to {destination}. "
+                            "Reply YES only if ALL of the following are true: "
+                            "(1) it shows a scenic landscape, skyline, coastline, mountain, landmark, or architecture; "
+                            "(2) there are NO people prominently visible in the frame; "
+                            "(3) it clearly represents {destination} or its natural/built environment. "
+                            "Reply NO if it shows markets, crowds, street food stalls, people, or generic unrelated scenes. "
+                            "Reply YES or NO only."
+                        ),
+                    },
+                ],
+            }],
+        )
+        answer = resp.content[0].text.strip().upper()
+        return answer.startswith("YES")
+    except Exception as exc:
+        logger.warning("Hero photo verify failed for %s: %s", url, exc)
+        return False
+
+
 @router.get("/destination-photo")
 def destination_photo(
     destination: str = Query(..., description="Destination name, e.g. 'Kyoto, Japan'"),
     _client=Depends(get_current_client),
 ):
     """Return a high-quality hero photo URL for a travel destination.
-    Uses Unsplash API if UNSPLASH_ACCESS_KEY is set, otherwise falls back to Google Places."""
+    Fetches up to 8 Unsplash candidates and runs a Claude Haiku vision gate to ensure
+    the photo is scenic (landscape/landmark/skyline) with no people prominently visible.
+    Falls back to Google Places if no candidate passes."""
     if UNSPLASH_ACCESS_KEY:
         try:
             resp = httpx.get(
                 "https://api.unsplash.com/search/photos",
                 params={
-                    "query": f"{destination} travel landscape",
-                    "per_page": 3,
+                    "query": f"{destination} landscape scenery",
+                    "per_page": 8,
                     "orientation": "landscape",
                     "content_filter": "high",
                     "order_by": "relevant",
@@ -621,12 +671,16 @@ def destination_photo(
             )
             resp.raise_for_status()
             results = resp.json().get("results", [])
-            if results:
-                # Prefer the photo with the highest resolution
-                best = max(results, key=lambda p: p.get("width", 0) * p.get("height", 0))
-                url = best.get("urls", {}).get("full") or best.get("urls", {}).get("regular")
-                if url:
+            # Sort highest resolution first so we try the best candidates early
+            results.sort(key=lambda p: p.get("width", 0) * p.get("height", 0), reverse=True)
+            for photo in results:
+                url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
+                if not url:
+                    continue
+                if _verify_hero_photo(url, destination):
+                    logger.info("Hero photo verified for '%s': %s", destination, url)
                     return {"photo_url": url, "source": "unsplash"}
+            logger.info("No verified hero photo found on Unsplash for '%s', falling through", destination)
         except Exception:
             pass  # fall through to Places
 
