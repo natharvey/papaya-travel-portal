@@ -85,8 +85,15 @@ export interface AccommodationSuggestion {
 }
 
 export interface BudgetSummary {
+  per_person_aud: number | null
   estimated_total_aud: number | null
   assumptions: string[]
+}
+
+export interface HeadsUp {
+  category: 'visa' | 'book' | 'weather' | 'dress' | 'health' | 'money' | 'etiquette'
+  title: string
+  description: string
 }
 
 export type TransportMode = 'flight' | 'drive' | 'train' | 'bus' | 'ferry' | 'cruise' | 'transfer'
@@ -146,6 +153,7 @@ export interface ItineraryJSON {
   budget_summary: BudgetSummary
   packing_checklist: string[]
   risks_and_notes: string[]
+  heads_up?: HeadsUp[]
 }
 
 export interface Itinerary {

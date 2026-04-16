@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import PDFDownloadButton from '../components/PDFDownloadButton'
 import Layout from '../components/Layout'
 import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
+import TravelNotesTab from '../components/TravelNotesTab'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MayaChatPanel from '../components/MayaChatPanel'
 import AccommodationTab from '../components/AccommodationTab'
@@ -974,11 +975,7 @@ export default function TripDetailPage() {
             {/* Travel Notes Tab */}
             {tab === 'notes' && (
               latestItinerary ? (
-                <ItineraryTimeline
-                  data={latestItinerary.itinerary_json}
-                  sectionsOnly
-                  hideOverview
-                />
+                <TravelNotesTab data={latestItinerary.itinerary_json} />
               ) : (
                 <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--color-text-muted)' }}>
                   <p style={{ fontSize: 14 }}>Travel notes will appear here once your itinerary is ready.</p>

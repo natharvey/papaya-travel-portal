@@ -74,11 +74,43 @@ The JSON must match this exact schema — no extra fields, no missing fields:
       "google_maps_url": "https://www.google.com/maps/search/HOTEL+NAME+CITY"
     }
   ],
+  "heads_up": [
+    {
+      "category": "visa | book | weather | dress | health | money | etiquette",
+      "title": "string — short headline (max 8 words)",
+      "description": "string — 1-2 sentences of practical detail"
+    }
+  ],
   "transport_notes": ["string"],
-  "budget_summary": {"estimated_total_aud": number|null, "assumptions": ["string"]},
+  "budget_summary": {"per_person_aud": number|null, "estimated_total_aud": number|null, "assumptions": ["string"]},
   "packing_checklist": ["string"],
   "risks_and_notes": ["string"]
 }
+
+HEADS UP RULES:
+- "heads_up" is a list of 3–6 genuinely important things the traveller must know before they go.
+- Each item has a category — choose the most fitting:
+  - "visa": entry requirements, passport validity, eTA, arrival cards
+  - "book": something that must be reserved well in advance (restaurants, experiences, transport passes)
+  - "weather": seasonal conditions that will materially affect the trip
+  - "dress": dress codes or modesty requirements at specific venues on the itinerary
+  - "health": vaccinations, medications, health advisories
+  - "money": cash vs card, ATM access, currency tips
+  - "etiquette": critical local customs that could cause offence if ignored
+- Only include items that are genuinely important for THIS specific trip, not generic travel advice.
+- Do NOT include budget clarifications or questions in heads_up — budget is already confirmed per person.
+
+BUDGET RULES:
+- budget_range provided is PER PERSON. Use this to calibrate all cost estimates.
+- per_person_aud: your estimated total spend per person for the entire trip.
+- estimated_total_aud: per_person_aud × number of travellers.
+- assumptions: line items showing how you arrived at the estimate (flights, accommodation, food, activities, transport). Be specific and realistic.
+- Do NOT include budget clarification notes in risks_and_notes — the budget is per person and confirmed.
+
+RISKS & NOTES RULES:
+- Only include genuine risks or important trip-level notes: political/safety advisories, health risks, peak season crowds, cultural sensitivities, natural hazards.
+- Do NOT include: budget clarifications, booking reminders (those go in heads_up), or general travel advice.
+- Leave as an empty array if there are no genuine risks.
 
 ACTIVITY TIP RULES:
 - Each activity block has an optional "tip" field. Use it for ONE critical piece of practical advice specific to that activity — dress code (e.g. "Cover shoulders and knees to enter"), advance booking requirement, best arrival time, or essential local etiquette.
@@ -425,7 +457,7 @@ def build_generation_prompt(
         f"ORIGIN: {trip.origin_city}",
         f"DESTINATION: {trip.title}",
         f"DATES: {trip.start_date.isoformat()} to {trip.end_date.isoformat()} ({days} days)",
-        f"BUDGET: {trip.budget_range}",
+        f"BUDGET: {trip.budget_range} per person",
     ]
 
     if confirmed_flights:

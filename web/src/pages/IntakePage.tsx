@@ -260,7 +260,7 @@ function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2D
         </div>
 
         <div>
-          <label style={labelStyle}>Budget (AUD)</label>
+          <label style={labelStyle}>Budget per person (AUD)</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {['Under $3,000', '$3,000–$6,000', '$6,000–$10,000', '$10,000–$15,000', '$15,000+'].map(opt => (
               <button
