@@ -467,7 +467,8 @@ def build_generation_prompt(
     parts.append(
         "\nUsing your knowledge of real, currently-operating establishments, "
         "name specific restaurants, hotels, and attractions throughout. "
-        "Include 6-8 hotel suggestions per destination in hotel_suggestions, using exact official names as they appear on Google Maps. "
+        "Include exactly 3 hotel suggestions per destination in hotel_suggestions (no more, no less), "
+        "covering a spread of styles within the client's budget, using exact official names as they appear on Google Maps. "
         "Output the complete itinerary JSON."
     )
 
@@ -1033,6 +1034,79 @@ def generate_accommodation_suggestions(
             match = re.search(r"\[.*\]", raw, re.DOTALL)
             if match:
                 return json.loads(match.group(0))
+            return []
+
+        messages.append({"role": "assistant", "content": response.content})
+        tool_results = [
+            {"type": "tool_result", "tool_use_id": b.id, "content": "Search completed."}
+            for b in response.content if b.type == "tool_use"
+        ]
+        messages.append({"role": "user", "content": tool_results})
+
+    return []
+
+
+def generate_accommodation_for_destination(
+    destination: str,
+    trip_title: str,
+    budget_range: str,
+    accommodation_style: str,
+    traveller_profile: str,
+    count: int,
+    exclude_names: list[str],
+) -> list[dict]:
+    """Fetch exactly `count` new hotel suggestions for one destination, skipping already-known hotels."""
+    import math
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    exclude_str = ""
+    if exclude_names:
+        exclude_str = f"\nDo NOT suggest any of these already-listed hotels: {', '.join(exclude_names)}."
+
+    prompt = (
+        f"Find exactly {count} real accommodation options in {destination} for this trip:\n"
+        f"Trip: {trip_title}\n"
+        f"Preferred style: {accommodation_style}\n"
+        f"Budget: {budget_range} AUD total trip budget\n"
+        f"Traveller profile: {traveller_profile}{exclude_str}\n\n"
+        f"Return exactly {count} hotels as a JSON array. Only real, currently-operating properties."
+    )
+
+    system = ACCOMMODATION_SYSTEM + f"\nReturn exactly {count} results."
+    tools = [{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}]
+    messages = [{"role": "user", "content": prompt}]
+
+    for _ in range(MAX_TURNS):
+        response = client.beta.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4000,
+            system=system,
+            messages=messages,
+            tools=tools,
+            betas=["web-search-2025-03-05"],
+        )
+
+        text_parts = []
+        has_tool_use = False
+        for block in response.content:
+            if hasattr(block, "text"):
+                text_parts.append(block.text)
+            elif block.type == "tool_use":
+                has_tool_use = True
+
+        if response.stop_reason == "end_turn" or not has_tool_use:
+            raw = "\n".join(text_parts)
+            match = re.search(r"\[.*\]", raw, re.DOTALL)
+            if match:
+                results = json.loads(match.group(0))
+                # Ensure destination is stamped on every result
+                for r in results:
+                    r.setdefault("destination", destination)
+                return results
             return []
 
         messages.append({"role": "assistant", "content": response.content})

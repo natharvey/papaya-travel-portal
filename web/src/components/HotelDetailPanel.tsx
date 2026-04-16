@@ -6,6 +6,9 @@ import { usePlacePhoto } from '../hooks/usePlacePhoto'
 interface Props {
   hotel: HotelSuggestion | null
   onClose: () => void
+  isAdded?: boolean          // true if this hotel is already a confirmed stay
+  onAddToTrip?: () => void   // opens date-picker modal
+  onRemoveFromTrip?: () => void
 }
 
 function StarRating({ rating }: { rating: number }) {
@@ -28,7 +31,7 @@ function StarRating({ rating }: { rating: number }) {
   )
 }
 
-export default function HotelDetailPanel({ hotel, onClose }: Props) {
+export default function HotelDetailPanel({ hotel, onClose, isAdded, onAddToTrip, onRemoveFromTrip }: Props) {
   // Use pre-enriched data if available, otherwise fall back to live lookup
   const hasEnrichedData = !!(hotel?.photo_url !== undefined)
   const live = usePlacePhoto(
@@ -189,6 +192,45 @@ export default function HotelDetailPanel({ hotel, onClose }: Props) {
 
               {/* CTAs */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Add / Remove trip */}
+                {onAddToTrip && !isAdded && (
+                  <button
+                    onClick={onAddToTrip}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      background: 'var(--color-primary)', color: 'white', border: 'none',
+                      borderRadius: 10, padding: '13px 20px', fontSize: 14, fontWeight: 700,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    + Add to trip
+                  </button>
+                )}
+                {isAdded && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      background: '#f0fdf4', border: '1.5px solid #bbf7d0', borderRadius: 10,
+                      padding: '13px 20px', fontSize: 14, fontWeight: 700, color: '#15803d',
+                    }}>
+                      ✓ Added to trip
+                    </div>
+                    {onRemoveFromTrip && (
+                      <button
+                        onClick={onRemoveFromTrip}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: '1.5px solid #FECACA', borderRadius: 10, padding: '13px 16px',
+                          fontSize: 13, fontWeight: 600, color: '#B91C1C', background: '#FEF2F2',
+                          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Remove from trip
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <a
                   href={hotel.booking_com_search}
                   target="_blank"

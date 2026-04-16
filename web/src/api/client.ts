@@ -160,6 +160,51 @@ export async function getAccommodationSuggestions(tripId: string): Promise<{ sug
   return res.data
 }
 
+// ─── Hotel Suggestion Records (persisted, per-destination) ────────────────────
+
+export interface HotelSuggestionRecord {
+  id: string
+  destination: string
+  hotel_data: AccommodationSuggestion & { photo_url?: string; rating?: number; website?: string; address?: string }
+  status: 'suggestion' | 'saved' | 'dismissed'
+  created_at: string
+}
+
+export async function getHotelSuggestions(tripId: string, destination: string): Promise<HotelSuggestionRecord[]> {
+  const res = await api.get<HotelSuggestionRecord[]>(`/client/trips/${tripId}/hotel-suggestions`, {
+    params: { destination },
+  })
+  return res.data
+}
+
+export async function getSavedHotelSuggestions(tripId: string): Promise<HotelSuggestionRecord[]> {
+  const res = await api.get<HotelSuggestionRecord[]>(`/client/trips/${tripId}/hotel-suggestions/saved`)
+  return res.data
+}
+
+export async function updateHotelSuggestionStatus(
+  tripId: string,
+  suggestionId: string,
+  status: 'suggestion' | 'saved' | 'dismissed',
+): Promise<HotelSuggestionRecord> {
+  const res = await api.patch<HotelSuggestionRecord>(
+    `/client/trips/${tripId}/hotel-suggestions/${suggestionId}`,
+    { status },
+  )
+  return res.data
+}
+
+export async function fetchMoreHotelSuggestions(
+  tripId: string,
+  destination: string,
+): Promise<HotelSuggestionRecord[]> {
+  const res = await api.post<HotelSuggestionRecord[]>(
+    `/client/trips/${tripId}/hotel-suggestions/fetch`,
+    { destination },
+  )
+  return res.data
+}
+
 export async function getFlightSuggestions(tripId: string): Promise<{ suggestions: FlightSuggestion[] }> {
   const res = await api.post(`/client/trips/${tripId}/flight-suggestions`)
   return res.data

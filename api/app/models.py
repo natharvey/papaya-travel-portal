@@ -86,6 +86,7 @@ class Trip(Base):
     messages = relationship("Message", back_populates="trip", order_by="Message.created_at")
     flights = relationship("Flight", back_populates="trip", order_by="Flight.leg_order")
     stays = relationship("Stay", back_populates="trip", order_by="Stay.stay_order")
+    hotel_suggestion_records = relationship("HotelSuggestionRecord", back_populates="trip", order_by="HotelSuggestionRecord.created_at")
 
 
 class IntakeResponse(Base):
@@ -186,6 +187,20 @@ class Stay(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     trip = relationship("Trip", back_populates="stays")
+
+
+class HotelSuggestionRecord(Base):
+    """Persisted hotel suggestions per trip+destination, with status tracking."""
+    __tablename__ = "hotel_suggestion_records"
+
+    id = Column(UUIDType, primary_key=True, default=uuid.uuid4)
+    trip_id = Column(UUIDType, ForeignKey("trips.id"), nullable=False, index=True)
+    destination = Column(String(255), nullable=False)
+    hotel_data = Column(JSON, nullable=False)   # full HotelSuggestion object
+    status = Column(String(20), default="suggestion", nullable=False)  # suggestion | saved | dismissed
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    trip = relationship("Trip", back_populates="hotel_suggestion_records")
 
 
 class DestinationCard(Base):

@@ -5,17 +5,15 @@ import Layout from '../components/Layout'
 import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MayaChatPanel from '../components/MayaChatPanel'
-import HotelDetailPanel from '../components/HotelDetailPanel'
-import HotelCard from '../components/HotelCard'
+import AccommodationTab from '../components/AccommodationTab'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
 import { TabBar, Tab } from '../components/TabBar'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, ExternalLink, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
 import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
-import type { HotelSuggestion } from '../types'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
-import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getAccommodationSuggestions, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, addClientStay, removeClientStay, type TripDocument, type AccommodationSuggestion, type FlightSuggestion, type FlightLookupResult } from '../api/client'
+import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, addClientStay, removeClientStay, type TripDocument, type FlightSuggestion, type FlightLookupResult } from '../api/client'
 import type { TripDetail, Message, HotelSuggestion as HotelSuggestionType, Stay } from '../types'
 
 const STATUS_BADGE: Record<string, 'active' | 'muted' | 'warning'> = {
@@ -145,26 +143,10 @@ export default function TripDetailPage() {
 
   function switchTab(next: 'itinerary' | 'accommodation' | 'flights' | 'notes' | 'documents') {
     setTab(next)
-    // Auto-load accommodation suggestions when tab opens if itinerary has no hotel_suggestions
-    if (next === 'accommodation' && !accommodation && !accommodationLoading) {
-      const hasItinerarySuggestions = trip?.itineraries?.length &&
-        trip.itineraries[trip.itineraries.length - 1]?.itinerary_json?.hotel_suggestions?.length
-      if (!hasItinerarySuggestions) {
-        setAccommodationLoading(true)
-        getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false))
-      }
-    }
   }
 
   // Selected day — shared between UnifiedTripMap and ItineraryTimeline
   const [selectedDay, setSelectedDay] = useState(0)
-
-  // Hotel detail panel
-  const [selectedHotel, setSelectedHotel] = useState<HotelSuggestion | null>(null)
-
-  // Accommodation suggestions
-  const [accommodation, setAccommodation] = useState<AccommodationSuggestion[] | null>(null)
-  const [accommodationLoading, setAccommodationLoading] = useState(false)
 
   // Flight suggestions
   const [flightSuggestions, setFlightSuggestions] = useState<FlightSuggestion[] | null>(null)
@@ -676,8 +658,7 @@ export default function TripDetailPage() {
 
             {/* Accommodation Tab */}
             {tab === 'accommodation' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-
+              <>
                 {/* Add-stay-from-suggestion modal */}
                 {addingStayFrom && (
                   <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -745,165 +726,15 @@ export default function TripDetailPage() {
                   </div>
                 )}
 
-                {/* Confirmed stays */}
-                {trip.stays && trip.stays.length > 0 && (
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Confirmed Stays</h3>
-                      <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {trip.stays.map(stay => {
-                        const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
-                        const photoUrl = stay.photo_reference
-                          ? `https://places.googleapis.com/v1/${stay.photo_reference}/media?maxHeightPx=300&maxWidthPx=500&key=${import.meta.env.VITE_GOOGLE_PLACES_API_KEY}`
-                          : null
-                        return (
-                          <div key={stay.id} style={{ border: '1.5px solid #BBF7D0', borderRadius: 12, overflow: 'hidden', background: '#F0FDF4' }}>
-                            {photoUrl && (
-                              <img src={photoUrl} alt={stay.name} style={{ width: '100%', height: 160, objectFit: 'cover' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                            )}
-                            <div style={{ padding: '14px 16px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                                <div>
-                                  <div style={{ fontWeight: 700, fontSize: 15, color: '#166534' }}>{stay.name}</div>
-                                  {stay.address && <div style={{ fontSize: 12, color: '#15803D', marginTop: 2 }}>{stay.address}</div>}
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                                  <span style={{ background: '#166534', color: 'white', borderRadius: 6, padding: '3px 9px', fontSize: 12, fontWeight: 700 }}>{nights}n</span>
-                                  {stay.rating && <span style={{ fontSize: 12, color: '#15803D', fontWeight: 600 }}>★ {stay.rating}</span>}
-                                </div>
-                              </div>
-                              <div style={{ fontSize: 12, color: '#15803D', marginBottom: 8 }}>
-                                {new Date(stay.check_in).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} → {new Date(stay.check_out).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                {stay.confirmation_number && <span style={{ marginLeft: 10 }}>· Ref: <strong>{stay.confirmation_number}</strong></span>}
-                              </div>
-                              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                                {stay.website && <a href={stay.website} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#15803D', textDecoration: 'none' }}><ExternalLink size={12} /> Website</a>}
-                                {stay.google_place_id && <a href={`https://www.google.com/maps/place/?q=place_id:${stay.google_place_id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#15803D', textDecoration: 'none' }}><ExternalLink size={12} /> Maps</a>}
-                                <button
-                                  onClick={() => handleRemoveStay(stay.id)}
-                                  disabled={removingStayId === stay.id}
-                                  style={{ marginLeft: 'auto', background: 'none', border: '1px solid #fca5a5', borderRadius: 6, color: '#dc2626', fontSize: 11, fontWeight: 600, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}
-                                >
-                                  {removingStayId === stay.id ? 'Removing…' : 'Remove'}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Manual add button */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={() => setManualStayOpen(true)} style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--color-text)', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    + Add accommodation manually
-                  </button>
-                </div>
-
-                {/* Hotel suggestions from itinerary */}
-                {latestItinerary?.itinerary_json.hotel_suggestions && latestItinerary.itinerary_json.hotel_suggestions.length > 0 && (() => {
-                  const suggestions = latestItinerary.itinerary_json.hotel_suggestions!
-                  const confirmedNames = new Set((trip?.stays ?? []).map((s: Stay) => s.name.toLowerCase()))
-                  const grouped: Record<string, typeof suggestions> = {}
-                  suggestions.forEach(h => {
-                    if (!grouped[h.destination]) grouped[h.destination] = []
-                    grouped[h.destination].push(h)
-                  })
-                  return (
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>Suggested Hotels</h3>
-                        <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                        {Object.keys(grouped).map(dest => (
-                          <div key={dest}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{dest}</div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-                              {grouped[dest].map((h, i) => {
-                                const isAdded = confirmedNames.has(h.name.toLowerCase())
-                                return (
-                                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                                    <HotelCard hotel={h} onClick={() => setSelectedHotel(h)} />
-                                    <button
-                                      onClick={() => { setAddingStayFrom(h); setStayCheckIn(''); setStayCheckOut(''); setStayError('') }}
-                                      disabled={isAdded}
-                                      style={{
-                                        border: isAdded ? '1.5px solid #bbf7d0' : '1.5px solid var(--color-primary)',
-                                        borderTop: 'none',
-                                        borderRadius: '0 0 10px 10px',
-                                        background: isAdded ? '#f0fdf4' : 'var(--color-primary)',
-                                        color: isAdded ? '#15803d' : 'white',
-                                        fontSize: 12, fontWeight: 700, padding: '9px',
-                                        cursor: isAdded ? 'default' : 'pointer',
-                                        fontFamily: 'inherit',
-                                        transition: 'opacity 0.15s',
-                                      }}
-                                    >
-                                      {isAdded ? '✓ Added to trip' : '+ Add to trip'}
-                                    </button>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* On-demand AI search — shown as "More Options" only if itinerary suggestions already displayed above, otherwise hidden (auto-triggered) */}
-                {(() => {
-                  const hasItinerarySuggestions = latestItinerary?.itinerary_json.hotel_suggestions?.length
-                  const sectionLabel = hasItinerarySuggestions ? 'More Options' : 'Suggested Hotels'
-                  return (
-                    <div>
-                      {accommodationLoading && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--color-text-muted)', fontSize: 13, padding: '8px 0' }}>
-                          <LoadingSpinner size={20} label="" /> Finding hotel suggestions…
-                        </div>
-                      )}
-                      {!accommodation && !accommodationLoading && hasItinerarySuggestions && (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>{sectionLabel}</h3>
-                            <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                          </div>
-                          <button
-                            onClick={() => { setAccommodationLoading(true); getAccommodationSuggestions(tripId!).then(r => setAccommodation(r.suggestions)).catch(() => setAccommodation([])).finally(() => setAccommodationLoading(false)) }}
-                            style={{ background: 'var(--color-bg)', border: '1.5px solid var(--color-border)', padding: '10px 20px', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}>
-                            Search additional options
-                          </button>
-                        </div>
-                      )}
-                      {accommodation && accommodation.length > 0 && (
-                        <div>
-                          {hasItinerarySuggestions && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                              <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', margin: 0 }}>{sectionLabel}</h3>
-                              <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                            </div>
-                          )}
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-                            {accommodation.map((a, i) => (
-                              <HotelCard
-                                key={i}
-                                hotel={{ destination: a.destination, name: a.name, area: a.area, style: a.style, why_suits: a.why_suits, price_per_night_aud: a.price_per_night_aud, booking_com_search: a.booking_com_search, google_maps_url: a.google_maps_url }}
-                                onClick={() => setSelectedHotel({ destination: a.destination, name: a.name, area: a.area, style: a.style, why_suits: a.why_suits, price_per_night_aud: a.price_per_night_aud, booking_com_search: a.booking_com_search, google_maps_url: a.google_maps_url })}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
+                <AccommodationTab
+                  tripId={tripId!}
+                  trip={trip}
+                  onAddFromSuggestion={(hotel) => { setAddingStayFrom(hotel); setStayCheckIn(''); setStayCheckOut(''); setStayError('') }}
+                  onRemoveStay={handleRemoveStay}
+                  removingStayId={removingStayId}
+                  onManualAdd={() => setManualStayOpen(true)}
+                />
+              </>
             )}
 
             {/* Flights Tab */}
@@ -1228,12 +1059,8 @@ export default function TripDetailPage() {
           onItineraryUpdated={newItinerary =>
             setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, newItinerary] } : prev)
           }
-          hidden={!!selectedHotel}
         />
       )}
-
-      {/* Hotel detail panel */}
-      <HotelDetailPanel hotel={selectedHotel} onClose={() => setSelectedHotel(null)} />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </Layout>
