@@ -96,10 +96,10 @@ function makeActivityMarkerEl(period: string): HTMLDivElement {
   const label = PERIOD_LABELS[period] || period.slice(0, 3).toUpperCase()
   el.style.cssText = `
     background: ${color}; color: white;
-    border: 2px solid white; border-radius: 12px;
-    padding: 2px 7px; font-size: 10px; font-weight: 700;
+    border: 2px solid white; border-radius: 20px;
+    padding: 3px 9px; font-size: 10px; font-weight: 700;
     white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.28);
-    cursor: pointer; font-family: inherit; letter-spacing: 0.03em;
+    cursor: pointer; font-family: inherit; letter-spacing: 0.04em;
     transition: transform 0.12s, box-shadow 0.12s;
     display: none;
   `
@@ -112,13 +112,12 @@ function makeActivityMarkerEl(period: string): HTMLDivElement {
 function makeStayMarkerEl(): HTMLDivElement {
   const el = document.createElement('div')
   el.style.cssText = `
-    background: white; border: 2.5px solid #10b981; border-radius: 8px;
-    width: 26px; height: 26px; display: none;
+    background: #10b981; border: 2.5px solid white; border-radius: 50%;
+    width: 30px; height: 30px; display: none;
     align-items: center; justify-content: center;
-    font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.22); cursor: pointer;
+    font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); cursor: pointer;
     transition: transform 0.12s;
   `
-  el.style.display = 'none'
   el.textContent = '🏨'
   el.onmouseenter = () => { el.style.transform = 'scale(1.15)' }
   el.onmouseleave = () => { el.style.transform = '' }
@@ -263,7 +262,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       console.warn('UnifiedTripMap: failed to init Mapbox:', e)
       return
     }
-    map.current.addControl(new mapboxgl.AttributionControl({ compact: true }))
+    map.current.addControl(new mapboxgl.AttributionControl({ compact: true }), 'bottom-right')
     map.current.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-left')
 
     map.current.on('load', async () => {
@@ -412,20 +411,37 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       })
 
       // ── Draw transport routes ────────────────────────────────────────────
-      const firstDest = stops.find(s => !s.isOrigin)
-      const hasOriginLeg = legs.some(l =>
-        l.from.toLowerCase() === originCity.toLowerCase() ||
-        l.to.toLowerCase() === originCity.toLowerCase()
-      )
-      if (firstDest && !hasOriginLeg && map.current) {
+      const destStops = stops.filter(s => !s.isOrigin)
+      const firstDest = destStops[0]
+      const lastDest = destStops[destStops.length - 1]
+
+      // Separate checks: does a real leg depart from origin / arrive at origin?
+      const hasOutboundLeg = legs.some(l => l.from.toLowerCase() === originCity.toLowerCase())
+      const hasReturnLeg   = legs.some(l => l.to.toLowerCase()   === originCity.toLowerCase())
+
+      // Generic outbound arc (origin → first destination) when no real outbound leg
+      if (firstDest && !hasOutboundLeg && map.current) {
         const arcCoords = buildArc(originCoords, firstDest.coords)
-        const sourceId = `route-origin-${firstDest.name}`.replace(/[\s/]/g, '-')
-        map.current.addSource(sourceId, {
+        map.current.addSource('route-generic-outbound', {
           type: 'geojson',
           data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arcCoords } },
         })
         map.current.addLayer({
-          id: sourceId, type: 'line', source: sourceId,
+          id: 'route-generic-outbound', type: 'line', source: 'route-generic-outbound',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': TRANSPORT_COLORS.flight, 'line-width': 2.5, 'line-opacity': 0.7, 'line-dasharray': [2, 2.5] },
+        })
+      }
+
+      // Generic return arc (last destination → origin) when no real return leg
+      if (lastDest && !hasReturnLeg && map.current) {
+        const arcCoords = buildArc(lastDest.coords, originCoords)
+        map.current.addSource('route-generic-return', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arcCoords } },
+        })
+        map.current.addLayer({
+          id: 'route-generic-return', type: 'line', source: 'route-generic-return',
           layout: { 'line-join': 'round', 'line-cap': 'round' },
           paint: { 'line-color': TRANSPORT_COLORS.flight, 'line-width': 2.5, 'line-opacity': 0.7, 'line-dasharray': [2, 2.5] },
         })
@@ -679,7 +695,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         <button
           onClick={handleResetView}
           style={{
-            position: 'absolute', bottom: 12, right: 12,
+            position: 'absolute', bottom: 36, right: 10,
             background: 'white', border: '1px solid var(--color-border)',
             borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
             cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
@@ -692,7 +708,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       )}
 
       {ready && (
-        <div style={{ position: 'absolute', bottom: 12, left: 12, display: 'flex', gap: 6 }}>
+        <div style={{ position: 'absolute', bottom: 36, left: 10, display: 'flex', gap: 6 }}>
           {Object.entries(PERIOD_COLORS).map(([period, color]) => (
             <div key={period} style={{ background: 'white', border: `1.5px solid ${color}`, borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700, color, fontFamily: 'inherit', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
               {PERIOD_LABELS[period]} {period.charAt(0).toUpperCase() + period.slice(1)}
