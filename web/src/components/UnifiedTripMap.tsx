@@ -90,6 +90,19 @@ function getStayForDay(day: DayPlan, stays: Stay[]): Stay | null {
   }) ?? null
 }
 
+// Returns ALL stays that overlap with a given calendar day (covers transition days
+// where a client checks out of one hotel and into another on the same day).
+function getStaysForDay(day: DayPlan, stays: Stay[]): Stay[] {
+  if (!day.date) return []
+  const dayStart = new Date(day.date + 'T00:00:00Z')
+  const dayEnd   = new Date(day.date + 'T23:59:59Z')
+  return stays.filter(stay => {
+    const checkIn  = new Date(stay.check_in)
+    const checkOut = new Date(stay.check_out)
+    return checkIn <= dayEnd && checkOut > dayStart
+  })
+}
+
 function makeActivityMarkerEl(period: string): HTMLDivElement {
   const el = document.createElement('div')
   const color = PERIOD_COLORS[period] || '#6b7280'
@@ -101,7 +114,7 @@ function makeActivityMarkerEl(period: string): HTMLDivElement {
     white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.28);
     cursor: pointer; font-family: inherit; letter-spacing: 0.04em;
     transition: transform 0.12s, box-shadow 0.12s;
-    display: none;
+    visibility: hidden; pointer-events: none;
   `
   el.textContent = label
   el.onmouseenter = () => { el.style.transform = 'scale(1.12)'; el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.35)' }
@@ -113,10 +126,11 @@ function makeStayMarkerEl(): HTMLDivElement {
   const el = document.createElement('div')
   el.style.cssText = `
     background: #10b981; border: 2.5px solid white; border-radius: 50%;
-    width: 30px; height: 30px; display: none;
+    width: 30px; height: 30px; display: flex;
     align-items: center; justify-content: center;
     font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); cursor: pointer;
     transition: transform 0.12s;
+    visibility: hidden; pointer-events: none;
   `
   el.textContent = '🏨'
   el.onmouseenter = () => { el.style.transform = 'scale(1.15)' }
@@ -546,13 +560,19 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
     // Hide all activity markers
     activityMarkersRef.current.forEach(markers => {
       markers.forEach(m => {
-        if (m) (m.getElement() as HTMLElement).style.display = 'none'
+        if (m) {
+          const el = m.getElement() as HTMLElement
+          el.style.visibility = 'hidden'
+          el.style.pointerEvents = 'none'
+        }
       })
     })
 
     // Hide all stay markers
     stayMarkersRef.current.forEach(m => {
-      ;(m.getElement() as HTMLElement).style.display = 'none'
+      const el = m.getElement() as HTMLElement
+      el.style.visibility = 'hidden'
+      el.style.pointerEvents = 'none'
     })
 
     if (selectedDayNum < 1) {
@@ -570,26 +590,34 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
     // Show activity markers for selected day
     const dayMarkers = activityMarkersRef.current.get(selectedDayNum) || []
     dayMarkers.forEach(m => {
-      if (m) (m.getElement() as HTMLElement).style.display = 'flex'
+      if (m) {
+        const el = m.getElement() as HTMLElement
+        el.style.visibility = 'visible'
+        el.style.pointerEvents = 'auto'
+      }
     })
 
-    // Find stay for this night and show its marker
+    // Show all stays that overlap with this day (handles transition days with two hotels)
     const dayPlan = (itinerary.day_plans || []).find(dp => dp.day_number === selectedDayNum)
-    const stayForNight = dayPlan ? getStayForDay(dayPlan, stays) : null
-    let stayCoords: [number, number] | null = null
-    if (stayForNight) {
-      const stayMarker = stayMarkersRef.current.get(stayForNight.id)
+    const staysForDay = dayPlan ? getStaysForDay(dayPlan, stays) : []
+    const stayCoordsList: [number, number][] = []
+    staysForDay.forEach(stay => {
+      const stayMarker = stayMarkersRef.current.get(stay.id)
       if (stayMarker) {
-        ;(stayMarker.getElement() as HTMLElement).style.display = 'flex'
-        if (stayForNight.longitude && stayForNight.latitude) {
-          stayCoords = [stayForNight.longitude, stayForNight.latitude]
+        const el = stayMarker.getElement() as HTMLElement
+        el.style.visibility = 'visible'
+        el.style.pointerEvents = 'auto'
+        if (stay.longitude && stay.latitude) {
+          stayCoordsList.push([stay.longitude, stay.latitude])
         }
       }
-    }
+    })
 
-    // Compute bounds: activity coords + stay coords
-    const boundsCoords: [number, number][] = [...(dayBoundsCoords.current.get(selectedDayNum) || [])]
-    if (stayCoords) boundsCoords.push(stayCoords)
+    // Compute bounds: activity coords + all stay coords
+    const boundsCoords: [number, number][] = [
+      ...(dayBoundsCoords.current.get(selectedDayNum) || []),
+      ...stayCoordsList,
+    ]
 
     if (boundsCoords.length === 0) {
       // No geocoded activities — fall back to fly to destination city
@@ -622,10 +650,16 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
 
     // Hide activity + stay markers
     activityMarkersRef.current.forEach(markers => markers.forEach(m => {
-      if (m) (m.getElement() as HTMLElement).style.display = 'none'
+      if (m) {
+        const el = m.getElement() as HTMLElement
+        el.style.visibility = 'hidden'
+        el.style.pointerEvents = 'none'
+      }
     }))
     stayMarkersRef.current.forEach(m => {
-      ;(m.getElement() as HTMLElement).style.display = 'none'
+      const el = m.getElement() as HTMLElement
+      el.style.visibility = 'hidden'
+      el.style.pointerEvents = 'none'
     })
 
     if (allCoords.current.length === 1) {
@@ -707,18 +741,6 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         </button>
       )}
 
-      {ready && (
-        <div style={{ position: 'absolute', bottom: 36, left: 10, display: 'flex', gap: 6 }}>
-          {Object.entries(PERIOD_COLORS).map(([period, color]) => (
-            <div key={period} style={{ background: 'white', border: `1.5px solid ${color}`, borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700, color, fontFamily: 'inherit', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
-              {PERIOD_LABELS[period]} {period.charAt(0).toUpperCase() + period.slice(1)}
-            </div>
-          ))}
-          <div style={{ background: 'white', border: '1.5px solid #10b981', borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700, color: '#10b981', fontFamily: 'inherit', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
-            🏨 Stay
-          </div>
-        </div>
-      )}
     </div>
   )
 }
