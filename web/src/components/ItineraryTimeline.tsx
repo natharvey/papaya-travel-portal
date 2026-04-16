@@ -236,6 +236,17 @@ function TimeBlock({
           {block.title}
         </div>
         <DetailsAsBullets text={block.details} color={mutedColor} />
+        {block.tip && (
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: 6,
+            marginTop: 8, padding: '6px 10px',
+            background: '#FFFBEB', border: '1px solid #FDE68A',
+            borderRadius: 6, fontSize: 12, color: '#92400E', lineHeight: 1.5,
+          }}>
+            <span style={{ flexShrink: 0, fontSize: 13 }}>💡</span>
+            <span>{block.tip}</span>
+          </div>
+        )}
       </div>
 
       {/* ── Photo panel ── */}
@@ -693,11 +704,13 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
                 })}
 
                 {selectedDay.notes?.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                    {selectedDay.notes.map((note, i) => (
-                      <div key={i} style={{ background: 'white', borderLeft: '3px solid var(--color-border)', padding: '8px 12px', fontSize: '13px', color: 'var(--color-text-muted)', borderRadius: '0 6px 6px 0', lineHeight: '1.6' }}>{note}</div>
-                    ))}
-                  </div>
+                  <CollapsibleSection title="Tips for today" icon={<span style={{ fontSize: 14 }}>💡</span>}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {selectedDay.notes.map((note, i) => (
+                        <div key={i} style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6, paddingLeft: 4 }}>{note}</div>
+                      ))}
+                    </div>
+                  </CollapsibleSection>
                 )}
 
                 {/* Accommodation for this night */}

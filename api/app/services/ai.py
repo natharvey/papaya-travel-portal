@@ -48,9 +48,9 @@ The JSON must match this exact schema — no extra fields, no missing fields:
     "day_number": integer,
     "date": "YYYY-MM-DD",
     "location_base": "string",
-    "morning": {"title": "string", "details": "string (2-3 sentences)", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string"} | null,
-    "afternoon": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string"} | null,
-    "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string"} | null,
+    "morning": {"title": "string", "details": "string (2-3 sentences)", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string", "tip": "string|null"} | null,
+    "afternoon": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string", "tip": "string|null"} | null,
+    "evening": {"title": "string", "details": "string", "booking_needed": boolean, "est_cost_aud": number|null, "photo_query": "string", "tip": "string|null"} | null,
     "notes": ["string"]
   }],
   "transport_legs": [
@@ -79,6 +79,15 @@ The JSON must match this exact schema — no extra fields, no missing fields:
   "packing_checklist": ["string"],
   "risks_and_notes": ["string"]
 }
+
+ACTIVITY TIP RULES:
+- Each activity block has an optional "tip" field. Use it for ONE critical piece of practical advice specific to that activity — dress code (e.g. "Cover shoulders and knees to enter"), advance booking requirement, best arrival time, or essential local etiquette.
+- Keep it to a single concise sentence. If nothing genuinely important applies, set it to null.
+- Do NOT repeat information already in "details". Do NOT use it for general observations or marketing copy.
+
+DAY NOTES RULES:
+- "notes" is for day-level context NOT tied to any specific activity — neighbourhood character, what to wear for the day's weather, packing reminder, or a cultural observation about the area.
+- Leave it as an empty array [] if nothing genuinely useful applies. Do NOT pad it.
 
 PHOTO QUERY RULES:
 - Each morning/afternoon/evening block must include a "photo_query" field: 2-4 words for an Unsplash image search

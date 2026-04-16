@@ -18,9 +18,9 @@ const TRANSPORT_COLORS: Record<string, string> = {
 const DEST_COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b', '#06b6d4', '#ec4899']
 
 const PERIOD_COLORS: Record<string, string> = {
-  morning:   '#f59e0b',
-  afternoon: '#3b82f6',
-  evening:   '#6d28d9',
+  morning:   '#f97316',
+  afternoon: '#0ea5e9',
+  evening:   '#8b5cf6',
 }
 const PERIOD_LABELS: Record<string, string> = {
   morning: 'AM',
@@ -103,38 +103,45 @@ function getStaysForDay(day: DayPlan, stays: Stay[]): Stay[] {
   })
 }
 
-function makeActivityMarkerEl(period: string): HTMLDivElement {
+// SVG teardrop pin — tip at bottom-center, anchor:'bottom' lines it up perfectly
+function makePinEl(color: string, content: string): HTMLDivElement {
   const el = document.createElement('div')
-  const color = PERIOD_COLORS[period] || '#6b7280'
-  const label = PERIOD_LABELS[period] || period.slice(0, 3).toUpperCase()
   el.style.cssText = `
-    background: ${color}; color: white;
-    border: 2px solid white; border-radius: 20px;
-    padding: 3px 9px; font-size: 10px; font-weight: 700;
-    white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.28);
-    cursor: pointer; font-family: inherit; letter-spacing: 0.04em;
-    transition: transform 0.12s, box-shadow 0.12s;
-    visibility: hidden; pointer-events: none;
+    cursor: pointer; visibility: hidden; pointer-events: none;
+    transition: transform 0.12s; line-height: 0;
   `
-  el.textContent = label
-  el.onmouseenter = () => { el.style.transform = 'scale(1.12)'; el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.35)' }
-  el.onmouseleave = () => { el.style.transform = ''; el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.28)' }
+  el.innerHTML = `
+    <svg width="36" height="46" viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 0C8.06 0 0 8.06 0 18C0 30.5 18 46 18 46C18 46 36 30.5 36 18C36 8.06 27.94 0 18 0Z" fill="${color}"/>
+      <path d="M18 1C8.61 1 1 8.61 1 18C1 30 18 45 18 45C18 45 35 30 35 18C35 8.61 27.39 1 18 1Z" fill="${color}"/>
+      <circle cx="18" cy="17" r="13" fill="${color}" stroke="white" stroke-width="2.5"/>
+      <text x="18" y="22" text-anchor="middle" font-size="10" font-weight="800" fill="white" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" letter-spacing="0.5">${content}</text>
+    </svg>
+  `
+  el.onmouseenter = () => { el.style.transform = 'scale(1.12) translateY(-2px)' }
+  el.onmouseleave = () => { el.style.transform = '' }
   return el
 }
 
+function makeActivityMarkerEl(period: string): HTMLDivElement {
+  const color = PERIOD_COLORS[period] || '#6b7280'
+  const label = PERIOD_LABELS[period] || period.slice(0, 3).toUpperCase()
+  return makePinEl(color, label)
+}
+
 function makeStayMarkerEl(): HTMLDivElement {
-  const el = document.createElement('div')
-  el.style.cssText = `
-    background: #10b981; border: 2.5px solid white; border-radius: 50%;
-    width: 30px; height: 30px; display: flex;
-    align-items: center; justify-content: center;
-    font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); cursor: pointer;
-    transition: transform 0.12s;
-    visibility: hidden; pointer-events: none;
-  `
-  el.textContent = '🏨'
-  el.onmouseenter = () => { el.style.transform = 'scale(1.15)' }
-  el.onmouseleave = () => { el.style.transform = '' }
+  const el = makePinEl('#10b981', '')
+  // Replace the text node with a small house path
+  const svg = el.querySelector('svg')!
+  const existing = svg.querySelector('text')
+  if (existing) existing.remove()
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  // House icon centred at 18,17
+  g.innerHTML = `<g transform="translate(9,8)" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 9L9 2l8 7"/>
+    <path d="M3 7.5V17h5v-5h2v5h5V7.5"/>
+  </g>`
+  svg.appendChild(g)
   return el
 }
 
@@ -365,7 +372,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
               </div>
             `)
 
-          const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
             .setLngLat(coords)
             .setPopup(popup)
             .addTo(map.current!)
@@ -412,7 +419,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
               ${stay.website ? `<a href="${stay.website}" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;text-decoration:none;display:block;margin-top:6px">View hotel →</a>` : ''}
             </div>
           `)
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat(coords)
           .setPopup(popup)
           .addTo(map.current!)
@@ -501,24 +508,38 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       clearDestMarkers()
       stops.forEach(stop => {
         if (!map.current) return
-        const el = document.createElement('div')
+        let el: HTMLDivElement
         if (stop.isOrigin) {
+          el = document.createElement('div')
           el.style.cssText = `width:12px;height:12px;background:#2d4a5a;border:2.5px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);`
         } else {
+          // Destination pin: larger pin with city label below
+          el = document.createElement('div')
           el.style.cssText = `
-            background:${stop.color};color:white;
-            border:2.5px solid white;border-radius:20px;
-            padding:3px 10px;font-size:11px;font-weight:700;
-            white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.22);
-            cursor:pointer;font-family:inherit;letter-spacing:0.01em;
-            transition:transform 0.15s, box-shadow 0.15s;
+            display:flex;flex-direction:column;align-items:center;
+            cursor:pointer;transition:transform 0.15s;line-height:0;
           `
-          el.textContent = stop.dayRange
+          el.innerHTML = `
+            <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 0C9.85 0 0 9.85 0 22C0 37 22 56 22 56C22 56 44 37 44 22C44 9.85 34.15 0 22 0Z" fill="${stop.color}"/>
+              <circle cx="22" cy="21" r="16" fill="${stop.color}" stroke="white" stroke-width="3"/>
+              <text x="22" y="26" text-anchor="middle" font-size="10" font-weight="800" fill="white" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${stop.dayRange}</text>
+            </svg>
+            <div style="
+              margin-top:4px;background:rgba(255,255,255,0.95);
+              border-radius:10px;padding:2px 8px;
+              font-size:10px;font-weight:700;color:#1a2a3a;
+              white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.15);
+              line-height:1.6;
+            ">${stop.name}</div>
+          `
           el.addEventListener('click', () => onDaySelect(stop.firstDay))
+          el.onmouseenter = () => { el.style.transform = 'scale(1.08) translateY(-2px)' }
+          el.onmouseleave = () => { el.style.transform = '' }
         }
         const popup = new mapboxgl.Popup({ offset: 12, closeButton: false })
           .setHTML(`<div style="font-family:inherit;padding:4px 2px"><div style="font-weight:700;font-size:13px;color:#1a2a3a">${stop.name}</div><div style="font-size:11px;color:#6b7280;margin-top:2px">${stop.dayRange}</div></div>`)
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat(stop.coords)
           .setPopup(popup)
           .addTo(map.current!)

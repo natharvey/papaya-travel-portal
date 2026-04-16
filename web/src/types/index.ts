@@ -56,6 +56,7 @@ export interface DayBlock {
   booking_needed: boolean
   est_cost_aud: number | null
   photo_query?: string
+  tip?: string | null
   // Populated by background geocoding pass after generation
   lat?: number | null
   lng?: number | null
