@@ -52,6 +52,11 @@ export default function DatePicker({
   const fromDate = min ? parse(min, 'yyyy-MM-dd', new Date()) : undefined
   const toDate   = max ? parse(max, 'yyyy-MM-dd', new Date()) : undefined
 
+  // Build disabled matchers so out-of-range dates are visually blurred and unclickable
+  const disabled: import('react-day-picker').Matcher[] = []
+  if (fromDate) disabled.push({ before: fromDate })
+  if (toDate)   disabled.push({ after: toDate })
+
   return (
     <div ref={containerRef} style={{ position: 'relative', ...style }}>
       {/* Trigger */}
@@ -119,6 +124,7 @@ export default function DatePicker({
             startMonth={fromDate}
             endMonth={toDate}
             defaultMonth={validSelected ?? fromDate}
+            disabled={disabled.length > 0 ? disabled : undefined}
             components={{
               Chevron: ({ orientation }) =>
                 orientation === 'left'
