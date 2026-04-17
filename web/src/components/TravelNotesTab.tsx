@@ -15,7 +15,7 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, backdropFilter: 'blur(2px)' }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        width: '92%', maxWidth: 720, maxHeight: '88vh', overflowY: 'auto',
+        width: 'min(92vw, 900px)', maxHeight: '88vh', overflowY: 'auto',
         background: 'white', borderRadius: 20, zIndex: 1001,
         boxShadow: '0 24px 64px rgba(0,0,0,0.2)',
       }}>

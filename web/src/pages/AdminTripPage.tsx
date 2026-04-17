@@ -775,7 +775,7 @@ export default function AdminTripPage() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
+      <div style={{ width: 'min(90vw, 1440px)', margin: '0 auto', padding: '0 0 60px' }}>
 
         {/* Action error banner */}
         {actionError && (
