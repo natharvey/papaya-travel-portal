@@ -15,7 +15,7 @@ import httpx
 import anthropic as anthropic_sdk
 
 from app.db import get_db
-from app.models import Trip, Client, Itinerary, Message, Flight, Stay, IntakeResponse
+from app.models import Trip, Client, Itinerary, Message, Flight, Stay, IntakeResponse, HotelSuggestionRecord
 from app.schemas import (
     TripDetail, AdminTripListItem, TripUpdate, MessageCreate, MessageOut,
     ItineraryOut, RegenerateRequest, FlightCreate, FlightOut, StayCreate, StayOut,
@@ -622,6 +622,7 @@ def admin_delete_trip(
     db.query(Stay).filter(Stay.trip_id == trip_id).delete()
     db.query(Itinerary).filter(Itinerary.trip_id == trip_id).delete()
     db.query(IntakeResponse).filter(IntakeResponse.trip_id == trip_id).delete()
+    db.query(HotelSuggestionRecord).filter(HotelSuggestionRecord.trip_id == trip_id).delete()
     db.delete(trip)
     db.commit()
 
