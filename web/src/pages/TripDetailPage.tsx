@@ -52,84 +52,139 @@ function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON
 
 
 
-const GENERATION_STEPS = [
-  { label: 'Researching your destination', duration: 4000 },
-  { label: 'Planning your day-by-day route', duration: 5000 },
-  { label: 'Finding the best activities', duration: 5000 },
-  { label: 'Sourcing hotel options', duration: 5000 },
-  { label: 'Checking flights and routes', duration: 5000 },
-  { label: 'Adding local tips and notes', duration: 4000 },
-  { label: 'Finalising your itinerary', duration: 0 },
-]
+function buildResearchMessages(trip: import('../types').TripDetail | null): string[] {
+  const dest = trip?.title || 'your destination'
+  const origin = trip?.origin_city ? trip.origin_city.split(',')[0] : 'home'
+  const days = trip?.start_date && trip?.end_date
+    ? Math.round((new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / 86400000)
+    : null
+  const pace = trip?.pace || 'moderate'
+  const budget = trip?.budget_range || ''
 
-function GeneratingAnimation() {
-  const [currentStep, setCurrentStep] = useState(0)
+  return [
+    `Analysing the best time of year to visit ${dest}…`,
+    `Mapping distances and travel times across your route…`,
+    `Researching must-see landmarks and hidden gems…`,
+    days ? `Distributing ${days} days across your destinations for the best experience…` : `Balancing your days across each destination…`,
+    `Identifying ${pace}-pace activities that match your style…`,
+    `Cross-referencing local events and seasonal highlights…`,
+    `Finding the right accommodation areas for each stop…`,
+    budget ? `Calibrating recommendations to your ${budget} budget…` : `Tailoring recommendations to your budget…`,
+    `Checking typical flight routes from ${origin}…`,
+    `Weaving in cultural context and local tips…`,
+    `Reviewing day-by-day flow for a seamless journey…`,
+    `Putting the finishing touches on your itinerary…`,
+  ]
+}
 
+function GeneratingAnimation({ trip }: { trip: import('../types').TripDetail | null }) {
+  const messages = buildResearchMessages(trip)
+  const [msgIndex, setMsgIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+  const [progress, setProgress] = useState(0)
+
+  // Rotate messages with a fade
   useEffect(() => {
-    const step = GENERATION_STEPS[currentStep]
-    if (!step || step.duration === 0) return
-    const timer = setTimeout(() => {
-      setCurrentStep(s => Math.min(s + 1, GENERATION_STEPS.length - 1))
-    }, step.duration)
-    return () => clearTimeout(timer)
-  }, [currentStep])
+    const interval = setInterval(() => {
+      setVisible(false)
+      setTimeout(() => {
+        setMsgIndex(i => (i + 1) % messages.length)
+        setVisible(true)
+      }, 400)
+    }, 3500)
+    return () => clearInterval(interval)
+  }, [messages.length])
+
+  // Slowly advance a progress bar (never reaches 100 — server controls completion)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress(p => {
+        if (p >= 92) return p  // stall near the end, don't fake completion
+        return p + (92 - p) * 0.018  // eases toward 92%
+      })
+    }, 800)
+    return () => clearInterval(interval)
+  }, [])
+
+  const destLine = trip?.title
+    ? `${trip.title}${trip.origin_city ? ` · from ${trip.origin_city.split(',')[0]}` : ''}`
+    : 'Your trip'
 
   return (
-    <div style={{ maxWidth: 480, margin: '48px auto', padding: '0 20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: 36 }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🌴</div>
-        <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8, color: 'var(--color-text)' }}>
-          Building your itinerary…
-        </h3>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 14, lineHeight: 1.6 }}>
-          Usually takes 1–2 minutes. This page updates automatically.
-        </p>
-      </div>
+    <>
+      <style>{`
+        @keyframes papaya-pulse {
+          0%, 100% { opacity: 0.6; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.08); }
+        }
+        @keyframes papaya-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes papaya-fade-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div style={{
+        margin: '0 auto',
+        padding: '64px 32px 80px',
+        maxWidth: 560,
+        textAlign: 'center',
+      }}>
+        {/* Spinner */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%',
+            border: '2.5px solid var(--color-border)',
+            borderTopColor: 'var(--color-primary)',
+            animation: 'papaya-spin 1s linear infinite',
+          }} />
+        </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {GENERATION_STEPS.map((step, i) => {
-          const done = i < currentStep
-          const active = i === currentStep
-          return (
-            <div
-              key={i}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 16px',
-                borderRadius: 'var(--radius)',
-                background: done ? 'var(--color-bg)' : active ? 'var(--color-accent)' : 'transparent',
-                border: `1px solid ${done ? 'var(--color-border)' : active ? '#FCD9B8' : 'transparent'}`,
-                transition: 'all 0.4s ease',
-                opacity: i > currentStep + 1 ? 0.35 : 1,
-              }}
-            >
-              <div style={{
-                width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: done ? 'var(--color-success)' : active ? 'var(--color-primary)' : 'var(--color-border)',
-                transition: 'background 0.4s ease',
-              }}>
-                {done ? (
-                  <span style={{ color: 'white', fontSize: 13, fontWeight: 700 }}>✓</span>
-                ) : active ? (
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'white', display: 'inline-block', animation: 'blink 1s ease-in-out infinite' }} />
-                ) : (
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'white', display: 'inline-block', opacity: 0.5 }} />
-                )}
-              </div>
-              <span style={{
-                fontSize: 14, fontWeight: active ? 600 : 400,
-                color: done ? 'var(--color-text-muted)' : active ? 'var(--color-primary-dark)' : 'var(--color-text-muted)',
-                transition: 'color 0.4s ease',
-                textDecoration: done ? 'line-through' : 'none',
-              }}>
-                {step.label}
-              </span>
-            </div>
-          )
-        })}
+        {/* Heading */}
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-primary)', marginBottom: 12 }}>
+          Crafting your itinerary
+        </div>
+        <h2 style={{ fontSize: 26, fontWeight: 900, color: 'var(--color-text)', margin: '0 0 8px', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
+          {destLine}
+        </h2>
+        <p style={{ fontSize: 14, color: 'var(--color-text-muted)', margin: '0 0 40px', lineHeight: 1.6 }}>
+          Usually 3–8 minutes · up to 15 for longer trips.<br />
+          This page will refresh automatically when ready.
+        </p>
+
+        {/* Progress bar */}
+        <div style={{
+          height: 3, borderRadius: 99,
+          background: 'var(--color-border)',
+          marginBottom: 32, overflow: 'hidden',
+        }}>
+          <div style={{
+            height: '100%', borderRadius: 99,
+            background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-dark))',
+            width: `${progress}%`,
+            transition: 'width 0.8s ease',
+          }} />
+        </div>
+
+        {/* Rotating research message */}
+        <div style={{
+          minHeight: 48,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <p style={{
+            fontSize: 14, color: 'var(--color-text-muted)', lineHeight: 1.6,
+            fontStyle: 'italic', margin: 0,
+            opacity: visible ? 1 : 0,
+            transform: visible ? 'translateY(0)' : 'translateY(4px)',
+            transition: 'opacity 0.4s ease, transform 0.4s ease',
+          }}>
+            {messages[msgIndex]}
+          </p>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -531,7 +586,7 @@ export default function TripDetailPage() {
             {/* Itinerary Tab */}
             {tab === 'itinerary' && (
               <>
-                {trip.status === 'GENERATING' && <GeneratingAnimation />}
+                {trip.status === 'GENERATING' && <GeneratingAnimation trip={trip} />}
                 {!latestItinerary && trip.status !== 'GENERATING' && (
                   <div style={{ textAlign: 'center', padding: '48px 20px' }}>
                     <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
