@@ -115,7 +115,7 @@ export default function AdminDashboardPage() {
 
   return (
     <Layout variant="admin">
-      <div style={{ padding: '40px 28px 80px', maxWidth: '1400px', margin: '0 auto' }}>
+      <div style={{ padding: '40px 0 80px', width: 'min(90vw, 1440px)', margin: '0 auto' }}>
         <div style={{ marginBottom: '32px' }}>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '6px', letterSpacing: '-0.4px' }}>
             Trip Dashboard

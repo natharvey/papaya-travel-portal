@@ -40,7 +40,7 @@ export default function TripItineraryView({ itinerary, trip, itineraryCount, sel
   return (
     <>
       {/* Overview block */}
-      <div style={{ maxWidth: 820, marginBottom: 24 }}>
+      <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginRight: 'auto' }}>
             Generated {new Date(itinerary.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -82,7 +82,7 @@ export default function TripItineraryView({ itinerary, trip, itineraryCount, sel
 
       {/* Unified trip map */}
       {((json.destinations?.length ?? 0) > 0 || (json.transport_legs?.length ?? 0) > 0) && (
-        <div style={{ maxWidth: 820, marginBottom: 28 }}>
+        <div style={{ marginBottom: 28 }}>
           <Suspense fallback={<div style={{ height: 340, background: '#e8f0f5', borderRadius: 12 }} />}>
             <UnifiedTripMap
               itinerary={json}

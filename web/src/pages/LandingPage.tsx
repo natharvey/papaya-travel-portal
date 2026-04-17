@@ -123,7 +123,7 @@ export default function LandingPage() {
 
       {/* How it works */}
       <section style={{ background: 'var(--color-bg)', padding: '80px 24px' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ width: 'min(90vw, 1200px)', margin: '0 auto' }}>
           <h2 style={{
             textAlign: 'center', fontSize: '28px', fontWeight: 800,
             color: 'var(--color-text)', marginBottom: 8, letterSpacing: '-0.3px',
@@ -159,7 +159,7 @@ export default function LandingPage() {
 
       {/* Features */}
       <section style={{ background: 'var(--color-surface)', padding: '80px 24px', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ width: 'min(90vw, 1200px)', margin: '0 auto' }}>
           <h2 style={{
             textAlign: 'center', fontSize: '28px', fontWeight: 800,
             color: 'var(--color-text)', marginBottom: 8, letterSpacing: '-0.3px',

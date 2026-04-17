@@ -21,7 +21,7 @@ export default function PortalPage() {
 
   return (
     <Layout variant="client">
-      <div style={{ maxWidth: '820px', margin: '0 auto', padding: '48px 24px 80px' }}>
+      <div style={{ width: 'min(90vw, 1440px)', margin: '0 auto', padding: '48px 0 80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '36px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <h1 style={{ fontSize: '30px', fontWeight: 800, color: 'var(--color-text)', marginBottom: '6px', letterSpacing: '-0.4px' }}>

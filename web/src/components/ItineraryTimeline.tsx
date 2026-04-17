@@ -583,7 +583,7 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
   }
 
   return (
-    <div style={{ maxWidth: '820px' }}>
+    <div>
       {/* ── Overview text + destinations ── */}
       {!hideOverview && (
         <div style={{ marginBottom: '20px' }}>
