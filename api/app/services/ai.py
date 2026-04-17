@@ -475,7 +475,7 @@ def build_generation_prompt(
     confirmed_stays: list = None,
     client_profile: dict = None,
 ) -> str:
-    days = (trip.end_date - trip.start_date).days
+    days = (trip.end_date - trip.start_date).days + 1  # inclusive: arrival day + departure day
     parts = [
         f"Create a detailed {days}-day travel itinerary for the following client.\n",
         f"CLIENT: {client.name}",

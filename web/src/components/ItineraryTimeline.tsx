@@ -793,6 +793,49 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
                     </div>
                   )
                 })()}
+
+                {/* Top hotel suggestion for this destination */}
+                {(() => {
+                  const loc = selectedDay.location_base?.toLowerCase()
+                  const suggestion = data.hotel_suggestions?.find(h => h.destination?.toLowerCase() === loc)
+                  if (!suggestion) return null
+                  // Don't show if there's already a confirmed stay for this night
+                  const hasConfirmedStay = selectedDay.date ? stays.some(s => {
+                    const dayDate = new Date(selectedDay.date! + 'T12:00:00Z')
+                    return new Date(s.check_in) <= dayDate && dayDate < new Date(s.check_out)
+                  }) : false
+                  if (hasConfirmedStay) return null
+                  return (
+                    <div style={{ marginTop: 8, padding: '12px 14px', background: 'linear-gradient(135deg, #fffbeb 0%, #fef9e7 100%)', border: '1.5px solid #d4a017', borderRadius: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: '#92580a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Top Suggestion</span>
+                        <span style={{ fontSize: 10, color: '#b45309', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>{suggestion.style}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #d4a017, #f59e0b)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 4px rgba(212,160,23,0.4)' }}>
+                          <Hotel size={13} color="white" strokeWidth={2.5} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#78350f', marginBottom: 2, lineHeight: 1.3 }}>{suggestion.name}</div>
+                          <div style={{ fontSize: 11, color: '#92400e', marginBottom: 4 }}>{suggestion.area}</div>
+                          {suggestion.why_suits && (
+                            <div style={{ fontSize: 11, color: '#92400e', lineHeight: 1.5, marginBottom: 6, fontStyle: 'italic' }}>{suggestion.why_suits}</div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            {suggestion.price_per_night_aud && (
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#78350f' }}>~${suggestion.price_per_night_aud.toLocaleString()} AUD/night</span>
+                            )}
+                            <a href={suggestion.booking_com_search} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#d4a017', fontWeight: 700, textDecoration: 'none' }}>Book →</a>
+                            <a href={suggestion.google_maps_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#d4a017', fontWeight: 600, textDecoration: 'none' }}>Maps →</a>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 10, color: '#b45309', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>Not yet booked — add to trip to confirm</span>
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
             </div>

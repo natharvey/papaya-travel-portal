@@ -145,6 +145,27 @@ function makeStayMarkerEl(): HTMLDivElement {
   return makeIconDotEl('#10b981', STAY_SVG)
 }
 
+function makeSuggestedHotelMarkerEl(): HTMLDivElement {
+  const el = document.createElement('div')
+  el.style.cssText = 'cursor: pointer; visibility: hidden; pointer-events: none; line-height: 0;'
+
+  const inner = document.createElement('div')
+  inner.style.cssText = `
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, #92400e, #b45309);
+    border: 2.5px solid #d4a017;
+    box-shadow: 0 0 0 2px rgba(212,160,23,0.35), 0 2px 10px rgba(180,83,9,0.35);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.12s;
+  `
+  inner.innerHTML = STAY_SVG
+  el.appendChild(inner)
+
+  el.onmouseenter = () => { inner.style.transform = 'scale(1.2) translateY(-2px)' }
+  el.onmouseleave = () => { inner.style.transform = '' }
+  return el
+}
+
 function formatMinutes(secs: number): string {
   const mins = Math.round(secs / 60)
   if (mins < 60) return `${mins} min`
@@ -169,6 +190,8 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   const activityMarkersRef = useRef<Map<number, (mapboxgl.Marker | null)[]>>(new Map())
   // stay.id → marker
   const stayMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
+  // destination (lowercase) → suggested hotel marker
+  const suggestedMarkersRef = useRef<Map<string, mapboxgl.Marker>>(new Map())
 
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
@@ -456,6 +479,44 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         stayMarkersRef.current.set(stay.id, marker)
       })
 
+      // ── Suggested hotel markers (gold rim, one per destination) ───────────
+      ;(itinerary.hotel_suggestions || []).forEach(suggestion => {
+        if (!suggestion.lat || !suggestion.lng) return
+        const dest = suggestion.destination?.toLowerCase() || ''
+        if (suggestedMarkersRef.current.has(dest)) return // first suggestion per dest only
+        const coords: [number, number] = [suggestion.lng, suggestion.lat]
+        const el = makeSuggestedHotelMarkerEl()
+        const price = suggestion.price_per_night_aud ? `~$${suggestion.price_per_night_aud.toLocaleString()} AUD/night` : ''
+        const popup = new mapboxgl.Popup({ offset: 16, closeButton: true, maxWidth: '280px', className: 'papaya-popup' })
+          .setHTML(`
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">Top Suggestion</div>
+              <div style="font-weight:700;font-size:14px;color:#0f172a;line-height:1.3;margin-bottom:3px">${suggestion.name}</div>
+              <div style="font-size:12px;color:#78350f;margin-bottom:5px">${suggestion.area} · ${suggestion.style}</div>
+              ${price ? `<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px">${price}</div>` : ''}
+              <div style="display:flex;gap:10px;margin-top:6px">
+                <a href="${suggestion.booking_com_search}" target="_blank" rel="noopener" style="font-size:12px;color:#d4a017;text-decoration:none;font-weight:700">Book →</a>
+                <a href="${suggestion.google_maps_url}" target="_blank" rel="noopener" style="font-size:12px;color:#d4a017;text-decoration:none;font-weight:600">Maps →</a>
+              </div>
+              <div style="margin-top:8px;font-size:10px;color:#b45309">Not yet booked</div>
+            </div>
+          `)
+        allPopupsRef.current.push(popup)
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat(coords)
+          .addTo(map.current!)
+        el.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const wasOpen = popup.isOpen()
+          closeAllPopups()
+          if (!wasOpen) {
+            popup.setLngLat(coords).addTo(map.current!)
+            map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
+          }
+        })
+        suggestedMarkersRef.current.set(dest, marker)
+      })
+
       // ── Draw transport routes ────────────────────────────────────────────
       const destStops = stops.filter(s => !s.isOrigin)
       const firstDest = destStops[0]
@@ -605,6 +666,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       clearDestMarkers()
       activityMarkersRef.current.forEach(markers => markers.forEach(m => m?.remove()))
       stayMarkersRef.current.forEach(m => m.remove())
+      suggestedMarkersRef.current.forEach(m => m.remove())
       map.current?.remove()
       map.current = null
     }
@@ -634,6 +696,13 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
 
     // Hide all stay markers
     stayMarkersRef.current.forEach(m => {
+      const el = m.getElement() as HTMLElement
+      el.style.visibility = 'hidden'
+      el.style.pointerEvents = 'none'
+    })
+
+    // Hide all suggested hotel markers
+    suggestedMarkersRef.current.forEach(m => {
       const el = m.getElement() as HTMLElement
       el.style.visibility = 'hidden'
       el.style.pointerEvents = 'none'
@@ -677,10 +746,25 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       }
     })
 
-    // Compute bounds: activity coords + all stay coords
+    // Show suggested hotel marker for this day's destination (only if no confirmed stay)
+    const suggestedCoordsList: [number, number][] = []
+    if (dayPlan && staysForDay.length === 0) {
+      const dest = dayPlan.location_base?.toLowerCase()
+      const suggestedMarker = dest ? suggestedMarkersRef.current.get(dest) : undefined
+      if (suggestedMarker) {
+        const el = suggestedMarker.getElement() as HTMLElement
+        el.style.visibility = 'visible'
+        el.style.pointerEvents = 'auto'
+        const lngLat = suggestedMarker.getLngLat()
+        suggestedCoordsList.push([lngLat.lng, lngLat.lat])
+      }
+    }
+
+    // Compute bounds: activity coords + stay coords + suggested hotel
     const boundsCoords: [number, number][] = [
       ...(dayBoundsCoords.current.get(selectedDayNum) || []),
       ...stayCoordsList,
+      ...suggestedCoordsList,
     ]
 
     if (boundsCoords.length === 0) {
@@ -721,6 +805,11 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       }
     }))
     stayMarkersRef.current.forEach(m => {
+      const el = m.getElement() as HTMLElement
+      el.style.visibility = 'hidden'
+      el.style.pointerEvents = 'none'
+    })
+    suggestedMarkersRef.current.forEach(m => {
       const el = m.getElement() as HTMLElement
       el.style.visibility = 'hidden'
       el.style.pointerEvents = 'none'
