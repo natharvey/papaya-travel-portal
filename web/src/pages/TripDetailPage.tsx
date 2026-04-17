@@ -13,7 +13,7 @@ import DatePicker from '../components/DatePicker'
 import TripItineraryView from '../components/TripItineraryView'
 import { TabBar, Tab } from '../components/TabBar'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, ExternalLink, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
-import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
+import { useDestinationPhotos } from '../hooks/useDestinationPhotos'
 const FlightMap = lazy(() => import('../components/FlightMap'))
 const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
 import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, addClientStay, removeClientStay, type TripDocument, type FlightSuggestion, type FlightLookupResult } from '../api/client'
@@ -357,9 +357,12 @@ export default function TripDetailPage() {
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
   const heroDests = latestItineraryForHero?.itinerary_json.destinations || []
-  const { photoUrl: heroPhoto0 } = useDestinationPhoto(heroDests[0]?.name || trip?.title || '')
-  const { photoUrl: heroPhoto1 } = useDestinationPhoto(heroDests[1]?.name || '')
-  const { photoUrl: heroPhoto2 } = useDestinationPhoto(heroDests[2]?.name || '')
+  const { photos: heroPhotos } = useDestinationPhotos([
+    heroDests[0]?.name || trip?.title || '',
+    heroDests[1]?.name || '',
+    heroDests[2]?.name || '',
+  ])
+  const [heroPhoto0, heroPhoto1, heroPhoto2] = heroPhotos
 
   if (loading) {
     return (

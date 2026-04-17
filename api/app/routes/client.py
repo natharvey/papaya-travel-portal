@@ -598,13 +598,17 @@ PLACES_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText"
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 
 
-def _verify_hero_photo(url: str, destination: str) -> bool:
-    """Use Claude Haiku vision to verify a destination hero photo is scenic, people-free, and in colour.
-    Accepts: landscapes, skylines, landmarks, nature, architecture with no people prominent, in natural colour.
-    Rejects: markets, crowds, street scenes with people, generic/unrelated images, black-and-white or heavily desaturated photos."""
+_SCENE_TAGS = frozenset({"mountain", "city", "coast", "nature", "architecture", "beach", "countryside", "lake", "desert", "other"})
+
+
+def _verify_hero_photo(url: str, destination: str) -> tuple[bool, str]:
+    """Use Claude Haiku vision to verify a destination hero photo.
+    Returns (accepted, scene_tag) where scene_tag is one of the _SCENE_TAGS values.
+    Accepts: wide scenic photos in full colour with no prominent people.
+    Rejects: B&W, desaturated, crowded, generic, or unrelated images."""
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not anthropic_key:
-        return True  # no key → skip gate
+        return True, "other"  # no key → skip gate
     try:
         img_resp = httpx.get(url, timeout=8, follow_redirects=True)
         img_resp.raise_for_status()
@@ -616,7 +620,7 @@ def _verify_hero_photo(url: str, destination: str) -> bool:
         client = anthropic_sdk.Anthropic(api_key=anthropic_key)
         resp = client.messages.create(
             model="claude-haiku-4-5-20251001",
-            max_tokens=5,
+            max_tokens=10,
             messages=[{
                 "role": "user",
                 "content": [
@@ -628,86 +632,97 @@ def _verify_hero_photo(url: str, destination: str) -> bool:
                         "type": "text",
                         "text": (
                             f"This photo will be used as a full-width hero image for a trip to {destination}. "
-                            "Reply YES only if ALL of the following are true: "
-                            f"(1) it shows a scenic landscape, skyline, coastline, mountain, landmark, or architecture; "
-                            "(2) there are NO people prominently visible in the frame; "
-                            f"(3) it clearly represents {destination} or its natural/built environment; "
-                            "(4) it is a full-colour photo — NOT black and white, NOT heavily desaturated or grayscale. "
-                            "Reply NO if it is black-and-white, monochrome, desaturated, shows markets, crowds, street food stalls, people, or generic unrelated scenes. "
-                            "Reply YES or NO only."
+                            "Reply with exactly two words: YES or NO, then a scene tag. "
+                            "Say YES only if ALL true: (1) scenic landscape/skyline/coast/mountain/landmark/architecture, "
+                            "(2) NO people prominently visible, (3) full-colour — NOT black-and-white or desaturated, "
+                            f"(4) represents {destination} or its environment. "
+                            "Say NO for: crowds, markets, street scenes, people, B&W/grayscale, generic unrelated images. "
+                            "Scene tags — pick one: mountain, city, coast, nature, architecture, beach, countryside, lake, desert, other. "
+                            "Examples: 'YES city' or 'NO mountain'. Two words only."
                         ),
                     },
                 ],
             }],
         )
-        answer = resp.content[0].text.strip().upper()
-        return answer.startswith("YES")
+        raw = resp.content[0].text.strip().lower()
+        parts = raw.split()
+        accepted = bool(parts) and parts[0] == "yes"
+        tag = parts[1] if len(parts) > 1 and parts[1] in _SCENE_TAGS else "other"
+        return accepted, tag
     except Exception as exc:
         logger.warning("Hero photo verify failed for %s: %s", url, exc)
-        return False
+        return False, "other"
+
+
+def _unsplash_hero_results(destination: str, n: int = 8) -> list[dict]:
+    """Fetch Unsplash results for a destination, filtered to wide-landscape only."""
+    if not UNSPLASH_ACCESS_KEY:
+        return []
+    try:
+        resp = httpx.get(
+            "https://api.unsplash.com/search/photos",
+            params={
+                "query": f"{destination} landscape scenery",
+                "per_page": n,
+                "orientation": "landscape",
+                "content_filter": "high",
+                "order_by": "relevant",
+            },
+            headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
+            timeout=8,
+        )
+        resp.raise_for_status()
+        results = resp.json().get("results", [])
+        # Keep only genuinely wide photos (≥ 1.5:1 ratio)
+        results = [p for p in results if p.get("height", 1) > 0 and p.get("width", 0) / p.get("height", 1) >= 1.5]
+        # Sort widest-ratio first, then by resolution as tiebreaker
+        results.sort(key=lambda p: (p.get("width", 0) / max(p.get("height", 1), 1), p.get("width", 0) * p.get("height", 0)), reverse=True)
+        return results
+    except Exception:
+        return []
+
+
+def _places_fallback_url(destination: str) -> str | None:
+    """Return a Google Places photo URL for a destination, or None."""
+    if not PLACES_API_KEY:
+        return None
+    try:
+        resp = httpx.post(
+            PLACES_SEARCH_URL,
+            json={"textQuery": f"{destination} landmark scenic", "maxResultCount": 1},
+            headers={
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": PLACES_API_KEY,
+                "X-Goog-FieldMask": "places.id,places.photos",
+            },
+            timeout=8,
+        )
+        resp.raise_for_status()
+        place = (resp.json().get("places") or [None])[0]
+        if place:
+            photo_ref = (place.get("photos") or [{}])[0].get("name")
+            if photo_ref:
+                return f"https://places.googleapis.com/v1/{photo_ref}/media?maxWidthPx=4800&maxHeightPx=2700&key={PLACES_API_KEY}"
+    except Exception:
+        pass
+    return None
 
 
 def fetch_destination_photo_url(destination: str) -> dict:
-    """Shared helper: return a high-quality hero photo URL for a travel destination.
-    Fetches up to 8 Unsplash candidates and runs a Claude Haiku vision gate to ensure
-    the photo is scenic (landscape/landmark/skyline) with no people prominently visible.
-    Falls back to Google Places if no candidate passes."""
-    if UNSPLASH_ACCESS_KEY:
-        try:
-            resp = httpx.get(
-                "https://api.unsplash.com/search/photos",
-                params={
-                    "query": f"{destination} landscape scenery",
-                    "per_page": 8,
-                    "orientation": "landscape",
-                    "content_filter": "high",
-                    "order_by": "relevant",
-                },
-                headers={"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"},
-                timeout=8,
-            )
-            resp.raise_for_status()
-            results = resp.json().get("results", [])
-            # Keep only genuinely wide landscape photos (≥ 1.5:1 ratio, i.e. 3:2 or wider)
-            results = [
-                p for p in results
-                if p.get("height", 1) > 0 and p.get("width", 0) / p.get("height", 1) >= 1.5
-            ]
-            # Sort widest-ratio first, then by resolution as tiebreaker
-            results.sort(key=lambda p: (p.get("width", 0) / max(p.get("height", 1), 1), p.get("width", 0) * p.get("height", 0)), reverse=True)
-            for photo in results:
-                url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
-                if not url:
-                    continue
-                if _verify_hero_photo(url, destination):
-                    logger.info("Hero photo verified for '%s': %s", destination, url)
-                    return {"photo_url": url, "source": "unsplash"}
-            logger.info("No verified hero photo found on Unsplash for '%s', falling through", destination)
-        except Exception:
-            pass  # fall through to Places
+    """Shared helper: return a high-quality wide-landscape hero photo URL for a single destination."""
+    for photo in _unsplash_hero_results(destination):
+        url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
+        if not url:
+            continue
+        accepted, _ = _verify_hero_photo(url, destination)
+        if accepted:
+            logger.info("Hero photo verified for '%s': %s", destination, url)
+            return {"photo_url": url, "source": "unsplash"}
+    logger.info("No verified hero photo found on Unsplash for '%s', falling through", destination)
 
-    # Fallback: Google Places at maximum resolution
-    if PLACES_API_KEY:
-        try:
-            resp = httpx.post(
-                PLACES_SEARCH_URL,
-                json={"textQuery": f"{destination} landmark scenic", "maxResultCount": 1},
-                headers={
-                    "Content-Type": "application/json",
-                    "X-Goog-Api-Key": PLACES_API_KEY,
-                    "X-Goog-FieldMask": "places.id,places.photos",
-                },
-                timeout=8,
-            )
-            resp.raise_for_status()
-            place = (resp.json().get("places") or [None])[0]
-            if place:
-                photo_ref = (place.get("photos") or [{}])[0].get("name")
-                if photo_ref:
-                    url = f"https://places.googleapis.com/v1/{photo_ref}/media?maxWidthPx=4800&maxHeightPx=2700&key={PLACES_API_KEY}"
-                    return {"photo_url": url, "source": "places"}
-        except Exception:
-            pass
+    url = _places_fallback_url(destination)
+    if url:
+        return {"photo_url": url, "source": "places"}
 
     return {"photo_url": None, "source": None}
 
@@ -718,6 +733,60 @@ def destination_photo(
     _client=Depends(get_current_client),
 ):
     return fetch_destination_photo_url(destination)
+
+
+def fetch_diverse_destination_photos(destinations: list[str]) -> dict[str, str | None]:
+    """Fetch hero photos for up to 3 destinations ensuring no two photos share the same scene type.
+    Each destination is checked for up to n Unsplash candidates; the one with an unused scene tag
+    is preferred. Falls back to Google Places if Unsplash yields nothing."""
+    used_scene_tags: set[str] = set()
+    result: dict[str, str | None] = {}
+
+    for destination in destinations:
+        if not destination:
+            result[destination] = None
+            continue
+
+        selected_url: str | None = None
+        fallback_url: str | None = None  # best accepted photo even if tag clashes
+
+        for photo in _unsplash_hero_results(destination, n=8):
+            url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
+            if not url:
+                continue
+            accepted, tag = _verify_hero_photo(url, destination)
+            if not accepted:
+                continue
+            if fallback_url is None:
+                fallback_url = url  # keep first accepted as safety net
+            if tag not in used_scene_tags:
+                selected_url = url
+                used_scene_tags.add(tag)
+                logger.info("Diverse hero: '%s' → %s (%s)", destination, url, tag)
+                break
+
+        if selected_url is None:
+            # All candidates share a used tag — use first accepted anyway
+            selected_url = fallback_url
+            if selected_url is None:
+                # No Unsplash candidate passed at all — try Places
+                selected_url = _places_fallback_url(destination)
+            if selected_url:
+                logger.info("Diverse hero fallback: '%s' → %s", destination, selected_url)
+
+        result[destination] = selected_url
+
+    return result
+
+
+@router.get("/destination-photos")
+def destination_photos_batch(
+    destinations: str = Query(..., description="Comma-separated destination names, up to 3"),
+    _client=Depends(get_current_client),
+):
+    """Return a diverse set of hero photos for multiple destinations in one call."""
+    dests = [d.strip() for d in destinations.split(",") if d.strip()][:3]
+    return fetch_diverse_destination_photos(dests)
 
 
 def _verify_activity_photo(url: str, title: str, location: str) -> bool:

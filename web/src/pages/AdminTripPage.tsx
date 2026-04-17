@@ -10,7 +10,7 @@ import DatePicker from '../components/DatePicker'
 import PDFDownloadButton from '../components/PDFDownloadButton'
 import TravelNotesTab from '../components/TravelNotesTab'
 import { TabBar, Tab } from '../components/TabBar'
-import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
+import { useDestinationPhotos } from '../hooks/useDestinationPhotos'
 import TripItineraryView from '../components/TripItineraryView'
 const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
 import {
@@ -641,9 +641,12 @@ export default function AdminTripPage() {
     ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
     : null
   const heroDests = latestItineraryForHero?.itinerary_json?.destinations || []
-  const { photoUrl: heroPhoto0 } = useDestinationPhoto(heroDests[0]?.name || trip?.title || '')
-  const { photoUrl: heroPhoto1 } = useDestinationPhoto(heroDests[1]?.name || '')
-  const { photoUrl: heroPhoto2 } = useDestinationPhoto(heroDests[2]?.name || '')
+  const { photos: heroPhotos } = useDestinationPhotos([
+    heroDests[0]?.name || trip?.title || '',
+    heroDests[1]?.name || '',
+    heroDests[2]?.name || '',
+  ])
+  const [heroPhoto0, heroPhoto1, heroPhoto2] = heroPhotos
 
   if (loading) {
     return (

@@ -57,6 +57,16 @@ def admin_destination_photo(
     return fetch_destination_photo_url(destination)
 
 
+@router.get("/destination-photos")
+def admin_destination_photos_batch(
+    destinations: str = Query(..., description="Comma-separated destination names, up to 3"),
+    _admin=Depends(require_admin),
+):
+    from app.routes.client import fetch_diverse_destination_photos
+    dests = [d.strip() for d in destinations.split(",") if d.strip()][:3]
+    return fetch_diverse_destination_photos(dests)
+
+
 @router.get("/activity-photo")
 def admin_activity_photo(
     title: str = Query(...),
