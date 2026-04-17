@@ -599,9 +599,9 @@ UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 
 
 def _verify_hero_photo(url: str, destination: str) -> bool:
-    """Use Claude Haiku vision to verify a destination hero photo is scenic and people-free.
-    Accepts: landscapes, skylines, landmarks, nature, architecture with no people prominent.
-    Rejects: markets, crowds, street scenes with people, generic/unrelated images."""
+    """Use Claude Haiku vision to verify a destination hero photo is scenic, people-free, and in colour.
+    Accepts: landscapes, skylines, landmarks, nature, architecture with no people prominent, in natural colour.
+    Rejects: markets, crowds, street scenes with people, generic/unrelated images, black-and-white or heavily desaturated photos."""
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not anthropic_key:
         return True  # no key → skip gate
@@ -629,10 +629,11 @@ def _verify_hero_photo(url: str, destination: str) -> bool:
                         "text": (
                             f"This photo will be used as a full-width hero image for a trip to {destination}. "
                             "Reply YES only if ALL of the following are true: "
-                            "(1) it shows a scenic landscape, skyline, coastline, mountain, landmark, or architecture; "
+                            f"(1) it shows a scenic landscape, skyline, coastline, mountain, landmark, or architecture; "
                             "(2) there are NO people prominently visible in the frame; "
-                            "(3) it clearly represents {destination} or its natural/built environment. "
-                            "Reply NO if it shows markets, crowds, street food stalls, people, or generic unrelated scenes. "
+                            f"(3) it clearly represents {destination} or its natural/built environment; "
+                            "(4) it is a full-colour photo — NOT black and white, NOT heavily desaturated or grayscale. "
+                            "Reply NO if it is black-and-white, monochrome, desaturated, shows markets, crowds, street food stalls, people, or generic unrelated scenes. "
                             "Reply YES or NO only."
                         ),
                     },
@@ -667,8 +668,13 @@ def fetch_destination_photo_url(destination: str) -> dict:
             )
             resp.raise_for_status()
             results = resp.json().get("results", [])
-            # Sort highest resolution first so we try the best candidates early
-            results.sort(key=lambda p: p.get("width", 0) * p.get("height", 0), reverse=True)
+            # Keep only genuinely wide landscape photos (≥ 1.5:1 ratio, i.e. 3:2 or wider)
+            results = [
+                p for p in results
+                if p.get("height", 1) > 0 and p.get("width", 0) / p.get("height", 1) >= 1.5
+            ]
+            # Sort widest-ratio first, then by resolution as tiebreaker
+            results.sort(key=lambda p: (p.get("width", 0) / max(p.get("height", 1), 1), p.get("width", 0) * p.get("height", 0)), reverse=True)
             for photo in results:
                 url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
                 if not url:
@@ -698,7 +704,7 @@ def fetch_destination_photo_url(destination: str) -> dict:
             if place:
                 photo_ref = (place.get("photos") or [{}])[0].get("name")
                 if photo_ref:
-                    url = f"https://places.googleapis.com/v1/{photo_ref}/media?maxHeightPx=4800&maxWidthPx=4800&key={PLACES_API_KEY}"
+                    url = f"https://places.googleapis.com/v1/{photo_ref}/media?maxWidthPx=4800&maxHeightPx=2700&key={PLACES_API_KEY}"
                     return {"photo_url": url, "source": "places"}
         except Exception:
             pass
