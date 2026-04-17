@@ -90,8 +90,8 @@ export async function submitIntake(payload: IntakeCreatePayload): Promise<Intake
 export async function intakeChat(
   messages: { role: string; content: string }[],
   seedData: Record<string, string | number>
-): Promise<{ message: string; complete: boolean }> {
-  const res = await api.post<{ message: string; complete: boolean }>('/intake/chat', {
+): Promise<{ message: string; complete: boolean; suggestions: string[] }> {
+  const res = await api.post<{ message: string; complete: boolean; suggestions: string[] }>('/intake/chat', {
     messages,
     seed_data: seedData,
   })
@@ -224,12 +224,17 @@ export interface AccommodationSuggestion {
 
 export interface FlightSuggestion {
   route: string
+  origin_iata: string
+  dest_iata: string
+  leg_type: 'outbound' | 'internal' | 'return'
   airlines: string[]
   typical_price_aud: string
   flight_time: string
-  tips: string
-  google_flights_url: string
-  skyscanner_url: string
+  tips_bullets: string[]
+  // legacy fallbacks for old cached responses
+  tips?: string
+  google_flights_url?: string
+  skyscanner_url?: string
 }
 
 // ─── Admin ───────────────────────────────────────────────────────────────────

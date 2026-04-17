@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { User, Mail, MapPin, Calendar, Wallet, Users, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
+import { User, Mail, MapPin, Wallet, Users, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
 import Layout from '../components/Layout'
 import PapayaLogo from '../components/PapayaLogo'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Button from '../components/Button'
+import DatePicker from '../components/DatePicker'
 import { submitIntake, intakeChat, getApiError } from '../api/client'
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -235,27 +236,20 @@ function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2D
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div>
             <label style={labelStyle}>Departure date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="date"
-                value={data.start_date}
-                onChange={e => onChange('start_date', e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
-              />
-            </div>
+            <DatePicker
+              value={data.start_date}
+              onChange={v => onChange('start_date', v)}
+              placeholder="Select departure date"
+            />
           </div>
           <div>
             <label style={labelStyle}>Return date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="date"
-                value={data.end_date}
-                onChange={e => onChange('end_date', e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
-              />
-            </div>
+            <DatePicker
+              value={data.end_date}
+              onChange={v => onChange('end_date', v)}
+              placeholder="Select return date"
+              min={data.start_date || undefined}
+            />
           </div>
         </div>
 
@@ -307,6 +301,7 @@ function Step2({ data, onChange }: { data: Step2Data; onChange: (k: keyof Step2D
 interface ChatMsg {
   role: 'user' | 'assistant'
   content: string
+  suggestions?: string[]
 }
 
 interface Step3Props {
@@ -337,8 +332,8 @@ function Step3({ seedData, onComplete }: Step3Props) {
     setStarted(true)
     setLoading(true)
     try {
-      const { message } = await intakeChat([], seedData)
-      setMessages([{ role: 'assistant', content: message }])
+      const { message, suggestions } = await intakeChat([], seedData)
+      setMessages([{ role: 'assistant', content: message, suggestions }])
     } catch {
       setMessages([{ role: 'assistant', content: "Hi! I'm Maya, your Papaya travel consultant. Tell me a bit about what you're hoping to get out of this trip!" }])
     } finally {
@@ -357,8 +352,8 @@ function Step3({ seedData, onComplete }: Step3Props) {
     setLoading(true)
 
     try {
-      const { message, complete: done } = await intakeChat(newMessages, seedData)
-      const updated: ChatMsg[] = [...newMessages, { role: 'assistant', content: message }]
+      const { message, complete: done, suggestions } = await intakeChat(newMessages, seedData)
+      const updated: ChatMsg[] = [...newMessages, { role: 'assistant', content: message, suggestions: done ? [] : suggestions }]
       setMessages(updated)
       if (done) {
         setComplete(true)
@@ -366,6 +361,29 @@ function Step3({ seedData, onComplete }: Step3Props) {
         const transcript = updated
           .map(m => `${m.role === 'user' ? 'Client' : 'Maya'}: ${m.content}`)
           .join('\n\n')
+        onComplete(transcript)
+      }
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: "Sorry, I had a connection issue. Could you repeat that?" }])
+    } finally {
+      setLoading(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
+  async function sendSuggestion(text: string) {
+    if (loading || complete) return
+    setInput('')
+    const newMessages: ChatMsg[] = [...messages, { role: 'user', content: text }]
+    setMessages(newMessages)
+    setLoading(true)
+    try {
+      const { message, complete: done, suggestions } = await intakeChat(newMessages, seedData)
+      const updated: ChatMsg[] = [...newMessages, { role: 'assistant', content: message, suggestions: done ? [] : suggestions }]
+      setMessages(updated)
+      if (done) {
+        setComplete(true)
+        const transcript = updated.map(m => `${m.role === 'user' ? 'Client' : 'Maya'}: ${m.content}`).join('\n\n')
         onComplete(transcript)
       }
     } catch {
@@ -409,27 +427,46 @@ function Step3({ seedData, onComplete }: Step3Props) {
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i} style={{
-            display: 'flex',
-            justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-          }}>
-            {msg.role === 'assistant' && <MayaAvatar />}
-            <div style={{
-              maxWidth: '80%',
-              padding: '10px 14px',
-              borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-              background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-surface)',
-              color: msg.role === 'user' ? 'white' : 'var(--color-text)',
-              fontSize: '13px',
-              lineHeight: '1.65',
-              boxShadow: 'var(--shadow-sm)',
-              border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
-            }}>
-              {msg.content}
+        {messages.map((msg, i) => {
+          const isLastAssistant = msg.role === 'assistant' && i === messages.length - 1
+          const showSuggestions = isLastAssistant && !loading && !complete && msg.suggestions && msg.suggestions.length > 0
+          return (
+            <div key={i}>
+              <div style={{
+                display: 'flex',
+                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              }}>
+                {msg.role === 'assistant' && <MayaAvatar />}
+                <div style={{
+                  maxWidth: '80%',
+                  padding: '10px 14px',
+                  borderRadius: msg.role === 'user' ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                  background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-surface)',
+                  color: msg.role === 'user' ? 'white' : 'var(--color-text)',
+                  fontSize: '13px',
+                  lineHeight: '1.65',
+                  boxShadow: 'var(--shadow-sm)',
+                  border: msg.role === 'assistant' ? '1px solid var(--color-border)' : 'none',
+                }}>
+                  {msg.content}
+                </div>
+              </div>
+              {showSuggestions && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingLeft: 38, marginTop: 6 }}>
+                  {msg.suggestions!.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => sendSuggestion(s)}
+                      className="maya-prompt"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

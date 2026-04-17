@@ -56,6 +56,7 @@ class IntakeChatRequest(BaseModel):
 class IntakeChatResponse(BaseModel):
     message: str
     complete: bool
+    suggestions: list[str] = []
 
 
 @router.post("/chat", response_model=IntakeChatResponse)
@@ -63,8 +64,8 @@ class IntakeChatResponse(BaseModel):
 def intake_chat(request: Request, body: IntakeChatRequest):
     try:
         msg_dicts = [{"role": m.role, "content": m.content} for m in body.messages]
-        text, complete = intake_chat_turn(msg_dicts, body.seed_data)
-        return IntakeChatResponse(message=text, complete=complete)
+        text, complete, suggestions = intake_chat_turn(msg_dicts, body.seed_data)
+        return IntakeChatResponse(message=text, complete=complete, suggestions=suggestions)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -101,8 +102,16 @@ def _run_generation(trip_id, conversation_transcript: str, seed_data: dict = Non
             conversation_transcript=conversation_transcript if not client_profile else "",
             client_profile=client_profile,
         )
-        # Send "ready" email with a fresh magic link deep-linked to the trip
+        # Update trip title with the AI-generated title from the itinerary JSON
         trip = db.query(Trip).filter(Trip.id == trip_id).first()
+        if trip and itinerary:
+            ai_title = getattr(itinerary, 'itinerary_json', {}).get('trip_title', '').strip()
+            if ai_title:
+                trip.title = ai_title
+                db.commit()
+                log.info("Updated trip %s title to AI-generated: '%s'", trip_id, ai_title)
+
+        # Send "ready" email with a fresh magic link deep-linked to the trip
         if trip:
             client = db.query(Client).filter(Client.id == trip.client_id).first()
             if client:

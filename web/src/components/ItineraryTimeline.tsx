@@ -238,12 +238,12 @@ function TimeBlock({
         <DetailsAsBullets text={block.details} color={mutedColor} />
         {block.tip && (
           <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: 6,
-            marginTop: 8, padding: '6px 10px',
+            display: 'flex', alignItems: 'flex-start', gap: 8,
+            marginTop: 10, padding: '8px 12px',
             background: '#FFFBEB', border: '1px solid #FDE68A',
-            borderRadius: 6, fontSize: 12, color: '#92400E', lineHeight: 1.5,
+            borderRadius: 8, fontSize: 12, color: '#92400E', lineHeight: 1.6,
           }}>
-            <span style={{ flexShrink: 0, fontSize: 13 }}>💡</span>
+            <Info size={13} strokeWidth={2} color="#D97706" style={{ flexShrink: 0, marginTop: 1 }} />
             <span>{block.tip}</span>
           </div>
         )}
@@ -675,6 +675,15 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
                   <MapPin size={13} strokeWidth={2} color="#FF6B35" />{selectedDay.location_base}
                 </div>
               </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px', borderBottom: '1px solid var(--color-border)', background: 'white' }}>
+                <button onClick={() => { setSelectedDayNum(d => Math.max(1, d - 1)); setEditState(null) }} disabled={selectedDayNum <= 1} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: selectedDayNum <= 1 ? 'default' : 'pointer', color: selectedDayNum <= 1 ? 'var(--color-border)' : 'var(--color-text)', fontFamily: 'inherit' }}>
+                  <ChevronLeft size={14} /> Prev
+                </button>
+                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{selectedDayNum} / {totalDays}</span>
+                <button onClick={() => { setSelectedDayNum(d => Math.min(totalDays, d + 1)); setEditState(null) }} disabled={selectedDayNum >= totalDays} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: selectedDayNum >= totalDays ? 'default' : 'pointer', color: selectedDayNum >= totalDays ? 'var(--color-border)' : 'var(--color-text)', fontFamily: 'inherit' }}>
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
 
               <div style={{ padding: '16px' }}>
                 {PERIODS.map(period => {
@@ -704,7 +713,7 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
                 })}
 
                 {selectedDay.notes?.length > 0 && (
-                  <CollapsibleSection title="Tips for today" icon={<span style={{ fontSize: 14 }}>💡</span>}>
+                  <CollapsibleSection title="Tips for today" icon={<Info size={14} strokeWidth={2} color="var(--color-text-muted)" />}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {selectedDay.notes.map((note, i) => (
                         <div key={i} style={{ fontSize: 13, color: 'var(--color-text-muted)', lineHeight: 1.6, paddingLeft: 4 }}>{note}</div>
@@ -739,15 +748,6 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
                 })()}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderTop: '1px solid var(--color-border)', background: 'white' }}>
-                <button onClick={() => { setSelectedDayNum(d => Math.max(1, d - 1)); setEditState(null) }} disabled={selectedDayNum <= 1} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: selectedDayNum <= 1 ? 'default' : 'pointer', color: selectedDayNum <= 1 ? 'var(--color-border)' : 'var(--color-text)', fontFamily: 'inherit' }}>
-                  <ChevronLeft size={14} /> Prev
-                </button>
-                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{selectedDayNum} / {totalDays}</span>
-                <button onClick={() => { setSelectedDayNum(d => Math.min(totalDays, d + 1)); setEditState(null) }} disabled={selectedDayNum >= totalDays} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '6px 14px', fontSize: '13px', fontWeight: 600, cursor: selectedDayNum >= totalDays ? 'default' : 'pointer', color: selectedDayNum >= totalDays ? 'var(--color-border)' : 'var(--color-text)', fontFamily: 'inherit' }}>
-                  Next <ChevronRight size={14} />
-                </button>
-              </div>
             </div>
           )}
         </>

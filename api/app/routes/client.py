@@ -646,12 +646,8 @@ def _verify_hero_photo(url: str, destination: str) -> bool:
         return False
 
 
-@router.get("/destination-photo")
-def destination_photo(
-    destination: str = Query(..., description="Destination name, e.g. 'Kyoto, Japan'"),
-    _client=Depends(get_current_client),
-):
-    """Return a high-quality hero photo URL for a travel destination.
+def fetch_destination_photo_url(destination: str) -> dict:
+    """Shared helper: return a high-quality hero photo URL for a travel destination.
     Fetches up to 8 Unsplash candidates and runs a Claude Haiku vision gate to ensure
     the photo is scenic (landscape/landmark/skyline) with no people prominently visible.
     Falls back to Google Places if no candidate passes."""
@@ -708,6 +704,14 @@ def destination_photo(
             pass
 
     return {"photo_url": None, "source": None}
+
+
+@router.get("/destination-photo")
+def destination_photo(
+    destination: str = Query(..., description="Destination name, e.g. 'Kyoto, Japan'"),
+    _client=Depends(get_current_client),
+):
+    return fetch_destination_photo_url(destination)
 
 
 def _verify_activity_photo(url: str, title: str, location: str) -> bool:
@@ -790,16 +794,8 @@ def _activity_search_queries(title: str, location: str) -> list[str]:
     return queries or [f"{title} {location}"]
 
 
-@router.get("/activity-photo")
-def activity_photo(
-    title: str = Query(..., description="Activity block title, e.g. 'Runyon Canyon & Breakfast in Los Feliz'"),
-    location: str = Query(..., description="Location/city, e.g. 'Los Angeles'"),
-    _client=Depends(get_current_client),
-):
-    """Return a single verified landscape photo URL for an itinerary activity block.
-    Candidates are drawn from Unsplash and filtered by Claude Haiku vision — only a photo
-    that clearly depicts the specific activity is returned. Returns an empty list if no
-    candidate passes the quality gate, which causes the frontend to show no photo."""
+def fetch_activity_photo_candidates(title: str, location: str) -> dict:
+    """Shared helper: return a single verified landscape photo URL for an activity block."""
     if not UNSPLASH_ACCESS_KEY:
         return {"candidates": []}
     seen: set[str] = set()
@@ -813,6 +809,15 @@ def activity_photo(
                 return {"candidates": [url]}
     logger.info("No verified photo found for '%s' @ %s", title, location)
     return {"candidates": []}
+
+
+@router.get("/activity-photo")
+def activity_photo(
+    title: str = Query(..., description="Activity block title, e.g. 'Runyon Canyon & Breakfast in Los Feliz'"),
+    location: str = Query(..., description="Location/city, e.g. 'Los Angeles'"),
+    _client=Depends(get_current_client),
+):
+    return fetch_activity_photo_candidates(title, location)
 
 
 @router.get("/place-lookup")

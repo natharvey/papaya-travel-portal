@@ -48,6 +48,25 @@ def require_admin(
     return payload
 
 
+@router.get("/destination-photo")
+def admin_destination_photo(
+    destination: str = Query(..., description="Destination name, e.g. 'Kyoto, Japan'"),
+    _admin=Depends(require_admin),
+):
+    from app.routes.client import fetch_destination_photo_url
+    return fetch_destination_photo_url(destination)
+
+
+@router.get("/activity-photo")
+def admin_activity_photo(
+    title: str = Query(...),
+    location: str = Query(...),
+    _admin=Depends(require_admin),
+):
+    from app.routes.client import fetch_activity_photo_candidates
+    return fetch_activity_photo_candidates(title, location)
+
+
 @router.get("/trips", response_model=list[AdminTripListItem])
 def list_trips(
     trip_status: Optional[str] = Query(None, alias="status"),
@@ -149,7 +168,14 @@ def _run_admin_generation(trip_id: uuid.UUID, additional_instructions: str = "")
     from app.db import SessionLocal
     db = SessionLocal()
     try:
-        generate_itinerary(db, trip_id=trip_id, additional_instructions=additional_instructions)
+        itinerary = generate_itinerary(db, trip_id=trip_id, additional_instructions=additional_instructions)
+        # Update trip title with the AI-generated title
+        trip = db.query(Trip).filter(Trip.id == trip_id).first()
+        if trip and itinerary:
+            ai_title = getattr(itinerary, 'itinerary_json', {}).get('trip_title', '').strip()
+            if ai_title:
+                trip.title = ai_title
+                db.commit()
     except Exception as e:
         log.error("Admin generation failed for trip %s: %s", trip_id, e)
         trip = db.query(Trip).filter(Trip.id == trip_id).first()

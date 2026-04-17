@@ -43,7 +43,7 @@ The JSON must match this exact schema — no extra fields, no missing fields:
 {
   "trip_title": "string",
   "overview": "string (2-3 sentences describing the trip character)",
-  "destinations": [{"name": "string", "nights": integer}],
+  "destinations": [{"name": "string", "nights": integer, "country_code": "string (ISO 3166-1 alpha-2, e.g. 'GB', 'FR', 'JP')"}],
   "day_plans": [{
     "day_number": integer,
     "date": "YYYY-MM-DD",
@@ -83,8 +83,8 @@ The JSON must match this exact schema — no extra fields, no missing fields:
   ],
   "transport_notes": ["string"],
   "budget_summary": {"per_person_aud": number|null, "estimated_total_aud": number|null, "assumptions": ["string"]},
-  "packing_checklist": ["string"],
-  "risks_and_notes": ["string"]
+  "packing_checklist": ["string — format: 'Item name — brief description', e.g. 'Waterproof jacket — essential for wet weather in the Highlands'. No brackets. Short bold name, then em-dash, then description."],
+  "risks_and_notes": ["string — format: 'Short title: full description sentence(s)', e.g. 'Road closures: Scottish Highland roads can close in winter — carry chains and check Traffic Scotland'. Title must be 3-6 words, sentence case, followed by a colon."]
 }
 
 HEADS UP RULES:
@@ -210,6 +210,22 @@ GOOD: "Are you more of a nice hotel person, or do you like something with a bit 
 BAD: "What activities are you interested in? Please list your preferences."
 
 GOOD: "When you picture a good day there — are you out doing stuff, or is half the plan just finding a good spot to sit?"
+
+SUGGESTED REPLIES:
+When your question has 2–4 clear, distinct options, add a suggestions line at the very end of your message (after all text) in this exact format:
+[SUGGESTIONS: Option A|Option B|Option C]
+
+Use suggestions for questions like:
+- "First time or returning?" → [SUGGESTIONS: First time|Been before]
+- "Who's travelling?" → [SUGGESTIONS: Solo|Couple|Family with kids|Friends group]
+- "Active or relaxed?" → [SUGGESTIONS: Active & outdoors|Slow travel|Mix of both]
+- "Accommodation style?" → [SUGGESTIONS: Luxury|Boutique/local|Mid-range|Budget]
+- "Food adventurousness?" → [SUGGESTIONS: Adventurous|Prefer familiar|Mix]
+- "Pace?" → [SUGGESTIONS: Packed schedule|Relaxed|Somewhere in between]
+- "Budget split?" → [SUGGESTIONS: Splurge on accommodation|Splurge on experiences|Split evenly]
+
+Do NOT add suggestions for open-ended questions or when the answer is genuinely freeform.
+Do NOT add suggestions on your closing/wrap-up message.
 
 WHEN WRAPPING UP:
 When you have collected all required information, send a warm closing message that briefly reflects back what you've gathered (1-2 sentences — make them feel heard, not summarised). End that message with exactly this marker on its own line:
@@ -396,7 +412,7 @@ def client_profile_to_prompt(profile: dict, seed_data: dict) -> str:
 def intake_chat_turn(
     messages: list[dict],
     seed_data: dict,
-) -> tuple[str, bool]:
+) -> tuple[str, bool, list[str]]:
     """
     Run one turn of the intake conversation.
     Returns (assistant_message, is_complete).
@@ -433,10 +449,19 @@ def intake_chat_turn(
 
     text = response.content[0].text
     is_complete = "[INTAKE_COMPLETE]" in text
-    # Strip the marker from displayed text
-    display_text = text.replace("[INTAKE_COMPLETE]", "").strip()
 
-    return display_text, is_complete
+    # Parse suggestions tag (must happen before stripping other tags)
+    import re as _re
+    suggestions: list[str] = []
+    suggestion_match = _re.search(r'\[SUGGESTIONS:\s*([^\]]+)\]', text)
+    if suggestion_match:
+        suggestions = [s.strip() for s in suggestion_match.group(1).split('|') if s.strip()]
+
+    # Strip all control tags from displayed text
+    display_text = _re.sub(r'\[SUGGESTIONS:[^\]]*\]', '', text)
+    display_text = display_text.replace("[INTAKE_COMPLETE]", "").strip()
+
+    return display_text, is_complete, suggestions
 
 
 # ─── Itinerary generation ─────────────────────────────────────────────────────
@@ -624,14 +649,15 @@ def generate_itinerary(
     last_exc = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = claude.beta.messages.create(
+            # Use streaming to support long itineraries (>10 min generation time)
+            with claude.beta.messages.stream(
                 model="claude-sonnet-4-6",
-                max_tokens=16000,
+                max_tokens=32000,
                 system=ITINERARY_SYSTEM,
                 messages=[{"role": "user", "content": user_prompt}],
                 betas=["output-128k-2025-02-19"],
-            )
-            raw_text = response.content[0].text
+            ) as stream:
+                raw_text = stream.get_final_text()
             itinerary_data = _parse_json_from_text(raw_text)
             break
         except Exception as e:
@@ -1166,20 +1192,30 @@ FLIGHTS_SYSTEM = """You are a flight expert helping Australian travellers find t
 Return ONLY a JSON array (no other text) matching this schema exactly:
 [
   {
-    "route": "e.g. Sydney → Bali (Denpasar)",
-    "airlines": ["Jetstar", "AirAsia"],
-    "typical_price_aud": "e.g. $400–$650 return",
-    "flight_time": "e.g. ~6 hours direct",
-    "tips": "best time to book, peak season warnings, layover tips",
-    "google_flights_url": "pre-filled Google Flights URL for this route and dates",
-    "skyscanner_url": "pre-filled Skyscanner URL"
+    "route": "Sydney (SYD) → Tokyo (NRT)",
+    "origin_iata": "SYD",
+    "dest_iata": "NRT",
+    "leg_type": "outbound",
+    "airlines": ["Qantas", "Japan Airlines"],
+    "typical_price_aud": "$950–$1,400",
+    "flight_time": "~9h 40min direct",
+    "tips_bullets": [
+      "Book 3–4 months ahead for best June fares",
+      "NRT (Narita) is ~60min from central Tokyo by Narita Express",
+      "JAL and ANA offer lie-flat business if upgrading"
+    ]
   }
 ]
-Include all legs of the journey (outbound, return, any internal flights needed).
-Build Google Flights URLs in this format:
-https://www.google.com/travel/flights?q=Flights+from+ORIGIN+to+DEST+on+DATE
-Build Skyscanner URLs in this format:
-https://www.skyscanner.com.au/transport/flights/ORIG/DEST/YYMMDD/YYMMDD/"""
+
+RULES:
+- Generate exactly one object per distinct flight leg. Never bundle multiple legs into one object.
+- leg_type must be exactly one of: "outbound", "internal", "return"
+- Every object MUST include origin_iata and dest_iata as valid IATA airport codes (e.g. SYD, NRT, HND, KIX, MEL)
+- typical_price_aud: price range only, e.g. "$950–$1,400" — no prose, no extra words
+- flight_time: duration only, e.g. "~9h 40min direct" or "~1h direct" — no prose
+- tips_bullets: exactly 2–4 short, practical bullet points. Booking timing, airport tips, airline recommendations. No long sentences.
+- airlines: list the 2–3 best airline options only
+- Do NOT include google_flights_url or skyscanner_url fields — the frontend builds these"""
 
 
 def generate_flight_suggestions(

@@ -76,6 +76,7 @@ export interface DayPlan {
 export interface Destination {
   name: string
   nights: number
+  country_code?: string
 }
 
 export interface AccommodationSuggestion {

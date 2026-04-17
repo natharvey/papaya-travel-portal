@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Calendar, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
+import { MapPin, ArrowRight, ArrowLeft, Send, Loader2 } from 'lucide-react'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import Button from '../components/Button'
+import DatePicker from '../components/DatePicker'
 import { submitIntake, intakeChat, getClientMe, getApiError } from '../api/client'
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -250,27 +251,20 @@ function StepTripBasics({ data, onChange }: { data: TripData; onChange: (k: keyo
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
           <div>
             <label style={labelStyle}>Departure date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="date"
-                value={data.start_date}
-                onChange={e => onChange('start_date', e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
-              />
-            </div>
+            <DatePicker
+              value={data.start_date}
+              onChange={v => onChange('start_date', v)}
+              placeholder="Select departure date"
+            />
           </div>
           <div>
             <label style={labelStyle}>Return date</label>
-            <div style={{ position: 'relative' }}>
-              <Calendar size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)', pointerEvents: 'none' }} />
-              <input
-                type="date"
-                value={data.end_date}
-                onChange={e => onChange('end_date', e.target.value)}
-                style={{ ...inputStyle, paddingLeft: '36px', colorScheme: 'light' }}
-              />
-            </div>
+            <DatePicker
+              value={data.end_date}
+              onChange={v => onChange('end_date', v)}
+              placeholder="Select return date"
+              min={data.start_date || undefined}
+            />
           </div>
         </div>
 

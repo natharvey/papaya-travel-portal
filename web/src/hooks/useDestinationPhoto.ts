@@ -18,12 +18,13 @@ export function useDestinationPhoto(destination: string): { photoUrl: string | n
     }
 
     const token = localStorage.getItem('papaya_token') || ''
+    const role = localStorage.getItem('papaya_role') || ''
+    const endpoint = role === 'admin'
+      ? `${API_BASE}/admin/destination-photo?destination=${encodeURIComponent(destination)}`
+      : `${API_BASE}/client/destination-photo?destination=${encodeURIComponent(destination)}`
     setLoading(true)
 
-    fetch(
-      `${API_BASE}/client/destination-photo?destination=${encodeURIComponent(destination)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
+    fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const url = data?.photo_url ?? null

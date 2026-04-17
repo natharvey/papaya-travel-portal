@@ -9,6 +9,8 @@ import MayaChatPanel from '../components/MayaChatPanel'
 import AccommodationTab from '../components/AccommodationTab'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
+import DatePicker from '../components/DatePicker'
+import TripItineraryView from '../components/TripItineraryView'
 import { TabBar, Tab } from '../components/TabBar'
 import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, ExternalLink, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
 import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
@@ -539,120 +541,25 @@ export default function TripDetailPage() {
                   </div>
                 )}
                 {latestItinerary && (
-                  <>
-                    {/* Overview block — constrained to 820px so everything aligns */}
-                    <div style={{ maxWidth: 820, marginBottom: 24 }}>
-                      {/* Generated date + action buttons */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginRight: 'auto' }}>
-                          Generated {new Date(latestItinerary.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          {trip.itineraries.length > 1 && (
-                            <span style={{ marginLeft: '8px', color: 'var(--color-primary)' }}>
-                              · {trip.itineraries.length} revisions
-                            </span>
-                          )}
-                        </span>
-                        <ItineraryCopySummary data={latestItinerary.itinerary_json} />
-                        <PDFDownloadButton
-                          data={latestItinerary.itinerary_json}
-                          tripTitle={trip.title}
-                          clientName={trip.client.name}
-                          startDate={trip.start_date}
-                          endDate={trip.end_date}
-                          originCity={trip.origin_city}
-                        />
-                      </div>
-
-                      {/* Overview paragraph + destination pills */}
-                      {(latestItinerary.itinerary_json.overview || latestItinerary.itinerary_json.destinations?.length > 0) && (
-                        <>
-                          {latestItinerary.itinerary_json.overview && (
-                            <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: '1.8', marginBottom: '14px' }}>
-                              {latestItinerary.itinerary_json.overview}
-                            </p>
-                          )}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-                            {latestItinerary.itinerary_json.destinations?.map((d: { name: string; nights: number }, i: number) => (
-                              <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-text)', padding: '4px 12px', borderRadius: '100px', fontSize: '12px', fontWeight: 600 }}>
-                                <MapPin size={11} strokeWidth={2.5} color="var(--color-primary)" />
-                                {d.name} · {d.nights} {d.nights === 1 ? 'night' : 'nights'}
-                              </span>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Unified journey map — shows full trip routes + flies to selected day */}
-                    {((latestItinerary.itinerary_json.destinations?.length ?? 0) > 0 || (latestItinerary.itinerary_json.transport_legs?.length ?? 0) > 0) && (
-                      <div style={{ maxWidth: 820 }}>
-                        <Suspense fallback={<div style={{ height: 340, background: '#e8f0f5', borderRadius: 12, marginBottom: 28 }} />}>
-                          <UnifiedTripMap
-                            itinerary={latestItinerary.itinerary_json}
-                            originCity={trip.origin_city}
-                            stays={trip.stays ?? []}
-                            selectedDayNum={selectedDay}
-                            onDaySelect={setSelectedDay}
-                          />
-                        </Suspense>
-                      </div>
-                    )}
-
-                    <ItineraryTimeline
-                      data={latestItinerary.itinerary_json}
-                      stays={trip.stays ?? []}
-                      hideOverview
-                      hideSections
-                      selectedDay={selectedDay}
-                      onDaySelect={setSelectedDay}
-                      onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
-                        if (!tripId) return
-                        const res = await editItineraryBlock(tripId, {
-                          day_number: dayNum,
-                          period,
-                          block_title: blockTitle,
-                          instruction: prompt,
-                        })
-                        if (res.itinerary_updated && res.new_itinerary) {
-                          setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
-                        }
-                      }}
-                    />
-
-                    {/* Confirmed bookings (if admin has added them) */}
-                    {((trip.flights && trip.flights.length > 0) || (trip.stays && trip.stays.length > 0)) && (
-                      <div style={{ marginTop: 32, borderTop: '1px solid var(--color-border)', paddingTop: 24 }}>
-                        <h3 style={{ fontSize: '15px', fontWeight: 700, marginBottom: 16, color: 'var(--color-secondary)' }}>Confirmed Bookings</h3>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {(trip.flights ?? []).map(flight => (
-                            <div key={flight.id} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                              <div style={{ background: 'var(--color-secondary)', color: 'white', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{flight.flight_number}</div>
-                              <div style={{ flex: 1, minWidth: 160 }}>
-                                <div style={{ fontWeight: 600, fontSize: 13 }}>{flight.departure_airport} → {flight.arrival_airport} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>{flight.airline}</span></div>
-                                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                                  {new Date(flight.departure_time).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })} → {new Date(flight.arrival_time).toLocaleString('en-AU', { timeStyle: 'short' })}
-                                </div>
-                              </div>
-                              {flight.booking_ref && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px' }}>Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: 1 }}>{flight.booking_ref}</strong></div>}
-                            </div>
-                          ))}
-                          {(trip.stays ?? []).map(stay => {
-                            const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
-                            return (
-                              <div key={stay.id} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                                <div style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{nights}n</div>
-                                <div style={{ flex: 1, minWidth: 160 }}>
-                                  <div style={{ fontWeight: 600, fontSize: 13 }}>{stay.name}</div>
-                                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Check-in: {new Date(stay.check_in).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-                                </div>
-                                {stay.confirmation_number && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px' }}>Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: 1 }}>{stay.confirmation_number}</strong></div>}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <TripItineraryView
+                    itinerary={latestItinerary}
+                    trip={trip}
+                    itineraryCount={trip.itineraries.length}
+                    selectedDay={selectedDay}
+                    onDaySelect={setSelectedDay}
+                    onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
+                      if (!tripId) return
+                      const res = await editItineraryBlock(tripId, {
+                        day_number: dayNum,
+                        period,
+                        block_title: blockTitle,
+                        instruction: prompt,
+                      })
+                      if (res.itinerary_updated && res.new_itinerary) {
+                        setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
+                      }
+                    }}
+                  />
                 )}
               </>
             )}
@@ -669,11 +576,11 @@ export default function TripDetailPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <div>
                           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-in date</label>
-                          <input type="date" value={stayCheckIn} onChange={e => setStayCheckIn(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                          <DatePicker value={stayCheckIn} onChange={setStayCheckIn} placeholder="Select check-in" min={trip.start_date?.slice(0, 10)} max={trip.end_date?.slice(0, 10)} />
                         </div>
                         <div>
                           <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-out date</label>
-                          <input type="date" value={stayCheckOut} onChange={e => setStayCheckOut(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                          <DatePicker value={stayCheckOut} onChange={setStayCheckOut} placeholder="Select check-out" min={stayCheckIn || trip.start_date?.slice(0, 10)} max={trip.end_date?.slice(0, 10)} />
                         </div>
                         {stayError && <p style={{ margin: 0, color: '#dc2626', fontSize: 13 }}>{stayError}</p>}
                       </div>
@@ -704,11 +611,11 @@ export default function TripDetailPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                           <div>
                             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-in *</label>
-                            <input type="date" value={stayCheckIn} onChange={e => setStayCheckIn(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                            <DatePicker value={stayCheckIn} onChange={setStayCheckIn} placeholder="Select check-in" min={trip.start_date?.slice(0, 10)} max={trip.end_date?.slice(0, 10)} />
                           </div>
                           <div>
                             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', display: 'block', marginBottom: 5 }}>Check-out *</label>
-                            <input type="date" value={stayCheckOut} onChange={e => setStayCheckOut(e.target.value)} style={{ width: '100%', border: '1.5px solid var(--color-border)', borderRadius: 8, padding: '10px 12px', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                            <DatePicker value={stayCheckOut} onChange={setStayCheckOut} placeholder="Select check-out" min={stayCheckIn || trip.start_date?.slice(0, 10)} max={trip.end_date?.slice(0, 10)} />
                           </div>
                         </div>
                         <div>
@@ -775,18 +682,13 @@ export default function TripDetailPage() {
                         outline: 'none', letterSpacing: '0.5px',
                       }}
                     />
-                    <input
-                      type="date"
+                    <DatePicker
                       value={lookupDate}
-                      onChange={e => setLookupDate(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleFlightLookup()}
+                      onChange={setLookupDate}
+                      placeholder="Flight date"
                       min={trip.start_date?.slice(0, 10)}
                       max={trip.end_date?.slice(0, 10)}
-                      style={{
-                        border: '1.5px solid var(--color-border)', borderRadius: 8,
-                        padding: '10px 14px', fontSize: 14, fontFamily: 'inherit',
-                        color: 'var(--color-text)', outline: 'none',
-                      }}
+                      style={{ width: 160 }}
                     />
                     <button
                       onClick={handleFlightLookup}
@@ -886,75 +788,78 @@ export default function TripDetailPage() {
                   {flightSuggestions && flightSuggestions.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                       {flightSuggestions.map((f, i) => {
-                        const iatas = [...f.route.matchAll(/\(([A-Z]{3})\)/g)].map((m: RegExpMatchArray) => m[1])
-                        const fromCode = iatas[0] || ''
-                        const toCode = iatas[1] || ''
+                        const fromCode = f.origin_iata || ''
+                        const toCode = f.dest_iata || ''
+                        const legType = f.leg_type || 'outbound'
+                        const bullets: string[] = f.tips_bullets?.length ? f.tips_bullets : f.tips ? [f.tips] : []
 
-                        // Parse flight_time: take only the first option (before ';'), strip parenthetical airline names
-                        const primaryFlightTime = (f.flight_time || '')
-                          .split(/;/)[0]
-                          .replace(/\s*\([^)]*\)/g, '')
-                          .trim()
+                        const LEG_TYPE_STYLE: Record<string, { label: string; color: string; bg: string }> = {
+                          outbound: { label: 'Outbound', color: '#059669', bg: '#D1FAE5' },
+                          internal: { label: 'Internal', color: '#2563EB', bg: '#DBEAFE' },
+                          return:   { label: 'Return',   color: '#6B7280', bg: '#F3F4F6' },
+                        }
+                        const legStyle = LEG_TYPE_STYLE[legType] ?? LEG_TYPE_STYLE.outbound
 
-                        // Parse price: extract the first price range (e.g. "$300–$700") from potentially verbose AI prose
-                        const priceMatch = (f.typical_price_aud || '').match(/~?\$[\d,]+(?:[–\-]~?\$[\d,]+)?/)
-                        const displayPrice = priceMatch ? priceMatch[0] : f.typical_price_aud
-
-                        // Detect summary legs (no parseable IATA codes — AI generated a multi-leg summary)
-                        const isSummaryLeg = !fromCode && !toCode
-
-                        // For summary legs, parse pipe-separated segments into individual rows
-                        const summarySegments = isSummaryLeg
-                          ? (f.flight_time || '').split('|').map(s => s.trim()).filter(Boolean)
-                          : []
+                        // Build URLs from IATA codes + trip dates (avoids AI hallucinating broken links)
+                        const dateForLeg = legType === 'return' ? trip?.end_date : trip?.start_date
+                        const googleUrl = fromCode && toCode && dateForLeg
+                          ? `https://www.google.com/travel/flights?q=Flights+from+${fromCode}+to+${toCode}+on+${dateForLeg.slice(0, 10)}&curr=AUD`
+                          : f.google_flights_url || '#'
+                        const skyDate = dateForLeg ? (() => {
+                          const d = new Date(dateForLeg)
+                          return `${String(d.getFullYear()).slice(2)}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`
+                        })() : ''
+                        const skyUrl = fromCode && toCode && skyDate
+                          ? `https://www.skyscanner.com.au/transport/flights/${fromCode.toLowerCase()}/${toCode.toLowerCase()}/${skyDate}/`
+                          : f.skyscanner_url || '#'
 
                         return (
-                        <div key={i} style={{ border: '1px solid var(--color-border)', borderRadius: 16, padding: '24px 28px', background: 'white' }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 18 }}>Leg {i + 1}</div>
+                        <div key={i} style={{ border: '1px solid var(--color-border)', borderRadius: 16, padding: '20px 24px', background: 'white' }}>
+                          {/* Header row: leg number + type badge */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Leg {i + 1}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 8px', borderRadius: 100, background: legStyle.bg, color: legStyle.color }}>{legStyle.label}</span>
+                          </div>
 
-                          {isSummaryLeg ? (
-                            /* Summary leg: no IATA codes, show price + segment breakdown */
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 24 }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                {summarySegments.map((seg, si) => (
-                                  <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-muted)' }}>
-                                    <Plane size={12} color="var(--color-text-muted)" strokeWidth={2} style={{ flexShrink: 0 }} />
-                                    <span>{seg}</span>
-                                  </div>
-                                ))}
+                          {/* IATA route row */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 10 }}>
+                            <div style={{ fontSize: 34, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.5px', lineHeight: 1 }}>{fromCode || '—'}</div>
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                              <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
+                                <Plane size={15} color="var(--color-text-muted)" strokeWidth={2} />
+                                <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
                               </div>
-                              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{displayPrice}</div>
-                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>est. total</div>
-                              </div>
+                              <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{f.flight_time}</span>
                             </div>
-                          ) : (
-                            /* Standard leg: IATA route row */
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 6 }}>
-                              <div style={{ fontSize: 34, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.5px', lineHeight: 1 }}>{fromCode}</div>
-                              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                                <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                  <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                                  <Plane size={15} color="var(--color-text-muted)" strokeWidth={2} />
-                                  <div style={{ flex: 1, height: 1, background: 'var(--color-border)' }} />
-                                </div>
-                                <span style={{ fontSize: 12, color: 'var(--color-text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>{primaryFlightTime}</span>
-                              </div>
-                              <div style={{ fontSize: 34, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.5px', lineHeight: 1 }}>{toCode}</div>
-                              <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
-                                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{displayPrice}</div>
-                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>est. one-way</div>
-                              </div>
+                            <div style={{ fontSize: 34, fontWeight: 900, color: 'var(--color-text)', letterSpacing: '-0.5px', lineHeight: 1 }}>{toCode || '—'}</div>
+                            <div style={{ marginLeft: 'auto', textAlign: 'right', flexShrink: 0 }}>
+                              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--color-text)' }}>{f.typical_price_aud}</div>
+                              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 500 }}>est. {legType === 'return' ? 'one-way' : 'one-way'}</div>
                             </div>
+                          </div>
+
+                          {/* Airlines */}
+                          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: bullets.length ? 14 : 16 }}>{f.airlines.join(' · ')}</div>
+
+                          {/* Tips as bullets */}
+                          {bullets.length > 0 && (
+                            <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none', borderTop: '1px solid var(--color-border)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                              {bullets.map((b, bi) => (
+                                <li key={bi} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                                  <span style={{ color: 'var(--color-primary)', fontWeight: 700, flexShrink: 0, marginTop: 1 }}>·</span>
+                                  <span>{b}</span>
+                                </li>
+                              ))}
+                            </ul>
                           )}
 
-                          <div style={{ fontSize: 13, color: 'var(--color-text-muted)', marginBottom: 16 }}>{f.airlines.join(' · ')}</div>
-                          {f.tips && <p style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 18, lineHeight: 1.65, borderTop: '1px solid var(--color-border)', paddingTop: 14 }}>{f.tips}</p>}
+                          {/* Booking links */}
                           <div style={{ display: 'flex', gap: 10 }}>
-                            <a href={f.google_flights_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-secondary)', padding: '11px 16px', borderRadius: 10, textDecoration: 'none' }}>
+                            <a href={googleUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'white', background: 'var(--color-secondary)', padding: '11px 16px', borderRadius: 10, textDecoration: 'none' }}>
                               <ExternalLink size={13} /> Google Flights
                             </a>
-                            <a href={f.skyscanner_url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none', border: '1.5px solid var(--color-border)', padding: '11px 16px', borderRadius: 10 }}>
+                            <a href={skyUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', textDecoration: 'none', border: '1.5px solid var(--color-border)', padding: '11px 16px', borderRadius: 10 }}>
                               <ExternalLink size={13} /> Skyscanner
                             </a>
                           </div>

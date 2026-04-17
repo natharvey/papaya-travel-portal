@@ -18,8 +18,12 @@ export async function fetchActivityCandidates(
   const searchTitle = photoQuery ?? title
   const params = `title=${encodeURIComponent(searchTitle)}&location=${encodeURIComponent(location)}`
   const token = localStorage.getItem('papaya_token') || ''
+  const role = localStorage.getItem('papaya_role') || ''
+  const endpoint = role === 'admin'
+    ? `${API_BASE}/admin/activity-photo?${params}`
+    : `${API_BASE}/client/activity-photo?${params}`
   try {
-    const resp = await fetch(`${API_BASE}/client/activity-photo?${params}`, {
+    const resp = await fetch(endpoint, {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = resp.ok ? await resp.json() : null

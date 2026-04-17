@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
+import { Maximize2, Minimize2, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ItineraryJSON, Stay, DayPlan, DayBlock } from '../types'
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || ''
@@ -15,29 +16,26 @@ const TRANSPORT_COLORS: Record<string, string> = {
   transfer: '#6b7280',
 }
 
-const DEST_COLORS = ['#f97316', '#3b82f6', '#8b5cf6', '#10b981', '#ef4444', '#f59e0b', '#06b6d4', '#ec4899']
+const DEST_COLORS = ['#F07332', '#2D4A5A', '#2A9D5C', '#E8A020', '#D45E1E', '#1E7096', '#6B7C5E', '#8B6914']
 
 const PERIOD_COLORS: Record<string, string> = {
-  morning:   '#f97316',
-  afternoon: '#0ea5e9',
-  evening:   '#8b5cf6',
+  morning:   '#F07332',
+  afternoon: '#2D4A5A',
+  evening:   '#E8A020',
 }
-const PERIOD_LABELS: Record<string, string> = {
-  morning: 'AM',
-  afternoon: 'PM',
-  evening: 'EVE',
-}
+
 
 // Fixed IDs for the activity-to-stay route layer (only one active at a time)
 const ROUTE_SOURCE_ID = 'activity-route'
 const ROUTE_LAYER_ID  = 'activity-route'
 
-async function geocodeCity(name: string): Promise<[number, number] | null> {
+async function geocodeCity(name: string, countryCode?: string): Promise<[number, number] | null> {
   const token = import.meta.env.VITE_MAPBOX_TOKEN
   if (!token) return null
   try {
+    const countryParam = countryCode ? `&country=${countryCode.toLowerCase()}` : ''
     const res = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(name)}.json?types=place,locality,region,country&limit=1&access_token=${token}`
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(name)}.json?types=place,locality,region,country&limit=1${countryParam}&access_token=${token}`
     )
     const data = await res.json()
     if (data.features?.length > 0) return data.features[0].center as [number, number]
@@ -103,46 +101,48 @@ function getStaysForDay(day: DayPlan, stays: Stay[]): Stay[] {
   })
 }
 
-// SVG teardrop pin — tip at bottom-center, anchor:'bottom' lines it up perfectly
-function makePinEl(color: string, content: string): HTMLDivElement {
+// Icon SVGs for each period (Lucide-style, 15×15 rendered at 24×24 viewBox)
+const MORNING_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>`
+const AFTERNOON_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4" fill="white" stroke="none"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`
+const EVENING_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="white" stroke="none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`
+const STAY_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+
+const PERIOD_ICONS: Record<string, string> = {
+  morning: MORNING_SVG,
+  afternoon: AFTERNOON_SVG,
+  evening: EVENING_SVG,
+}
+
+// Dot marker — outer el is controlled by Mapbox (never touch its transform).
+// Hover is applied to the inner visual div only.
+function makeIconDotEl(color: string, iconSvg: string): HTMLDivElement {
   const el = document.createElement('div')
-  el.style.cssText = `
-    cursor: pointer; visibility: hidden; pointer-events: none;
-    transition: transform 0.12s; line-height: 0;
+  el.style.cssText = 'cursor: pointer; visibility: hidden; pointer-events: none; line-height: 0;'
+
+  const inner = document.createElement('div')
+  inner.style.cssText = `
+    width: 32px; height: 32px; border-radius: 50%;
+    background: ${color}; border: 2.5px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.12s;
   `
-  el.innerHTML = `
-    <svg width="36" height="46" viewBox="0 0 36 46" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M18 0C8.06 0 0 8.06 0 18C0 30.5 18 46 18 46C18 46 36 30.5 36 18C36 8.06 27.94 0 18 0Z" fill="${color}"/>
-      <path d="M18 1C8.61 1 1 8.61 1 18C1 30 18 45 18 45C18 45 35 30 35 18C35 8.61 27.39 1 18 1Z" fill="${color}"/>
-      <circle cx="18" cy="17" r="13" fill="${color}" stroke="white" stroke-width="2.5"/>
-      <text x="18" y="22" text-anchor="middle" font-size="10" font-weight="800" fill="white" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" letter-spacing="0.5">${content}</text>
-    </svg>
-  `
-  el.onmouseenter = () => { el.style.transform = 'scale(1.12) translateY(-2px)' }
-  el.onmouseleave = () => { el.style.transform = '' }
+  inner.innerHTML = iconSvg
+  el.appendChild(inner)
+
+  el.onmouseenter = () => { inner.style.transform = 'scale(1.2) translateY(-2px)' }
+  el.onmouseleave = () => { inner.style.transform = '' }
   return el
 }
 
 function makeActivityMarkerEl(period: string): HTMLDivElement {
   const color = PERIOD_COLORS[period] || '#6b7280'
-  const label = PERIOD_LABELS[period] || period.slice(0, 3).toUpperCase()
-  return makePinEl(color, label)
+  const icon = PERIOD_ICONS[period] || AFTERNOON_SVG
+  return makeIconDotEl(color, icon)
 }
 
 function makeStayMarkerEl(): HTMLDivElement {
-  const el = makePinEl('#10b981', '')
-  // Replace the text node with a small house path
-  const svg = el.querySelector('svg')!
-  const existing = svg.querySelector('text')
-  if (existing) existing.remove()
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-  // House icon centred at 18,17
-  g.innerHTML = `<g transform="translate(9,8)" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M1 9L9 2l8 7"/>
-    <path d="M3 7.5V17h5v-5h2v5h5V7.5"/>
-  </g>`
-  svg.appendChild(g)
-  return el
+  return makeIconDotEl('#10b981', STAY_SVG)
 }
 
 function formatMinutes(secs: number): string {
@@ -172,6 +172,12 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
 
   const [loading, setLoading] = useState(true)
   const [ready, setReady] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
+  const allPopupsRef = useRef<mapboxgl.Popup[]>([])
+
+  function closeAllPopups() {
+    allPopupsRef.current.forEach(p => { try { p.remove() } catch { /* ignore */ } })
+  }
 
   const locationCoords = useRef<Map<string, [number, number]>>(new Map())
   const dayLocation = useRef<Map<number, string>>(new Map())
@@ -223,6 +229,13 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
       },
     })
   }
+
+  // ── Resize map when fullscreen toggles ──────────────────────────────────────
+  useEffect(() => {
+    if (!map.current) return
+    const t = setTimeout(() => map.current?.resize(), 50)
+    return () => clearTimeout(t)
+  }, [fullscreen])
 
   // ── Fetch both routes when activeRoute changes ───────────────────────────────
   useEffect(() => {
@@ -298,7 +311,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
 
       const resolvedDests: { name: string; coords: [number, number] | null; nights: number }[] = []
       for (const dest of destinations) {
-        const coords = await geocodeCity(dest.name)
+        const coords = await geocodeCity(dest.name, dest.country_code)
         resolvedDests.push({ name: dest.name, coords, nights: dest.nights })
       }
 
@@ -336,7 +349,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
           name: dest.name,
           coords: dest.coords,
           color: DEST_COLORS[i % DEST_COLORS.length],
-          dayRange: firstDay === lastDay ? `Day ${firstDay}` : `Days ${firstDay}–${lastDay}`,
+          dayRange: firstDay === lastDay ? `${firstDay}` : `${firstDay}–${lastDay}`,
           firstDay,
           isOrigin: false,
         })
@@ -361,26 +374,34 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
           dayCoords.push(coords)
 
           const el = makeActivityMarkerEl(period)
-          const costStr = block.est_cost_aud != null ? ` · ~A$${block.est_cost_aud}` : ''
-          const popup = new mapboxgl.Popup({ offset: 14, closeButton: false, maxWidth: '240px' })
+          const costStr = block.est_cost_aud != null ? `~A$${block.est_cost_aud}` : ''
+          const detailsPreview = (block.details || '').slice(0, 120) + ((block.details?.length || 0) > 120 ? '…' : '')
+          const popup = new mapboxgl.Popup({ offset: 16, closeButton: true, maxWidth: '280px', className: 'papaya-popup' })
             .setHTML(`
-              <div style="font-family:inherit;padding:4px 2px">
-                <div style="font-size:10px;font-weight:700;color:${PERIOD_COLORS[period]};text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">${period}${costStr}</div>
-                <div style="font-weight:700;font-size:13px;color:#1a2a3a;margin-bottom:4px">${block.title}</div>
-                <div style="font-size:11px;color:#6b7280;line-height:1.4">${block.details?.slice(0, 100)}${(block.details?.length || 0) > 100 ? '…' : ''}</div>
-                ${block.place_id ? `<a href="https://www.google.com/maps/place/?q=place_id:${block.place_id}" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;text-decoration:none;display:block;margin-top:6px">View on Google Maps →</a>` : ''}
+              <div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px">
+                  <span style="font-size:10px;font-weight:700;color:${PERIOD_COLORS[period]};text-transform:uppercase;letter-spacing:0.08em">${period}</span>
+                  ${costStr ? `<span style="font-size:10px;color:#94a3b8">·</span><span style="font-size:10px;font-weight:600;color:#64748b">${costStr}</span>` : ''}
+                </div>
+                <div style="font-weight:700;font-size:14px;color:#0f172a;line-height:1.3;margin-bottom:7px">${block.title}</div>
+                <div style="font-size:12px;color:#64748b;line-height:1.6">${detailsPreview}</div>
+                ${block.place_id ? `<a href="https://www.google.com/maps/place/?q=place_id:${block.place_id}" target="_blank" rel="noopener" style="font-size:12px;color:#3b82f6;text-decoration:none;display:block;margin-top:10px;font-weight:600">View on Google Maps →</a>` : ''}
               </div>
             `)
+          allPopupsRef.current.push(popup)
 
-          const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+          const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
             .setLngLat(coords)
-            .setPopup(popup)
             .addTo(map.current!)
 
           el.addEventListener('click', (e) => {
             e.stopPropagation()
-            map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
-            marker.togglePopup()
+            const wasOpen = popup.isOpen()
+            closeAllPopups()
+            if (!wasOpen) {
+              popup.setLngLat(coords).addTo(map.current!)
+              map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
+            }
 
             // Trigger route draw if there's a stay for this night
             const currentStay = getStayForDay(dp, staysRef.current)
@@ -410,23 +431,27 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         const coords: [number, number] = [stay.longitude, stay.latitude]
         const el = makeStayMarkerEl()
         const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
-        const popup = new mapboxgl.Popup({ offset: 14, closeButton: false, maxWidth: '220px' })
+        const popup = new mapboxgl.Popup({ offset: 16, closeButton: true, maxWidth: '260px', className: 'papaya-popup' })
           .setHTML(`
-            <div style="font-family:inherit;padding:4px 2px">
-              <div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px">Accommodation</div>
-              <div style="font-weight:700;font-size:13px;color:#1a2a3a;margin-bottom:4px">${stay.name}</div>
-              <div style="font-size:11px;color:#6b7280">${nights} night${nights !== 1 ? 's' : ''}</div>
-              ${stay.website ? `<a href="${stay.website}" target="_blank" rel="noopener" style="font-size:11px;color:#3b82f6;text-decoration:none;display:block;margin-top:6px">View hotel →</a>` : ''}
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px">Accommodation</div>
+              <div style="font-weight:700;font-size:14px;color:#0f172a;line-height:1.3;margin-bottom:6px">${stay.name}</div>
+              <div style="font-size:12px;color:#64748b">${nights} night${nights !== 1 ? 's' : ''}</div>
+              ${stay.website ? `<a href="${stay.website}" target="_blank" rel="noopener" style="font-size:12px;color:#3b82f6;text-decoration:none;display:block;margin-top:10px;font-weight:600">View hotel →</a>` : ''}
             </div>
           `)
-        const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+        allPopupsRef.current.push(popup)
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat(coords)
-          .setPopup(popup)
           .addTo(map.current!)
         el.addEventListener('click', (e) => {
           e.stopPropagation()
-          map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
-          marker.togglePopup()
+          const wasOpen = popup.isOpen()
+          closeAllPopups()
+          if (!wasOpen) {
+            popup.setLngLat(coords).addTo(map.current!)
+            map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
+          }
         })
         stayMarkersRef.current.set(stay.id, marker)
       })
@@ -513,32 +538,49 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
           el = document.createElement('div')
           el.style.cssText = `width:12px;height:12px;background:#2d4a5a;border:2.5px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.25);`
         } else {
-          // Destination pin: larger pin with city label below
+          // Destination chip: floating pill label above a small color dot.
+          // Outer el is Mapbox-controlled — never apply transforms to it.
+          // Hover applied to inner wrapper only.
           el = document.createElement('div')
-          el.style.cssText = `
-            display:flex;flex-direction:column;align-items:center;
-            cursor:pointer;transition:transform 0.15s;line-height:0;
-          `
-          el.innerHTML = `
-            <svg width="44" height="56" viewBox="0 0 44 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 0C9.85 0 0 9.85 0 22C0 37 22 56 22 56C22 56 44 37 44 22C44 9.85 34.15 0 22 0Z" fill="${stop.color}"/>
-              <circle cx="22" cy="21" r="16" fill="${stop.color}" stroke="white" stroke-width="3"/>
-              <text x="22" y="26" text-anchor="middle" font-size="10" font-weight="800" fill="white" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">${stop.dayRange}</text>
-            </svg>
+          el.style.cssText = 'cursor:pointer;line-height:0;display:flex;flex-direction:column;align-items:center;'
+          const destInner = document.createElement('div')
+          destInner.style.cssText = 'display:flex;flex-direction:column;align-items:center;transition:transform 0.15s;'
+          destInner.innerHTML = `
             <div style="
-              margin-top:4px;background:rgba(255,255,255,0.95);
-              border-radius:10px;padding:2px 8px;
-              font-size:10px;font-weight:700;color:#1a2a3a;
-              white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.15);
-              line-height:1.6;
-            ">${stop.name}</div>
+              display:flex;align-items:center;gap:6px;
+              background:white;
+              border-radius:100px;
+              padding:5px 10px 5px 6px;
+              box-shadow:0 2px 10px rgba(0,0,0,0.18);
+              white-space:nowrap;
+              margin-bottom:5px;
+            ">
+              <span style="
+                background:${stop.color};color:white;
+                border-radius:100px;padding:2px 7px;
+                font-size:10px;font-weight:800;
+                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                line-height:1.5;letter-spacing:0.02em;
+              ">${stop.dayRange}</span>
+              <span style="
+                font-size:12px;font-weight:700;color:#1a2a3a;
+                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                line-height:1;
+              ">${stop.name}</span>
+            </div>
+            <div style="
+              width:10px;height:10px;border-radius:50%;
+              background:${stop.color};border:2.5px solid white;
+              box-shadow:0 1px 4px rgba(0,0,0,0.25);
+            "></div>
           `
+          el.appendChild(destInner)
           el.addEventListener('click', () => onDaySelect(stop.firstDay))
-          el.onmouseenter = () => { el.style.transform = 'scale(1.08) translateY(-2px)' }
-          el.onmouseleave = () => { el.style.transform = '' }
+          el.onmouseenter = () => { destInner.style.transform = 'scale(1.06) translateY(-2px)' }
+          el.onmouseleave = () => { destInner.style.transform = '' }
         }
         const popup = new mapboxgl.Popup({ offset: 12, closeButton: false })
-          .setHTML(`<div style="font-family:inherit;padding:4px 2px"><div style="font-weight:700;font-size:13px;color:#1a2a3a">${stop.name}</div><div style="font-size:11px;color:#6b7280;margin-top:2px">${stop.dayRange}</div></div>`)
+          .setHTML(`<div style="font-family:inherit;padding:4px 2px"><div style="font-weight:700;font-size:13px;color:#1a2a3a">${stop.name}</div><div style="font-size:11px;color:#6b7280;margin-top:2px">Day ${stop.dayRange}</div></div>`)
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat(stop.coords)
           .setPopup(popup)
@@ -572,7 +614,8 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   useEffect(() => {
     if (!ready || !map.current) return
 
-    // Clear any active route when the day changes
+    // Clear any active route and popups when the day changes
+    closeAllPopups()
     clearRouteLayer()
     routeDataCache.current = null
     setActiveRoute(null)
@@ -696,72 +739,169 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
 
   if (!itinerary.destinations?.length && !itinerary.transport_legs?.length) return null
 
+  const dayPlans = itinerary.day_plans || []
+  const totalDays = dayPlans.length
+  const canPrev = selectedDayNum > 1
+  const canNext = selectedDayNum < totalDays
+
   return (
-    <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--color-border)', marginBottom: 24 }}>
-      <div ref={mapContainer} style={{ height: 340, width: '100%' }} />
+    <>
+      {/* Popup CSS overrides */}
+      <style>{`
+        .papaya-popup .mapboxgl-popup-content {
+          border-radius: 12px;
+          padding: 14px 16px;
+          box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          border: 1px solid rgba(0,0,0,0.07);
+        }
+        .papaya-popup .mapboxgl-popup-close-button {
+          font-size: 16px;
+          color: #94a3b8;
+          top: 8px;
+          right: 10px;
+          background: none;
+          border: none;
+          cursor: pointer;
+        }
+        .papaya-popup .mapboxgl-popup-close-button:hover {
+          color: #475569;
+        }
+        .papaya-popup .mapboxgl-popup-tip {
+          border-top-color: white;
+        }
+      `}</style>
 
-      {loading && (
-        <div style={{ position: 'absolute', inset: 0, background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#6b7280' }}>
-          Loading map…
-        </div>
-      )}
+      <div style={{
+        position: fullscreen ? 'fixed' : 'relative',
+        inset: fullscreen ? 0 : undefined,
+        zIndex: fullscreen ? 1000 : undefined,
+        borderRadius: fullscreen ? 0 : 12,
+        overflow: 'hidden',
+        border: fullscreen ? 'none' : '1px solid var(--color-border)',
+        marginBottom: fullscreen ? 0 : 24,
+        background: '#f0f4f8',
+      }}>
+        <div ref={mapContainer} style={{ height: fullscreen ? '100%' : 340, width: '100%', minHeight: fullscreen ? '100vh' : undefined }} />
 
-      {/* Route travel time toggle — appears when an activity with a stay is clicked */}
-      {ready && routeTimes && (
-        <div style={{
-          position: 'absolute', top: 12, right: 12,
-          background: 'white', borderRadius: 10, padding: '6px 8px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
-          display: 'flex', gap: 4, alignItems: 'center',
-          fontFamily: 'inherit',
-        }}>
+        {loading && (
+          <div style={{ position: 'absolute', inset: 0, background: '#f0f4f8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#6b7280' }}>
+            Loading map…
+          </div>
+        )}
+
+        {/* Fullscreen expand/minimize button */}
+        {ready && (
           <button
-            onClick={() => setRouteMode('walking')}
+            onClick={() => setFullscreen(fs => !fs)}
+            title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             style={{
-              border: routeMode === 'walking' ? '1.5px solid #10b981' : '1.5px solid #e5e7eb',
-              background: routeMode === 'walking' ? '#f0fdf4' : 'white',
-              borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit',
-              color: routeMode === 'walking' ? '#10b981' : '#6b7280',
-              display: 'flex', alignItems: 'center', gap: 4,
-              transition: 'all 0.15s',
+              position: 'absolute', top: 12, right: 12,
+              background: 'white', border: '1px solid rgba(0,0,0,0.12)',
+              borderRadius: 8, width: 34, height: 34,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.14)',
+              color: '#374151',
             }}
           >
-            🚶 {routeTimes.walking != null ? formatMinutes(routeTimes.walking) : '—'}
+            {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
-          <button
-            onClick={() => setRouteMode('driving')}
-            style={{
-              border: routeMode === 'driving' ? '1.5px solid #3b82f6' : '1.5px solid #e5e7eb',
-              background: routeMode === 'driving' ? '#eff6ff' : 'white',
-              borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700,
-              cursor: 'pointer', fontFamily: 'inherit',
-              color: routeMode === 'driving' ? '#3b82f6' : '#6b7280',
-              display: 'flex', alignItems: 'center', gap: 4,
-              transition: 'all 0.15s',
-            }}
-          >
-            🚗 {routeTimes.driving != null ? formatMinutes(routeTimes.driving) : '—'}
-          </button>
-        </div>
-      )}
+        )}
 
-      {ready && (
-        <button
-          onClick={handleResetView}
-          style={{
-            position: 'absolute', bottom: 36, right: 10,
-            background: 'white', border: '1px solid var(--color-border)',
-            borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
-            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-            color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: 5,
+        {/* Route travel time toggle — appears when an activity with a stay is clicked */}
+        {ready && routeTimes && (
+          <div style={{
+            position: 'absolute', top: 12, right: fullscreen ? 56 : 54,
+            background: 'white', borderRadius: 10, padding: '6px 8px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+            display: 'flex', gap: 4, alignItems: 'center',
             fontFamily: 'inherit',
-          }}
-        >
-          ↙ Full trip view
-        </button>
-      )}
+          }}>
+            <button
+              onClick={() => setRouteMode('walking')}
+              style={{
+                border: routeMode === 'walking' ? '1.5px solid #10b981' : '1.5px solid #e5e7eb',
+                background: routeMode === 'walking' ? '#f0fdf4' : 'white',
+                borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                color: routeMode === 'walking' ? '#10b981' : '#6b7280',
+                display: 'flex', alignItems: 'center', gap: 4,
+                transition: 'all 0.15s',
+              }}
+            >
+              🚶 {routeTimes.walking != null ? formatMinutes(routeTimes.walking) : '—'}
+            </button>
+            <button
+              onClick={() => setRouteMode('driving')}
+              style={{
+                border: routeMode === 'driving' ? '1.5px solid #3b82f6' : '1.5px solid #e5e7eb',
+                background: routeMode === 'driving' ? '#eff6ff' : 'white',
+                borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', fontFamily: 'inherit',
+                color: routeMode === 'driving' ? '#3b82f6' : '#6b7280',
+                display: 'flex', alignItems: 'center', gap: 4,
+                transition: 'all 0.15s',
+              }}
+            >
+              🚗 {routeTimes.driving != null ? formatMinutes(routeTimes.driving) : '—'}
+            </button>
+          </div>
+        )}
 
-    </div>
+        {/* Full trip view button */}
+        {ready && (
+          <button
+            onClick={handleResetView}
+            style={{
+              position: 'absolute', bottom: 36, right: 10,
+              background: 'white', border: '1px solid var(--color-border)',
+              borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'inherit',
+            }}
+          >
+            ↙ Full trip view
+          </button>
+        )}
+
+        {/* Fullscreen day prev/next nav */}
+        {fullscreen && ready && selectedDayNum >= 1 && (
+          <div style={{
+            position: 'absolute', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'white', borderRadius: 12, padding: '8px 14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+            fontFamily: 'inherit',
+          }}>
+            <button
+              onClick={() => canPrev && onDaySelect(selectedDayNum - 1)}
+              disabled={!canPrev}
+              style={{
+                background: 'none', border: 'none', cursor: canPrev ? 'pointer' : 'default',
+                color: canPrev ? '#374151' : '#cbd5e1', padding: '2px 4px',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', minWidth: 60, textAlign: 'center' }}>
+              Day {selectedDayNum} <span style={{ fontWeight: 400, color: '#94a3b8' }}>/ {totalDays}</span>
+            </span>
+            <button
+              onClick={() => canNext && onDaySelect(selectedDayNum + 1)}
+              disabled={!canNext}
+              style={{
+                background: 'none', border: 'none', cursor: canNext ? 'pointer' : 'default',
+                color: canNext ? '#374151' : '#cbd5e1', padding: '2px 4px',
+                display: 'flex', alignItems: 'center',
+              }}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
+      </div>
+    </>
   )
 }

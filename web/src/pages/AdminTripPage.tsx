@@ -1,11 +1,18 @@
-import React, { useEffect, useState } from 'react'
+import React, { lazy, Suspense, useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, Send, StickyNote, Save, Plus, Trash2, Pencil, X, Check, Search } from 'lucide-react'
+import { User, PlaneTakeoff, Calendar, Clock, Wallet, Gauge, Sparkles, RefreshCw, AlertCircle, StickyNote, Save, Plus, Trash2, Pencil, X, Check, Search, MapPin } from 'lucide-react'
 import Layout from '../components/Layout'
-import ItineraryTimeline from '../components/ItineraryTimeline'
+import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import MessageThread from '../components/MessageThread'
 import LoadingSpinner from '../components/LoadingSpinner'
 import FlightMap from '../components/FlightMap'
+import DatePicker from '../components/DatePicker'
+import PDFDownloadButton from '../components/PDFDownloadButton'
+import TravelNotesTab from '../components/TravelNotesTab'
+import { TabBar, Tab } from '../components/TabBar'
+import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
+import TripItineraryView from '../components/TripItineraryView'
+const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
 import {
   getAdminTrip,
   updateAdminTrip,
@@ -157,9 +164,9 @@ export default function AdminTripPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'itinerary' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents'>('itinerary')
+  const [tab, setTab] = useState<'itinerary' | 'messages' | 'flights' | 'stays' | 'documents' | 'travel_notes'>('itinerary')
 
-  function switchTab(next: 'itinerary' | 'messages' | 'notes' | 'flights' | 'stays' | 'documents') {
+  function switchTab(next: 'itinerary' | 'messages' | 'flights' | 'stays' | 'documents' | 'travel_notes') {
     setTab(next)
     if (next === 'messages' && tripId) {
       markAdminMessagesRead(tripId)
@@ -231,6 +238,12 @@ export default function AdminTripPage() {
   const [genError, setGenError] = useState('')
   const [regenInstructions, setRegenInstructions] = useState('')
   const [selectedItineraryVersion, setSelectedItineraryVersion] = useState<number | null>(null)
+  const [selectedDay, setSelectedDay] = useState(0)
+
+  // Title editing
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [titleSaving, setTitleSaving] = useState(false)
 
   useEffect(() => {
     if (!tripId) return
@@ -250,6 +263,18 @@ export default function AdminTripPage() {
       .catch(e => setError(getApiError(e)))
       .finally(() => setLoading(false))
   }, [tripId])
+
+  async function handleSaveTitle() {
+    if (!tripId || !trip || !titleDraft.trim()) return
+    setTitleSaving(true)
+    try {
+      const updated = await updateAdminTrip(tripId, { title: titleDraft.trim() })
+      setTrip(updated)
+      setEditingTitle(false)
+    } catch { /* ignore */ } finally {
+      setTitleSaving(false)
+    }
+  }
 
   async function handleStatusChange(newStatus: string) {
     if (!tripId || !trip) return
@@ -611,6 +636,15 @@ export default function AdminTripPage() {
     }
   }
 
+  // Destination photo hooks — must be called before any early returns (Rules of Hooks)
+  const latestItineraryForHero = trip?.itineraries?.length
+    ? trip.itineraries.reduce((a, b) => a.version > b.version ? a : b)
+    : null
+  const heroDests = latestItineraryForHero?.itinerary_json?.destinations || []
+  const { photoUrl: heroPhoto0 } = useDestinationPhoto(heroDests[0]?.name || trip?.title || '')
+  const { photoUrl: heroPhoto1 } = useDestinationPhoto(heroDests[1]?.name || '')
+  const { photoUrl: heroPhoto2 } = useDestinationPhoto(heroDests[2]?.name || '')
+
   if (loading) {
     return (
       <Layout variant="admin">
@@ -644,115 +678,108 @@ export default function AdminTripPage() {
   const tripDays = Math.ceil(
     (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
   )
+  const showMosaic = heroDests.length >= 2
+  const thumbDests = heroDests.slice(1, 3)
+  const thumbPhotos = [heroPhoto1, heroPhoto2]
 
   return (
     <Layout variant="admin">
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px 60px' }}>
-        {/* Breadcrumb */}
-        <div style={{ marginBottom: '20px' }}>
-          <Link to="/admin" style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
-            ← All Trips
-          </Link>
-        </div>
 
-        {/* Trip header */}
-        <div style={{
-          background: 'linear-gradient(135deg, var(--color-secondary) 0%, #1A3344 100%)',
-          color: 'white',
-          borderRadius: 'var(--radius-lg)',
-          padding: '24px 28px',
-          marginBottom: '24px',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ flex: 1 }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 800, marginBottom: '12px' }}>{trip.title}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                <User size={13} color="#64748B" strokeWidth={2} />
-                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>{trip.client.name} · {trip.client.email}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                {[
-                  { Icon: PlaneTakeoff, label: trip.origin_city },
-                  { Icon: Calendar, label: `${new Date(trip.start_date).toLocaleDateString('en-AU')} — ${new Date(trip.end_date).toLocaleDateString('en-AU')}` },
-                  { Icon: Clock, label: `${tripDays} days` },
-                  { Icon: Wallet, label: trip.budget_range },
-                  { Icon: Gauge, label: trip.pace },
-                ].map(({ Icon, label }) => (
-                  <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
-                    <Icon size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
-                    {label}
-                  </span>
-                ))}
-              </div>
+      {/* ── HERO (matches client view) ── */}
+      <div style={{ position: 'relative', width: '100%', height: 400, overflow: 'hidden', flexShrink: 0, background: 'var(--color-secondary)' }}>
+        {showMosaic ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '62% 38%', gridTemplateRows: `repeat(${thumbDests.length === 1 ? 1 : 2}, 1fr)`, gap: 3, height: '100%' }}>
+            <div style={{ gridRow: `1 / ${thumbDests.length === 1 ? 2 : 3}`, position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
+              {heroPhoto0 && <img src={heroPhoto0} alt={heroDests[0]?.name || trip.title} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.04) 100%)' }} />
             </div>
-
-            {/* Status + delete */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <select
-                  value={trip.status}
-                  onChange={e => handleStatusChange(e.target.value)}
-                  disabled={statusUpdating}
-                  style={{
-                    background: statusColors.bg,
-                    border: 'none',
-                    color: statusColors.text,
-                    borderRadius: 'var(--radius)',
-                    padding: '6px 12px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {VALID_STATUSES.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                {statusUpdating && <LoadingSpinner size={16} label="" />}
+            {thumbDests.map((dest, i) => (
+              <div key={dest.name} style={{ position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
+                {thumbPhotos[i] && <img src={thumbPhotos[i]!} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.0) 60%)' }} />
+                <div style={{ position: 'absolute', bottom: 10, left: 12, background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(6px)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 5 }}>{dest.name}</div>
               </div>
-              {confirmDelete ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Delete this trip?</span>
-                  <button onClick={handleDeleteTrip} disabled={deleting} style={{ background: '#EF4444', border: 'none', borderRadius: 6, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {deleting ? '...' : 'Yes, delete'}
-                  </button>
-                  <button onClick={() => setConfirmDelete(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, padding: '4px 10px', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#EF4444'; e.currentTarget.style.color = '#FCA5A5' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)' }}
-                >
-                  Delete trip
-                </button>
-              )}
-            </div>
+            ))}
           </div>
-        </div>
-
-        {/* Flight map */}
-        {flights.length > 0 && (
-          <div style={{ marginBottom: '24px' }}>
-            <FlightMap flights={flights} originCity={trip.origin_city} />
-          </div>
+        ) : (
+          <>
+            {heroPhoto0 && <img src={heroPhoto0} alt={trip.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.10) 100%)' }} />
+          </>
         )}
+
+        {/* Top row: breadcrumb + admin controls */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '22px 40px', zIndex: 2 }}>
+          <Link to="/admin" style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>← All Trips</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <select
+              value={trip.status}
+              onChange={e => handleStatusChange(e.target.value)}
+              disabled={statusUpdating}
+              style={{ background: statusColors.bg, border: 'none', color: statusColors.text, borderRadius: 'var(--radius)', padding: '6px 12px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              {VALID_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            {statusUpdating && <LoadingSpinner size={16} label="" />}
+            {confirmDelete ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Delete trip?</span>
+                <button onClick={handleDeleteTrip} disabled={deleting} style={{ background: '#EF4444', border: 'none', borderRadius: 6, padding: '4px 10px', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{deleting ? '...' : 'Yes, delete'}</button>
+                <button onClick={() => setConfirmDelete(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDelete(true)} style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, padding: '5px 12px', color: 'rgba(255,255,255,0.7)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Delete trip</button>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom: title + client info + meta */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: showMosaic ? '38%' : 0, padding: '0 40px 36px', zIndex: 2 }}>
+          {editingTitle ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSaveTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
+                style={{ fontSize: showMosaic ? '28px' : '36px', fontWeight: 900, color: 'white', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8, padding: '4px 12px', outline: 'none', fontFamily: 'inherit', flex: 1 }}
+              />
+              <button onClick={handleSaveTitle} disabled={titleSaving} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, padding: '6px 12px', color: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 600 }}>{titleSaving ? '...' : 'Save'}</button>
+              <button onClick={() => setEditingTitle(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Cancel</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, cursor: 'pointer' }} onClick={() => { setTitleDraft(trip.title); setEditingTitle(true) }}>
+              <h1 style={{ fontSize: showMosaic ? '36px' : '46px', fontWeight: 900, color: 'white', margin: 0, lineHeight: 1.05, letterSpacing: '-0.5px', textShadow: '0 2px 24px rgba(0,0,0,0.4)' }}>{trip.title}</h1>
+              <Pencil size={16} color="rgba(255,255,255,0.5)" strokeWidth={2} style={{ flexShrink: 0, marginTop: 4 }} />
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <User size={13} color="rgba(255,255,255,0.5)" strokeWidth={2} />
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>{trip.client.name} · {trip.client.email}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            {[
+              { Icon: PlaneTakeoff, label: `From ${trip.origin_city}` },
+              { Icon: Calendar, label: `${new Date(trip.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })} — ${new Date(trip.end_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}` },
+              { Icon: Clock, label: `${tripDays} days` },
+              { Icon: Wallet, label: trip.budget_range },
+              { Icon: Gauge, label: trip.pace },
+            ].map(({ Icon, label }) => (
+              <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 500 }}>
+                <Icon size={13} color="rgba(255,255,255,0.4)" strokeWidth={2} />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── CONTENT ── */}
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px' }}>
 
         {/* Action error banner */}
         {actionError && (
-          <div style={{
-            background: '#FEF2F2',
-            border: '1px solid #FECACA',
-            borderRadius: 'var(--radius)',
-            padding: '12px 16px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-          }}>
+          <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius)', padding: '12px 16px', margin: '16px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertCircle size={15} strokeWidth={2} color="#B91C1C" style={{ flexShrink: 0 }} />
             <span style={{ fontSize: '13px', color: '#B91C1C', flex: 1 }}>{actionError}</span>
             <button onClick={() => setActionError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B91C1C', fontSize: '16px', lineHeight: 1, padding: 0 }}>×</button>
@@ -760,242 +787,165 @@ export default function AdminTripPage() {
         )}
 
         {/* Tabs */}
-        <div style={{
-          background: 'white',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-sm)',
-          overflow: 'hidden',
-        }}>
-          <div style={{ borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center' }}>
-            <TabButton label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
-            <TabButton label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
-            <TabButton label="Accommodation" active={tab === 'stays'} onClick={() => switchTab('stays')} />
-            <TabButton label="Notes" active={tab === 'notes'} onClick={() => switchTab('notes')} />
-            <TabButton label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <TabButton
-                label={`Messages (${messages.length})`}
-                active={tab === 'messages'}
-                onClick={() => switchTab('messages')}
-              />
-              {(() => {
-                const unread = messages.filter(m => m.sender_type === 'CLIENT' && !m.is_read).length
-                return unread > 0 ? (
-                  <span style={{
-                    background: '#EF4444',
-                    color: 'white',
-                    borderRadius: '100px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '1px 7px',
-                    marginLeft: '-8px',
-                    marginTop: '-10px',
-                  }}>
-                    {unread}
-                  </span>
-                ) : null
-              })()}
-            </div>
-          </div>
+        <TabBar style={{ marginBottom: 32, marginTop: 8 }}>
+          <Tab label="Itinerary" active={tab === 'itinerary'} onClick={() => switchTab('itinerary')} />
+          <Tab label="Accommodation" active={tab === 'stays'} onClick={() => switchTab('stays')} />
+          <Tab label="Flights" active={tab === 'flights'} onClick={() => switchTab('flights')} />
+          <Tab label="Travel Notes" active={tab === 'travel_notes'} onClick={() => switchTab('travel_notes')} />
+          <Tab label={`Documents${documents.length > 0 ? ` (${documents.length})` : ''}`} active={tab === 'documents'} onClick={() => switchTab('documents')} />
+          <Tab label={`Messages${messages.filter(m => m.sender_type === 'CLIENT' && !m.is_read).length > 0 ? ` (${messages.filter(m => m.sender_type === 'CLIENT' && !m.is_read).length} new)` : ''}`} active={tab === 'messages'} onClick={() => switchTab('messages')} />
+        </TabBar>
 
-          <div style={{ padding: '24px' }}>
-            {/* ── ITINERARY TAB ── */}
-            {tab === 'itinerary' && (
-              <div>
-                {/* Generate / Version controls */}
-                <div style={{
-                  background: 'var(--color-bg)',
-                  borderRadius: 'var(--radius)',
-                  padding: '16px',
-                  marginBottom: '24px',
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                }}>
-                  {trip.itineraries.length === 0 ? (
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                      {generating || trip.status === 'GENERATING' ? (
-                        <>
-                          <LoadingSpinner size={18} label="" />
-                          <span style={{ fontSize: '14px', color: 'var(--color-text-muted)', fontWeight: 500 }}>
-                            Generating itinerary with Claude...
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
-                            Generation failed.
-                          </span>
-                          <button
-                            onClick={handleGenerate}
-                            style={{
-                              background: 'none', border: 'none', color: 'var(--color-primary)',
-                              fontSize: '14px', fontWeight: 600, cursor: 'pointer', padding: 0,
-                            }}
-                          >
-                            Retry
-                          </button>
-                        </>
-                      )}
+        <div>
+          {/* ── ITINERARY TAB ── */}
+          {tab === 'itinerary' && (
+            <div>
+              {/* Admin toolbar: version selector + regenerate */}
+              <div style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: '20px' }}>
+                {trip.itineraries.length === 0 ? (
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {generating || trip.status === 'GENERATING' ? (
+                      <>
+                        <LoadingSpinner size={16} label="" />
+                        <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontWeight: 500 }}>Generating itinerary with Claude...</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={15} color="#B91C1C" strokeWidth={2} />
+                        <span style={{ fontSize: '13px', color: '#B91C1C' }}>Generation failed.</span>
+                        <button onClick={handleGenerate} style={{ background: 'none', border: 'none', color: 'var(--color-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>Retry</button>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    {/* Version pills */}
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Version:</span>
+                      {trip.itineraries.map((it: Itinerary) => (
+                        <button
+                          key={it.version}
+                          onClick={() => setSelectedItineraryVersion(it.version)}
+                          style={{
+                            background: selectedItineraryVersion === it.version ? 'var(--color-secondary)' : 'white',
+                            color: selectedItineraryVersion === it.version ? 'white' : 'var(--color-text)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius)',
+                            padding: '4px 10px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: selectedItineraryVersion === it.version ? 600 : 400,
+                          }}
+                        >
+                          v{it.version} <span style={{ fontSize: '10px', opacity: 0.6, marginLeft: 3 }}>{new Date(it.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</span>
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
-                      {/* Version selector */}
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>
-                          Versions:
-                        </span>
-                        {trip.itineraries.map((it: Itinerary) => (
-                          <button
-                            key={it.version}
-                            onClick={() => setSelectedItineraryVersion(it.version)}
-                            style={{
-                              background: selectedItineraryVersion === it.version ? 'var(--color-secondary)' : 'white',
-                              color: selectedItineraryVersion === it.version ? 'white' : 'var(--color-text)',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 'var(--radius)',
-                              padding: '6px 12px',
-                              fontSize: '13px',
-                              cursor: 'pointer',
-                              fontWeight: selectedItineraryVersion === it.version ? 600 : 400,
-                            }}
-                          >
-                            v{it.version}
-                            <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: '4px' }}>
-                              {new Date(it.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Regenerate section */}
-                {trip.itineraries.length > 0 && (
-                  <div style={{
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius)',
-                    padding: '14px',
-                    marginBottom: '24px',
-                  }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text)' }}>
-                      <RefreshCw size={13} strokeWidth={2} color="#64748B" />
-                      Regenerate with Instructions
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {/* Regen input */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       <input
                         type="text"
                         value={regenInstructions}
                         onChange={e => setRegenInstructions(e.target.value)}
-                        placeholder="e.g. Focus more on off-the-beaten-path experiences, add a day in the mountains..."
-                        style={{
-                          flex: 1,
-                          minWidth: '280px',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius)',
-                          padding: '8px 12px',
-                          fontSize: '13px',
-                          outline: 'none',
-                        }}
+                        placeholder="Regeneration instructions..."
+                        style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '6px 10px', fontSize: '12px', outline: 'none', width: 260 }}
                       />
                       <button
                         onClick={handleRegenerate}
                         disabled={generating || !regenInstructions.trim()}
-                        style={{
-                          background: !regenInstructions.trim() || generating ? 'var(--color-border)' : 'var(--color-secondary)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 'var(--radius)',
-                          padding: '8px 18px',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          cursor: !regenInstructions.trim() || generating ? 'default' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          whiteSpace: 'nowrap',
-                        }}
+                        style={{ background: !regenInstructions.trim() || generating ? 'var(--color-border)' : 'var(--color-secondary)', color: 'white', border: 'none', borderRadius: 'var(--radius)', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: !regenInstructions.trim() || generating ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}
                       >
-                        {generating ? <LoadingSpinner size={14} color="white" label="" /> : <RefreshCw size={13} strokeWidth={2} />}
+                        {generating ? <LoadingSpinner size={12} color="white" label="" /> : <RefreshCw size={12} strokeWidth={2} />}
                         {generating ? 'Generating...' : 'Regenerate'}
                       </button>
                     </div>
                   </div>
                 )}
-
-                {genError && (
-                  <div style={{
-                    background: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    borderRadius: 'var(--radius)',
-                    padding: '14px 16px',
-                    marginBottom: '16px',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <AlertCircle size={16} strokeWidth={2} color="#B91C1C" style={{ flexShrink: 0, marginTop: '2px' }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '14px', color: '#B91C1C', fontWeight: 600, marginBottom: '4px' }}>
-                          Generation failed
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#991B1B', marginBottom: '12px' }}>
-                          {genError}
-                        </div>
-                        <button
-                          onClick={trip.itineraries.length === 0 ? handleGenerate : handleRegenerate}
-                          disabled={generating || (trip.itineraries.length > 0 && !regenInstructions.trim())}
-                          style={{
-                            background: '#B91C1C',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: 'var(--radius)',
-                            padding: '7px 16px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}
-                        >
-                          <RefreshCw size={13} strokeWidth={2} /> Try again
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {generating && trip.itineraries.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                    <LoadingSpinner label="Generating itinerary with AI... this may take 20-30 seconds" />
-                  </div>
-                )}
-
-                {selectedItinerary && (
-                  <ItineraryTimeline data={selectedItinerary.itinerary_json} />
-                )}
               </div>
-            )}
 
-            {/* ── FLIGHTS TAB ── */}
-            {tab === 'flights' && (
-              <div>
+              {genError && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <AlertCircle size={15} strokeWidth={2} color="#B91C1C" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '13px', color: '#B91C1C', flex: 1 }}>{genError}</span>
+                  <button onClick={trip.itineraries.length === 0 ? handleGenerate : handleRegenerate} style={{ background: 'none', border: 'none', color: '#B91C1C', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <RefreshCw size={12} strokeWidth={2} /> Retry
+                  </button>
+                </div>
+              )}
+
+              {/* Generating animation */}
+              {(generating || trip.status === 'GENERATING') && trip.itineraries.length === 0 && (
+                <div style={{ maxWidth: 480, margin: '48px auto', padding: '0 20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>🌴</div>
+                  <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Building itinerary…</h3>
+                  <p style={{ color: 'var(--color-text-muted)', fontSize: 14, lineHeight: 1.6 }}>Usually takes 1–2 minutes. This page updates automatically.</p>
+                  <LoadingSpinner label="" />
+                </div>
+              )}
+
+              {/* ── CLIENT VIEW (shared component) ── */}
+              {selectedItinerary && (
+                <TripItineraryView
+                  itinerary={selectedItinerary}
+                  trip={trip}
+                  itineraryCount={trip.itineraries.length}
+                  selectedDay={selectedDay}
+                  onDaySelect={setSelectedDay}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ── FLIGHTS TAB ── */}
+          {tab === 'flights' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+              {/* Route map — same as client */}
+              {flights.length > 0 ? (
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Route</h3>
+                  <Suspense fallback={<div style={{ height: 260, background: 'var(--color-secondary)', borderRadius: 'var(--radius-lg)' }} />}>
+                    <FlightMap flights={flights} originCity={trip.origin_city} />
+                  </Suspense>
+                </div>
+              ) : (
+                <div style={{ background: 'var(--color-bg)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '28px 24px', textAlign: 'center' }}>
+                  <PlaneTakeoff size={32} color="var(--color-text-muted)" strokeWidth={1.5} style={{ marginBottom: 10 }} />
+                  <p style={{ fontSize: 14, color: 'var(--color-text-muted)', margin: 0 }}>No flights added yet.</p>
+                </div>
+              )}
+
+              {/* Confirmed flights — client-style cards */}
+              {flights.length > 0 && (
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Confirmed Flights</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {flights.map(flight => (
+                      <div key={flight.id} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ background: 'var(--color-secondary)', color: 'white', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{flight.flight_number}</div>
+                        <div style={{ flex: 1, minWidth: 160 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{flight.departure_airport} → {flight.arrival_airport} <span style={{ fontWeight: 400, color: 'var(--color-text-muted)' }}>{flight.airline}</span></div>
+                          <div style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 2 }}>
+                            <span>Dep: {new Date(flight.departure_time).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}{flight.terminal_departure ? ` · ${flight.terminal_departure}` : ''}</span>
+                            <span>Arr: {new Date(flight.arrival_time).toLocaleString('en-AU', { timeStyle: 'short' })}{flight.terminal_arrival ? ` · ${flight.terminal_arrival}` : ''}</span>
+                          </div>
+                        </div>
+                        {flight.booking_ref && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px' }}>Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: 1 }}>{flight.booking_ref}</strong></div>}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => openEditFlightForm(flight)} title="Edit" style={{ background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Pencil size={13} strokeWidth={2} color="#475569" /></button>
+                          <button onClick={() => handleDeleteFlight(flight)} title="Delete" style={{ background: '#FEF2F2', border: 'none', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} strokeWidth={2} color="#B91C1C" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Admin: Add/Edit flight form */}
+              <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 24 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>
-                    Flights
-                  </h3>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>Manage Flights</h3>
                   {!flightFormOpen && (
-                    <button
-                      onClick={openNewFlightForm}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        background: 'var(--color-primary)', color: 'white', border: 'none',
-                        borderRadius: 'var(--radius)', padding: '8px 16px', fontSize: '13px',
-                        fontWeight: 600, cursor: 'pointer',
-                      }}
-                    >
+                    <button onClick={openNewFlightForm} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius)', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                       <Plus size={14} strokeWidth={2.5} /> Add Flight
                     </button>
                   )}
@@ -1041,14 +991,11 @@ export default function AdminTripPage() {
                             padding: '7px 10px', fontSize: '13px', outline: 'none', width: '90px', background: 'white',
                           }}
                         />
-                        <input
-                          type="date"
+                        <DatePicker
                           value={lookupDate}
-                          onChange={e => setLookupDate(e.target.value)}
-                          style={{
-                            border: '1px solid var(--color-border)', borderRadius: 'var(--radius)',
-                            padding: '7px 10px', fontSize: '13px', outline: 'none', background: 'white',
-                          }}
+                          onChange={setLookupDate}
+                          placeholder="Flight date"
+                          style={{ width: 150 }}
                         />
                         <button
                           onClick={handleLookupFlight}
@@ -1108,86 +1055,54 @@ export default function AdminTripPage() {
                   </div>
                 )}
 
-                {/* Flight list */}
-                {flights.length === 0 && !flightFormOpen ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
-                    <PlaneTakeoff size={36} strokeWidth={1.2} style={{ marginBottom: '12px', opacity: 0.4 }} />
-                    <p style={{ fontSize: '14px' }}>No flights added yet.</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {flights.map(flight => (
-                      <div key={flight.id} style={{
-                        background: 'white', border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius)', padding: '16px 20px',
-                        display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
-                      }}>
-                        <div style={{
-                          background: 'var(--color-secondary)', color: 'white',
-                          borderRadius: '6px', padding: '6px 12px',
-                          fontSize: '13px', fontWeight: 700, whiteSpace: 'nowrap',
-                        }}>
-                          {flight.flight_number}
-                        </div>
-                        <div style={{ flex: 1, minWidth: '200px' }}>
-                          <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
-                            {flight.departure_airport} → {flight.arrival_airport}
-                            <span style={{ fontWeight: 400, color: 'var(--color-text-muted)', marginLeft: '8px', fontSize: '13px' }}>
-                              {flight.airline}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                            <span>Dep: {new Date(flight.departure_time).toLocaleString('en-AU', { dateStyle: 'short', timeStyle: 'short' })}{flight.terminal_departure ? ` · ${flight.terminal_departure}` : ''}</span>
-                            <span>Arr: {new Date(flight.arrival_time).toLocaleString('en-AU', { dateStyle: 'short', timeStyle: 'short' })}{flight.terminal_arrival ? ` · ${flight.terminal_arrival}` : ''}</span>
-                            {flight.booking_ref && <span>Ref: <strong>{flight.booking_ref}</strong></span>}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            onClick={() => openEditFlightForm(flight)}
-                            title="Edit"
-                            style={{
-                              background: 'var(--color-bg)', border: 'none', borderRadius: '6px',
-                              padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                            }}
-                          >
-                            <Pencil size={13} strokeWidth={2} color="#475569" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteFlight(flight)}
-                            title="Delete"
-                            style={{
-                              background: '#FEF2F2', border: 'none', borderRadius: '6px',
-                              padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                            }}
-                          >
-                            <Trash2 size={13} strokeWidth={2} color="#B91C1C" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* ── ACCOMMODATION TAB ── */}
-            {tab === 'stays' && (
-              <div>
+          {/* ── ACCOMMODATION TAB ── */}
+          {tab === 'stays' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+              {/* Confirmed stays — client-style view */}
+              {stays.length > 0 ? (
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', marginBottom: 12 }}>Confirmed Accommodation</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {stays.map(stay => {
+                      const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
+                      return (
+                        <div key={stay.id} style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                          <div style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{nights} night{nights !== 1 ? 's' : ''}</div>
+                          <div style={{ flex: 1, minWidth: 200 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>{stay.name}</div>
+                            {stay.address && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 3 }}>{stay.address}</div>}
+                            <div style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                              <span>Check-in: {new Date(stay.check_in).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                              <span>Check-out: {new Date(stay.check_out).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                            </div>
+                            {stay.notes && <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 3, fontStyle: 'italic' }}>{stay.notes}</div>}
+                          </div>
+                          {stay.confirmation_number && <div style={{ fontSize: 12, background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 10px' }}>Ref: <strong style={{ color: 'var(--color-text)', letterSpacing: 1 }}>{stay.confirmation_number}</strong></div>}
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button onClick={() => openEditStayForm(stay)} title="Edit" style={{ background: 'white', border: '1px solid var(--color-border)', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Pencil size={13} strokeWidth={2} color="#475569" /></button>
+                            <button onClick={() => handleDeleteStay(stay)} title="Delete" style={{ background: '#FEF2F2', border: 'none', borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={13} strokeWidth={2} color="#B91C1C" /></button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ background: 'var(--color-bg)', border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '28px 24px', textAlign: 'center' }}>
+                  <p style={{ fontSize: 14, color: 'var(--color-text-muted)', margin: 0 }}>No accommodation added yet. Use the form below to add stays.</p>
+                </div>
+              )}
+
+              {/* Admin: Add/Edit stay form */}
+              <div style={{ borderTop: stays.length > 0 ? '1px solid var(--color-border)' : 'none', paddingTop: stays.length > 0 ? 24 : 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>
-                    Accommodation
-                  </h3>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>Manage Accommodation</h3>
                   {!stayFormOpen && (
-                    <button
-                      onClick={openNewStayForm}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        background: 'var(--color-primary)', color: 'white', border: 'none',
-                        borderRadius: 'var(--radius)', padding: '8px 16px', fontSize: '13px',
-                        fontWeight: 600, cursor: 'pointer',
-                      }}
-                    >
+                    <button onClick={openNewStayForm} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--color-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius)', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                       <Plus size={14} strokeWidth={2.5} /> Add Stay
                     </button>
                   )}
@@ -1246,79 +1161,27 @@ export default function AdminTripPage() {
                   </div>
                 )}
 
-                {stays.length === 0 && !stayFormOpen ? (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--color-text-muted)' }}>
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" style={{ marginBottom: '12px', opacity: 0.4, display: 'block', margin: '0 auto 12px' }}>
-                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
-                    </svg>
-                    <p style={{ fontSize: '14px' }}>No accommodation added yet.</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {stays.map(stay => {
-                      const nights = Math.round((new Date(stay.check_out).getTime() - new Date(stay.check_in).getTime()) / 86400000)
-                      return (
-                        <div key={stay.id} style={{
-                          background: 'white', border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius)', padding: '16px 20px',
-                          display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
-                        }}>
-                          <div style={{
-                            background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0',
-                            borderRadius: '6px', padding: '6px 12px',
-                            fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap',
-                          }}>
-                            {nights} night{nights !== 1 ? 's' : ''}
-                          </div>
-                          <div style={{ flex: 1, minWidth: '200px' }}>
-                            <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>{stay.name}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                              <span>Check-in: {new Date(stay.check_in).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                              <span>Check-out: {new Date(stay.check_out).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-                              {stay.confirmation_number && <span>Ref: <strong>{stay.confirmation_number}</strong></span>}
-                            </div>
-                            {stay.address && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>{stay.address}</div>}
-                            {stay.notes && <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px', fontStyle: 'italic' }}>{stay.notes}</div>}
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            <button
-                              onClick={() => openEditStayForm(stay)}
-                              title="Edit"
-                              style={{ background: 'var(--color-bg)', border: 'none', borderRadius: '6px', padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            >
-                              <Pencil size={13} strokeWidth={2} color="#475569" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteStay(stay)}
-                              title="Delete"
-                              style={{ background: '#FEF2F2', border: 'none', borderRadius: '6px', padding: '6px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                            >
-                              <Trash2 size={13} strokeWidth={2} color="#B91C1C" />
-                            </button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {/* ── MESSAGES TAB ── */}
+          {/* ── TRAVEL NOTES TAB ── */}
+          {tab === 'travel_notes' && (
+            selectedItinerary
+              ? <TravelNotesTab data={selectedItinerary.itinerary_json} />
+              : <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--color-text-muted)', fontSize: 14 }}>No itinerary available yet.</div>
+          )}
+
+
+          {/* ── MESSAGES TAB ── */}
             {tab === 'messages' && (
               <>
                 {sendMessageError && (
                   <div style={{
-                    background: '#FEF2F2',
-                    border: '1px solid #FECACA',
-                    borderRadius: 'var(--radius)',
-                    padding: '10px 14px',
-                    marginBottom: '12px',
-                    fontSize: '13px',
-                    color: '#B91C1C',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    background: '#FEF2F2', border: '1px solid #FECACA',
+                    borderRadius: 'var(--radius)', padding: '10px 14px',
+                    marginBottom: '12px', fontSize: '13px', color: '#B91C1C',
+                    display: 'flex', alignItems: 'center', gap: '8px',
                   }}>
                     <AlertCircle size={14} strokeWidth={2} color="#B91C1C" />
                     {sendMessageError}
@@ -1330,67 +1193,6 @@ export default function AdminTripPage() {
                   onSend={handleSendMessage}
                 />
               </>
-            )}
-
-            {/* ── NOTES TAB ── */}
-            {tab === 'notes' && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                  <StickyNote size={16} color="#64748B" strokeWidth={2} />
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-secondary)', margin: 0 }}>
-                    Internal Notes
-                  </h3>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: '4px' }}>
-                    — not visible to the client
-                  </span>
-                </div>
-                <textarea
-                  value={notes}
-                  onChange={e => { setNotes(e.target.value); setNotesSaved(false) }}
-                  placeholder="Add internal notes about this trip — client preferences, supplier contacts, booking references, special requests..."
-                  rows={14}
-                  style={{
-                    width: '100%',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius)',
-                    padding: '14px',
-                    fontSize: '14px',
-                    lineHeight: '1.6',
-                    resize: 'vertical',
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                    color: 'var(--color-text)',
-                    boxSizing: 'border-box',
-                  }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
-                  {notesSaved && (
-                    <span style={{ fontSize: '13px', color: '#15803D', fontWeight: 500 }}>
-                      Saved
-                    </span>
-                  )}
-                  <button
-                    onClick={handleSaveNotes}
-                    disabled={notesSaving}
-                    style={{
-                      background: notesSaving ? 'var(--color-border)' : 'var(--color-secondary)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: 'var(--radius)',
-                      padding: '10px 20px',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      cursor: notesSaving ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    {notesSaving ? <LoadingSpinner size={14} color="white" label="" /> : <Save size={14} strokeWidth={2} />}
-                    {notesSaving ? 'Saving...' : 'Save Notes'}
-                  </button>
-                </div>
-              </div>
             )}
 
             {tab === 'documents' && (
@@ -1455,7 +1257,6 @@ export default function AdminTripPage() {
             )}
           </div>
         </div>
-      </div>
     </Layout>
   )
 }
