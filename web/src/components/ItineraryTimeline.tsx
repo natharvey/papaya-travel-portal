@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { fetchActivityCandidates } from '../hooks/useActivityPhoto'
+
+// Module-level cache: survives day switches for the entire session.
+// Key: "<dayNum>:<period>:<title>" → selected photo URL (or null)
+const activityPhotoCache = new Map<string, string | null>()
 import {
   Sunrise, Sun, Moon, MapPin, Copy, Check,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp,
@@ -406,31 +410,74 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
   const selectedDay = data.day_plans?.find(d => d.day_number === selectedDayNum) ?? null
   const totalDays = data.day_plans?.length ?? 0
 
-  // Fetch photo candidates for all blocks of the selected day in parallel,
-  // then assign greedily to avoid showing the same image twice in one day.
+  // ── Activity photo selection ────────────────────────────────────────────────
+  // Photos are resolved into activityPhotoCache (module-level) so switching
+  // days and back shows the same photo instantly with no flash or re-fetch.
+
   const [dayPhotos, setDayPhotos] = useState<Record<string, string | null>>({})
-  useEffect(() => {
-    if (!selectedDay) return
-    const location = selectedDay.location_base
+  const prefetchedRef = useRef(false)
+
+  // Resolve photos for one day: check module cache first, fetch what's missing.
+  function resolveDay(day: DayPlan, applyToState: boolean) {
+    const location = day.location_base
     const blocks = PERIODS
-      .map(p => ({ period: p, block: selectedDay[PERIOD_KEYS[p]] as DayBlock | null }))
+      .map(p => ({ period: p, block: day[PERIOD_KEYS[p]] as DayBlock | null }))
       .filter((b): b is { period: Period; block: DayBlock } => b.block !== null)
 
-    Promise.all(
-      blocks.map(({ period, block }) =>
+    // Build what we already know from cache
+    const cached: Record<string, string | null> = {}
+    const toFetch: { period: Period; block: DayBlock }[] = []
+    for (const { period, block } of blocks) {
+      const k = `${day.day_number}:${period}:${block.title}`
+      if (activityPhotoCache.has(k)) {
+        cached[period] = activityPhotoCache.get(k)!
+      } else {
+        toFetch.push({ period, block })
+      }
+    }
+
+    // Show cached photos immediately (no flash)
+    if (applyToState && Object.keys(cached).length > 0) {
+      setDayPhotos(cached)
+    }
+
+    if (toFetch.length === 0) return Promise.resolve()
+
+    return Promise.all(
+      toFetch.map(({ period, block }) =>
         fetchActivityCandidates(block.title, location, block.photo_query)
-          .then(candidates => ({ period, candidates }))
+          .then(candidates => ({ period, block, candidates }))
       )
     ).then(results => {
-      const used = new Set<string>()
-      const resolved: Record<string, string | null> = {}
-      for (const { period, candidates } of results) {
-        const url = candidates.find(u => !used.has(u)) ?? null
+      // Assign greedily: avoid showing the same image twice in one day.
+      // Gather all already-used URLs (from cached + previously resolved blocks).
+      const used = new Set<string>(Object.values(cached).filter(Boolean) as string[])
+      const resolved: Record<string, string | null> = { ...cached }
+      for (const { period, block, candidates } of results) {
+        const url = candidates.find(u => !used.has(u)) ?? candidates[0] ?? null
         if (url) used.add(url)
         resolved[period] = url
+        activityPhotoCache.set(`${day.day_number}:${period}:${block.title}`, url)
       }
-      setDayPhotos(resolved)
+      if (applyToState) setDayPhotos(resolved)
     })
+  }
+
+  // On mount: prefetch ALL days in the background so every day switch is instant.
+  useEffect(() => {
+    if (prefetchedRef.current) return
+    prefetchedRef.current = true
+    const allDays = data.day_plans ?? []
+    // Stagger slightly so the current day's fetch isn't starved
+    allDays.forEach((day, i) => {
+      setTimeout(() => resolveDay(day, day.day_number === selectedDayNum), i * 80)
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // On day switch: show cached result immediately, fetch missing in background.
+  useEffect(() => {
+    if (!selectedDay) return
+    resolveDay(selectedDay, true)
   }, [selectedDay?.day_number]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleEdit(dayNum: number, period: Period, title: string) {
