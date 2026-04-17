@@ -110,7 +110,7 @@ export default function PortalPage() {
         )}
 
         {!loading && trips.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '20px' }}>
             {trips.map(trip => (
               <TripCard key={trip.id} trip={trip} linkTo={`/portal/trips/${trip.id}`} />
             ))}

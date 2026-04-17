@@ -633,10 +633,13 @@ def _verify_hero_photo(url: str, destination: str) -> tuple[bool, str]:
                         "text": (
                             f"This photo will be used as a full-width hero image for a trip to {destination}. "
                             "Reply with exactly two words: YES or NO, then a scene tag. "
-                            "Say YES only if ALL true: (1) scenic landscape/skyline/coast/mountain/landmark/architecture, "
-                            "(2) NO people prominently visible, (3) full-colour — NOT black-and-white or desaturated, "
-                            f"(4) represents {destination} or its environment. "
-                            "Say NO for: crowds, markets, street scenes, people, B&W/grayscale, generic unrelated images. "
+                            "Say YES only if ALL true: "
+                            "(1) scenic landscape/skyline/coast/mountain/landmark/architecture; "
+                            "(2) NO people prominently visible; "
+                            "(3) full-colour — NOT black-and-white or desaturated; "
+                            f"(4) represents {destination} or its environment; "
+                            "(5) taken in DAYLIGHT or golden hour — NOT a dark night-time photo. "
+                            "Say NO for: night shots, dark/low-light photos, crowds, markets, street scenes, people, B&W/grayscale, unrelated images. "
                             "Scene tags — pick one: mountain, city, coast, nature, architecture, beach, countryside, lake, desert, other. "
                             "Examples: 'YES city' or 'NO mountain'. Two words only."
                         ),
@@ -709,7 +712,8 @@ def _places_fallback_url(destination: str) -> str | None:
 
 
 def fetch_destination_photo_url(destination: str) -> dict:
-    """Shared helper: return a high-quality wide-landscape hero photo URL for a single destination."""
+    """Shared helper: return a high-quality wide-landscape daylight hero photo URL for a single destination.
+    Only uses Unsplash — Google Places photos are not used as hero images."""
     for photo in _unsplash_hero_results(destination):
         url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
         if not url:
@@ -718,12 +722,7 @@ def fetch_destination_photo_url(destination: str) -> dict:
         if accepted:
             logger.info("Hero photo verified for '%s': %s", destination, url)
             return {"photo_url": url, "source": "unsplash"}
-    logger.info("No verified hero photo found on Unsplash for '%s', falling through", destination)
-
-    url = _places_fallback_url(destination)
-    if url:
-        return {"photo_url": url, "source": "places"}
-
+    logger.info("No verified hero photo found on Unsplash for '%s'", destination)
     return {"photo_url": None, "source": None}
 
 
@@ -768,9 +767,6 @@ def fetch_diverse_destination_photos(destinations: list[str]) -> dict[str, str |
         if selected_url is None:
             # All candidates share a used tag — use first accepted anyway
             selected_url = fallback_url
-            if selected_url is None:
-                # No Unsplash candidate passed at all — try Places
-                selected_url = _places_fallback_url(destination)
             if selected_url:
                 logger.info("Diverse hero fallback: '%s' → %s", destination, selected_url)
 
