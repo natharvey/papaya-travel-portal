@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { PlaneTakeoff, Calendar, Wallet, Timer } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
-import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
+import { useDestinationPhotos } from '../hooks/useDestinationPhotos'
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   GENERATING: { bg: '#F5F3FF', text: '#6D28D9', label: 'Generating' },
@@ -74,15 +74,37 @@ function CountdownBadge({ startDate }: { startDate: string }) {
   )
 }
 
+/** Derive a clean display title from destinations, e.g. "Dubai", "Tokyo & Kyoto", "Paris, Rome & 2 more" */
+function buildDisplayTitle(destinations: { name: string }[]): string {
+  if (!destinations || destinations.length === 0) return ''
+  const names = destinations.map(d => d.name)
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} & ${names[1]}`
+  if (names.length === 3) return `${names[0]}, ${names[1]} & ${names[2]}`
+  // 4+: show first two + count
+  return `${names[0]}, ${names[1]} & ${names.length - 2} more`
+}
+
 export default function TripCard({ trip, linkTo, showClient, clientName, clientEmail }: TripCardProps) {
   const config = STATUS_CONFIG[trip.status] || STATUS_CONFIG.GENERATING
   const tripWithItinerary = trip as TripWithLatestItinerary
   const hasItinerary = tripWithItinerary.latest_itinerary != null
 
-  // Derive the photo lookup key: first destination name, or trip title as fallback
-  const heroDest =
-    (tripWithItinerary.latest_itinerary?.itinerary_json?.destinations?.[0]?.name) || trip.title
-  const { photoUrl } = useDestinationPhoto(heroDest)
+  const destinations: { name: string }[] =
+    tripWithItinerary.latest_itinerary?.itinerary_json?.destinations ?? []
+
+  // Up to 3 destination names for photo fetching
+  const destNames = destinations.slice(0, 3).map(d => d.name).filter(Boolean)
+  // Fallback to trip.title if no itinerary destinations yet
+  const photoQueryList = destNames.length > 0 ? destNames : [trip.title]
+  const { photos } = useDestinationPhotos(photoQueryList)
+
+  const displayTitle = destinations.length > 0
+    ? buildDisplayTitle(destinations)
+    : trip.title
+
+  const photoCount = photos.filter(Boolean).length
+  const hasPhotos = photoCount > 0
 
   return (
     <Link to={linkTo} style={{ textDecoration: 'none', display: 'block' }}>
@@ -109,30 +131,68 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           el.style.borderColor = 'var(--color-border)'
         }}
       >
-        {/* Hero photo banner */}
+        {/* Hero photo banner — splits into panels for multi-destination trips */}
         <div style={{
           position: 'relative',
           height: 150,
-          background: photoUrl ? 'var(--color-secondary)' : 'linear-gradient(135deg, #2D4A5A 0%, #1a2d38 100%)',
+          background: !hasPhotos ? 'linear-gradient(135deg, #2D4A5A 0%, #1a2d38 100%)' : undefined,
           overflow: 'hidden',
+          display: 'flex',
         }}>
-          {photoUrl && (
-            <img
-              src={photoUrl}
-              alt={heroDest}
-              style={{
-                width: '100%', height: '100%', objectFit: 'cover',
-                filter: 'saturate(1.3) brightness(1.05) contrast(1.05)',
-                transition: 'transform 0.4s ease',
-              }}
-            />
-          )}
-          {/* Bottom gradient so content below reads cleanly */}
+          {hasPhotos ? (
+            photos.map((url, i) => {
+              if (!url) return null
+              const validPhotos = photos.filter(Boolean)
+              const panelCount = validPhotos.length
+              return (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    // Thin divider between panels
+                    borderLeft: i > 0 ? '1.5px solid rgba(255,255,255,0.25)' : undefined,
+                  }}
+                >
+                  <img
+                    src={url}
+                    alt={photoQueryList[i] ?? ''}
+                    style={{
+                      width: '100%', height: '100%', objectFit: 'cover',
+                      filter: 'saturate(1.3) brightness(1.05) contrast(1.05)',
+                      // For side panels, zoom in slightly so they feel intentional, not cropped
+                      transform: panelCount > 1 ? 'scale(1.08)' : undefined,
+                      transition: 'transform 0.4s ease',
+                    }}
+                  />
+                  {/* Per-panel destination label for multi-dest cards */}
+                  {panelCount > 1 && photoQueryList[i] && (
+                    <div style={{
+                      position: 'absolute', top: 8, left: 8,
+                      fontSize: 9, fontWeight: 700, color: 'white',
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                      background: 'rgba(0,0,0,0.25)',
+                      padding: '2px 6px', borderRadius: 4,
+                      backdropFilter: 'blur(4px)',
+                    }}>
+                      {photoQueryList[i]}
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          ) : null}
+
+          {/* Gradient overlay (bottom) */}
           <div style={{
             position: 'absolute', inset: 0,
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%)',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.6) 100%)',
+            pointerEvents: 'none',
           }} />
-          {/* Status badge overlaid on photo */}
+
+          {/* Status badge */}
           <span style={{
             position: 'absolute', top: 12, right: 14,
             background: config.bg,
@@ -146,10 +206,11 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           }}>
             {config.label}
           </span>
+
           {/* Title overlaid at bottom of photo */}
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 20px 14px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'white', margin: 0, letterSpacing: '-0.2px', textShadow: '0 1px 8px rgba(0,0,0,0.4)' }}>
-              {trip.title}
+              {displayTitle}
             </h3>
             {showClient && (clientName || clientEmail) && (
               <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', margin: '2px 0 0' }}>
