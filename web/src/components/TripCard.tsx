@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { PlaneTakeoff, Calendar, Wallet, Timer } from 'lucide-react'
 import type { TripWithLatestItinerary, AdminTripListItem } from '../types'
+import { useDestinationPhoto } from '../hooks/useDestinationPhoto'
 
 const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
   GENERATING: { bg: '#F5F3FF', text: '#6D28D9', label: 'Generating' },
@@ -78,6 +79,11 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
   const tripWithItinerary = trip as TripWithLatestItinerary
   const hasItinerary = tripWithItinerary.latest_itinerary != null
 
+  // Derive the photo lookup key: first destination name, or trip title as fallback
+  const heroDest =
+    (tripWithItinerary.latest_itinerary?.itinerary_json?.destinations?.[0]?.name) || trip.title
+  const { photoUrl } = useDestinationPhoto(heroDest)
+
   return (
     <Link to={linkTo} style={{ textDecoration: 'none', display: 'block' }}>
       <div
@@ -85,7 +91,7 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           background: 'var(--color-surface)',
           border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-lg)',
-          padding: '22px 24px',
+          overflow: 'hidden',
           cursor: 'pointer',
           transition: 'box-shadow 0.2s, transform 0.2s, border-color 0.2s',
           boxShadow: 'var(--shadow-sm)',
@@ -103,63 +109,91 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
           el.style.borderColor = 'var(--color-border)'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-          <div style={{ flex: 1, marginRight: '12px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '4px', letterSpacing: '-0.1px' }}>
-              {trip.title}
-            </h3>
-            {showClient && (clientName || clientEmail) && (
-              <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-                {clientName} · {clientEmail}
-              </p>
-            )}
-          </div>
+        {/* Hero photo banner */}
+        <div style={{
+          position: 'relative',
+          height: 150,
+          background: photoUrl ? 'var(--color-secondary)' : 'linear-gradient(135deg, #2D4A5A 0%, #1a2d38 100%)',
+          overflow: 'hidden',
+        }}>
+          {photoUrl && (
+            <img
+              src={photoUrl}
+              alt={heroDest}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                filter: 'saturate(1.3) brightness(1.05) contrast(1.05)',
+                transition: 'transform 0.4s ease',
+              }}
+            />
+          )}
+          {/* Bottom gradient so content below reads cleanly */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%)',
+          }} />
+          {/* Status badge overlaid on photo */}
           <span style={{
+            position: 'absolute', top: 12, right: 14,
             background: config.bg,
             color: config.text,
             padding: '4px 12px',
             borderRadius: '100px',
             fontSize: '12px',
             fontWeight: 700,
-            whiteSpace: 'nowrap',
             letterSpacing: '0.1px',
+            backdropFilter: 'blur(4px)',
           }}>
             {config.label}
           </span>
-        </div>
-
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '14px' }}>
-          {[
-            { Icon: PlaneTakeoff, text: trip.origin_city },
-            { Icon: Calendar, text: `${formatDate(trip.start_date)} – ${formatDate(trip.end_date)}` },
-            { Icon: Wallet, text: `$${trip.budget_range}` },
-          ].map(({ Icon, text }) => (
-            <span key={text} style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <Icon size={13} strokeWidth={2} />
-              {text}
-            </span>
-          ))}
-        </div>
-
-        {trip.status !== 'COMPLETED' && (
-          <div style={{ marginBottom: '14px' }}>
-            <CountdownBadge startDate={trip.start_date} />
+          {/* Title overlaid at bottom of photo */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 20px 14px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'white', margin: 0, letterSpacing: '-0.2px', textShadow: '0 1px 8px rgba(0,0,0,0.4)' }}>
+              {trip.title}
+            </h3>
+            {showClient && (clientName || clientEmail) && (
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', margin: '2px 0 0' }}>
+                {clientName} · {clientEmail}
+              </p>
+            )}
           </div>
-        )}
+        </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--color-border)' }}>
-          <span style={{
-            fontSize: '12px',
-            color: hasItinerary ? 'var(--color-success)' : 'var(--color-text-muted)',
-            fontWeight: hasItinerary ? 600 : 400,
-          }}>
-            {hasItinerary
-              ? `✓ Itinerary v${tripWithItinerary.latest_itinerary!.version} ready`
-              : 'Itinerary pending'}
-          </span>
-          <span style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 600 }}>
-            View details →
-          </span>
+        {/* Card content */}
+        <div style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            {[
+              { Icon: PlaneTakeoff, text: trip.origin_city },
+              { Icon: Calendar, text: `${formatDate(trip.start_date)} – ${formatDate(trip.end_date)}` },
+              { Icon: Wallet, text: `$${trip.budget_range}` },
+            ].map(({ Icon, text }) => (
+              <span key={text} style={{ fontSize: '13px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Icon size={13} strokeWidth={2} />
+                {text}
+              </span>
+            ))}
+          </div>
+
+          {trip.status !== 'COMPLETED' && (
+            <div style={{ marginBottom: '12px' }}>
+              <CountdownBadge startDate={trip.start_date} />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--color-border)' }}>
+            <span style={{
+              fontSize: '12px',
+              color: hasItinerary ? 'var(--color-success)' : 'var(--color-text-muted)',
+              fontWeight: hasItinerary ? 600 : 400,
+            }}>
+              {hasItinerary
+                ? `✓ Itinerary v${tripWithItinerary.latest_itinerary!.version} ready`
+                : 'Itinerary pending'}
+            </span>
+            <span style={{ fontSize: '13px', color: 'var(--color-primary)', fontWeight: 600 }}>
+              View details →
+            </span>
+          </div>
         </div>
       </div>
     </Link>
