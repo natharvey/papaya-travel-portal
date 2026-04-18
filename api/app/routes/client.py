@@ -674,11 +674,12 @@ def _verify_hero_photo(url: str, destination: str) -> tuple[bool, str]:
                             "Say YES only if ALL true: "
                             "(1) scenic landscape/skyline/coast/mountain/landmark/architecture — OR a single atmospheric figure "
                             "(silhouette, lone person, local, fisherman, wildlife, single animal) that enhances the scene; "
-                            "(2) full-colour and well-lit — NOT black-and-white, desaturated, or predominantly dark/night; "
+                            "(2) has visible colour — NOT black-and-white or heavily desaturated; "
                             f"(3) represents {destination} or its natural/cultural environment; "
-                            "(4) taken in daylight, golden hour, or blue hour with visible colour — NOT a dark urban night shot. "
+                            "(4) well-exposed and visually striking — night skylines with city lights are ALLOWED, "
+                            "but reject pitch-black shots with no detail or colour. "
                             "Say NO for: crowds or groups of people, busy markets or street scenes, B&W or grayscale, "
-                            "dark night shots with no colour, generic unrelated images, indoor shots. "
+                            "completely dark/black images, generic unrelated images, indoor shots without a view. "
                             "A lone silhouetted figure, single wildlife animal, or lone person in a vast landscape is ALLOWED. "
                             "Scene tags — pick one: mountain, city, coast, nature, architecture, beach, countryside, lake, desert, other. "
                             "Examples: 'YES coast' or 'NO city'. Two words only."
@@ -712,6 +713,9 @@ def _hero_query_for(destination: str) -> str:
     mapping = [
         (["kyoto", "nara", "kamakura"],        "{destination} temple golden hour"),
         (["tokyo", "osaka", "singapore", "hong kong", "seoul"], "{destination} skyline dusk warm"),
+        (["bangkok", "chiang mai", "phuket", "pattaya"], "{destination} temple river golden hour daylight"),
+        (["hanoi", "ho chi minh", "saigon", "hoi an"], "{destination} old town golden hour daylight"),
+        (["kuala lumpur", "jakarta", "manila"], "{destination} landmark architecture daylight"),
         (["santorini", "mykonos", "positano", "amalfi"], "{destination} whitewash blue dome golden light"),
         (["bali", "ubud"],                     "{destination} rice terraces sunrise mist"),
         (["marrakech", "fes", "morocco"],       "{destination} architecture warm light aerial"),
@@ -820,12 +824,15 @@ def fetch_diverse_destination_photos(destinations: list[str]) -> dict[str, str |
         cache_key = f"hero:{destination.lower()}"
         cached = _photo_cache_get(cache_key)
         if cached is not False:
-            # cached URL (str) or cached miss (None)
-            result[destination] = cached
-            if cached:
-                used_urls.add(cached)
-            logger.info("Hero photo cache hit: '%s' → %s", destination, cached)
-            continue
+            # Skip cached URL if it's already used by another destination this request
+            if cached and cached in used_urls:
+                logger.info("Hero photo cache hit skipped (duplicate): '%s'", destination)
+            else:
+                result[destination] = cached
+                if cached:
+                    used_urls.add(cached)
+                logger.info("Hero photo cache hit: '%s' → %s", destination, cached)
+                continue
 
         selected_url: str | None = None
         fallback_url: str | None = None
@@ -857,12 +864,17 @@ def fetch_diverse_destination_photos(destinations: list[str]) -> dict[str, str |
         _photo_cache_set(cache_key, selected_url)
         result[destination] = selected_url
 
-    # For any destination that yielded nothing, reuse a photo from another destination
+    # For destinations that yielded nothing, reuse photos from other destinations.
+    # Avoid duplicates by picking URLs not already assigned to another destination.
     successful_urls = [url for url in result.values() if url]
+    assigned_urls = set(successful_urls)
     for destination in result:
         if result[destination] is None and successful_urls:
-            result[destination] = successful_urls[0]
-            logger.info("Hero photo reuse fallback: '%s' → reusing existing photo", destination)
+            # Prefer a URL not yet assigned; fall back to any if all are taken
+            candidate = next((u for u in successful_urls if u not in assigned_urls), successful_urls[0])
+            result[destination] = candidate
+            assigned_urls.add(candidate)
+            logger.info("Hero photo reuse fallback: '%s' → %s", destination, candidate)
 
     return result
 

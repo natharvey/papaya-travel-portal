@@ -268,6 +268,19 @@ def refresh_trip_photos(
     return {"status": "ok", "cleared": deleted, "destinations": destinations}
 
 
+@router.get("/photo-cache-debug")
+def photo_cache_debug(
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Return all rows in photo_url_cache for debugging."""
+    try:
+        rows = db.query(PhotoURLCache).all()
+        return {"count": len(rows), "rows": [{"query": r.query, "url": r.url, "created_at": str(r.created_at)} for r in rows]}
+    except Exception as e:
+        return {"error": str(e), "count": 0, "rows": []}
+
+
 @router.get("/trips/{trip_id}/messages", response_model=list[MessageOut])
 def get_messages(
     trip_id: uuid.UUID,

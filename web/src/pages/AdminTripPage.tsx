@@ -341,9 +341,9 @@ export default function AdminTripPage() {
     setRefreshingPhotos(true)
     try {
       await refreshTripPhotos(tripId)
+      window.location.reload()
     } catch (e) {
       setActionError(getApiError(e))
-    } finally {
       setRefreshingPhotos(false)
     }
   }
@@ -712,9 +712,8 @@ export default function AdminTripPage() {
             </div>
             {thumbDests.map((dest, i) => (
               <div key={dest.name} style={{ position: 'relative', overflow: 'hidden', background: 'var(--color-secondary)' }}>
-                {thumbPhotos[i] && <img src={thumbPhotos[i]!} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
+                {thumbPhotos[i] && <img src={thumbPhotos[i]!} alt={dest.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 60%', filter: 'saturate(1.35) brightness(1.08) contrast(1.05)' }} />}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.0) 60%)' }} />
-                <div style={{ position: 'absolute', bottom: 10, left: 12, background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(6px)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 5 }}>{dest.name}</div>
               </div>
             ))}
           </div>
