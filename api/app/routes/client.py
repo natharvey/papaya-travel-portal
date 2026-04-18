@@ -16,7 +16,8 @@ import httpx
 import anthropic as anthropic_sdk
 
 from app.db import get_db
-from app.models import Client, Trip, Itinerary, Message, Flight, Stay
+from app.models import Client, Trip, Itinerary, Message, Flight, Stay, IntakeResponse, HotelSuggestionRecord, PhotoURLCache
+from app.db import SessionLocal
 from app.schemas import (
     TripWithLatestItinerary, TripDetail, MessageCreate, MessageOut, ItineraryOut, FlightOut, StayOut
 )
@@ -511,6 +512,12 @@ def client_delete_trip(
     trip = db.query(Trip).filter(Trip.id == trip_id, Trip.client_id == client.id).first()
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
+    db.query(Message).filter(Message.trip_id == trip_id).delete()
+    db.query(Flight).filter(Flight.trip_id == trip_id).delete()
+    db.query(Stay).filter(Stay.trip_id == trip_id).delete()
+    db.query(Itinerary).filter(Itinerary.trip_id == trip_id).delete()
+    db.query(IntakeResponse).filter(IntakeResponse.trip_id == trip_id).delete()
+    db.query(HotelSuggestionRecord).filter(HotelSuggestionRecord.trip_id == trip_id).delete()
     db.delete(trip)
     db.commit()
 
@@ -601,6 +608,37 @@ UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 _SCENE_TAGS = frozenset({"mountain", "city", "coast", "nature", "architecture", "beach", "countryside", "lake", "desert", "other"})
 
 
+def _photo_cache_get(query: str) -> str | None | bool:
+    """Check photo_url_cache. Returns the cached URL (or None for a known miss), or False if not cached."""
+    db = SessionLocal()
+    try:
+        row = db.query(PhotoURLCache).filter(PhotoURLCache.query == query).first()
+        if row is None:
+            return False
+        return row.url  # could be None (cached miss) or a URL string
+    except Exception:
+        return False
+    finally:
+        db.close()
+
+
+def _photo_cache_set(query: str, url: str | None) -> None:
+    """Store a photo URL (or None for a miss) in photo_url_cache."""
+    db = SessionLocal()
+    try:
+        existing = db.query(PhotoURLCache).filter(PhotoURLCache.query == query).first()
+        if existing:
+            existing.url = url
+        else:
+            db.add(PhotoURLCache(query=query, url=url, created_at=datetime.utcnow()))
+        db.commit()
+    except Exception as e:
+        logger.warning("photo_cache_set failed for '%s': %s", query, e)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def _verify_hero_photo(url: str, destination: str) -> tuple[bool, str]:
     """Use Claude Haiku vision to verify a destination hero photo.
     Returns (accepted, scene_tag) where scene_tag is one of the _SCENE_TAGS values.
@@ -634,14 +672,16 @@ def _verify_hero_photo(url: str, destination: str) -> tuple[bool, str]:
                             f"This photo will be used as a full-width hero image for a trip to {destination}. "
                             "Reply with exactly two words: YES or NO, then a scene tag. "
                             "Say YES only if ALL true: "
-                            "(1) scenic landscape/skyline/coast/mountain/landmark/architecture; "
-                            "(2) NO people prominently visible; "
-                            "(3) full-colour — NOT black-and-white or desaturated; "
-                            f"(4) represents {destination} or its environment; "
-                            "(5) taken in DAYLIGHT or golden hour — NOT a dark night-time photo. "
-                            "Say NO for: night shots, dark/low-light photos, crowds, markets, street scenes, people, B&W/grayscale, unrelated images. "
+                            "(1) scenic landscape/skyline/coast/mountain/landmark/architecture — OR a single atmospheric figure "
+                            "(silhouette, lone person, local, fisherman, wildlife, single animal) that enhances the scene; "
+                            "(2) full-colour and well-lit — NOT black-and-white, desaturated, or predominantly dark/night; "
+                            f"(3) represents {destination} or its natural/cultural environment; "
+                            "(4) taken in daylight, golden hour, or blue hour with visible colour — NOT a dark urban night shot. "
+                            "Say NO for: crowds or groups of people, busy markets or street scenes, B&W or grayscale, "
+                            "dark night shots with no colour, generic unrelated images, indoor shots. "
+                            "A lone silhouetted figure, single wildlife animal, or lone person in a vast landscape is ALLOWED. "
                             "Scene tags — pick one: mountain, city, coast, nature, architecture, beach, countryside, lake, desert, other. "
-                            "Examples: 'YES city' or 'NO mountain'. Two words only."
+                            "Examples: 'YES coast' or 'NO city'. Two words only."
                         ),
                     },
                 ],
@@ -657,16 +697,47 @@ def _verify_hero_photo(url: str, destination: str) -> tuple[bool, str]:
         return False, "other"
 
 
+_HERO_QUERIES: dict[str, list[str]] = {
+    # Queries are tried in order; first hit with enough results wins
+    "default": [
+        "{destination} golden hour landscape",
+        "{destination} scenic viewpoint",
+        "{destination} travel destination",
+    ],
+}
+
+def _hero_query_for(destination: str) -> str:
+    """Return the best search query for a destination."""
+    d = destination.lower()
+    mapping = [
+        (["kyoto", "nara", "kamakura"],        "{destination} temple golden hour"),
+        (["tokyo", "osaka", "singapore", "hong kong", "seoul"], "{destination} skyline dusk warm"),
+        (["santorini", "mykonos", "positano", "amalfi"], "{destination} whitewash blue dome golden light"),
+        (["bali", "ubud"],                     "{destination} rice terraces sunrise mist"),
+        (["marrakech", "fes", "morocco"],       "{destination} architecture warm light aerial"),
+        (["sahara", "desert"],                  "{destination} sand dunes golden hour"),
+        (["paris", "rome", "florence", "barcelona", "lisbon"], "{destination} rooftop view golden hour"),
+        (["new zealand", "iceland", "norway", "patagonia"], "{destination} dramatic landscape wide"),
+        (["maldives", "tahiti", "fiji"],        "{destination} turquoise lagoon aerial"),
+        (["cairo", "petra", "angkor"],          "{destination} ancient ruins warm light"),
+    ]
+    for keywords, template in mapping:
+        if any(k in d for k in keywords):
+            return template.replace("{destination}", destination)
+    return f"{destination} scenic golden hour landscape"
+
+
 def _unsplash_hero_results(destination: str, n: int = 8) -> list[dict]:
-    """Fetch Unsplash results for a destination, filtered to wide-landscape only."""
+    """Fetch Unsplash results for a destination, filtered to wide-landscape only, sorted by likes."""
     if not UNSPLASH_ACCESS_KEY:
         return []
+    query = _hero_query_for(destination)
     try:
         resp = httpx.get(
             "https://api.unsplash.com/search/photos",
             params={
-                "query": f"{destination} landscape scenery",
-                "per_page": n,
+                "query": query,
+                "per_page": max(n * 3, 20),
                 "orientation": "landscape",
                 "content_filter": "high",
                 "order_by": "relevant",
@@ -676,11 +747,11 @@ def _unsplash_hero_results(destination: str, n: int = 8) -> list[dict]:
         )
         resp.raise_for_status()
         results = resp.json().get("results", [])
-        # Keep only genuinely wide photos (≥ 1.5:1 ratio)
-        results = [p for p in results if p.get("height", 1) > 0 and p.get("width", 0) / p.get("height", 1) >= 1.5]
-        # Sort widest-ratio first, then by resolution as tiebreaker
-        results.sort(key=lambda p: (p.get("width", 0) / max(p.get("height", 1), 1), p.get("width", 0) * p.get("height", 0)), reverse=True)
-        return results
+        # Keep only genuinely wide photos (≥ 1.4:1 ratio)
+        results = [p for p in results if p.get("height", 1) > 0 and p.get("width", 0) / p.get("height", 1) >= 1.4]
+        # Sort by likes descending (quality signal), then resolution as tiebreaker
+        results.sort(key=lambda p: (p.get("likes", 0), p.get("width", 0) * p.get("height", 0)), reverse=True)
+        return results[:n]
     except Exception:
         return []
 
@@ -736,9 +807,9 @@ def destination_photo(
 
 def fetch_diverse_destination_photos(destinations: list[str]) -> dict[str, str | None]:
     """Fetch hero photos for up to 3 destinations ensuring no two photos share the same scene type.
-    Each destination is checked for up to n Unsplash candidates; the one with an unused scene tag
-    is preferred. Falls back to Google Places if Unsplash yields nothing."""
+    Results are cached in photo_url_cache — Unsplash is only called on first request per destination."""
     used_scene_tags: set[str] = set()
+    used_urls: set[str] = set()
     result: dict[str, str | None] = {}
 
     for destination in destinations:
@@ -746,31 +817,52 @@ def fetch_diverse_destination_photos(destinations: list[str]) -> dict[str, str |
             result[destination] = None
             continue
 
+        cache_key = f"hero:{destination.lower()}"
+        cached = _photo_cache_get(cache_key)
+        if cached is not False:
+            # cached URL (str) or cached miss (None)
+            result[destination] = cached
+            if cached:
+                used_urls.add(cached)
+            logger.info("Hero photo cache hit: '%s' → %s", destination, cached)
+            continue
+
         selected_url: str | None = None
-        fallback_url: str | None = None  # best accepted photo even if tag clashes
+        fallback_url: str | None = None
 
         for photo in _unsplash_hero_results(destination, n=8):
             url = photo.get("urls", {}).get("full") or photo.get("urls", {}).get("regular")
             if not url:
                 continue
+            if url in used_urls:
+                continue
             accepted, tag = _verify_hero_photo(url, destination)
             if not accepted:
                 continue
             if fallback_url is None:
-                fallback_url = url  # keep first accepted as safety net
+                fallback_url = url
             if tag not in used_scene_tags:
                 selected_url = url
                 used_scene_tags.add(tag)
+                used_urls.add(url)
                 logger.info("Diverse hero: '%s' → %s (%s)", destination, url, tag)
                 break
 
         if selected_url is None:
-            # All candidates share a used tag — use first accepted anyway
-            selected_url = fallback_url
+            selected_url = fallback_url if fallback_url not in used_urls else None
             if selected_url:
+                used_urls.add(selected_url)
                 logger.info("Diverse hero fallback: '%s' → %s", destination, selected_url)
 
+        _photo_cache_set(cache_key, selected_url)
         result[destination] = selected_url
+
+    # For any destination that yielded nothing, reuse a photo from another destination
+    successful_urls = [url for url in result.values() if url]
+    for destination in result:
+        if result[destination] is None and successful_urls:
+            result[destination] = successful_urls[0]
+            logger.info("Hero photo reuse fallback: '%s' → reusing existing photo", destination)
 
     return result
 
@@ -866,9 +958,17 @@ def _activity_search_queries(title: str, location: str) -> list[str]:
 
 
 def fetch_activity_photo_candidates(title: str, location: str) -> dict:
-    """Shared helper: return a single verified landscape photo URL for an activity block."""
+    """Shared helper: return a single verified landscape photo URL for an activity block.
+    Results are cached in photo_url_cache — Unsplash is only called once per unique query."""
     if not UNSPLASH_ACCESS_KEY:
         return {"candidates": []}
+
+    cache_key = f"activity:{title.lower()}:{location.lower()}"
+    cached = _photo_cache_get(cache_key)
+    if cached is not False:
+        logger.info("Activity photo cache hit: '%s' @ %s", title, location)
+        return {"candidates": [cached] if cached else []}
+
     seen: set[str] = set()
     for query in _activity_search_queries(title, location):
         for url in _unsplash_candidates(query):
@@ -877,8 +977,11 @@ def fetch_activity_photo_candidates(title: str, location: str) -> dict:
             seen.add(url)
             if _verify_activity_photo(url, title, location):
                 logger.info("Photo verified for '%s' @ %s: %s", title, location, url)
+                _photo_cache_set(cache_key, url)
                 return {"candidates": [url]}
+
     logger.info("No verified photo found for '%s' @ %s", title, location)
+    _photo_cache_set(cache_key, None)
     return {"candidates": []}
 
 

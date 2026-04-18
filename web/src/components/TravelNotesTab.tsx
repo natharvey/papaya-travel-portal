@@ -12,7 +12,7 @@ import type { ItineraryJSON, HeadsUp } from '../types'
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, backdropFilter: 'blur(2px)' }} />
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000 }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
         width: 'min(92vw, 900px)', maxHeight: '88vh', overflowY: 'auto',

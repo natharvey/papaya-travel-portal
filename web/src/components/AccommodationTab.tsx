@@ -102,7 +102,6 @@ export default function AccommodationTab({ tripId, trip, onAddFromSuggestion, on
 
   function selectDest(dest: string) {
     setSelectedDest(dest)
-    loadDest(dest)
   }
 
   async function handleStatusChange(record: HotelSuggestionRecord, status: 'suggestion' | 'saved' | 'dismissed') {
@@ -134,7 +133,7 @@ export default function AccommodationTab({ tripId, trip, onAddFromSuggestion, on
     setFetchingMore(false)
   }
 
-  const currentSuggestions = (suggestionsByDest[selectedDest] ?? []).filter(r => r.status !== 'dismissed')
+  const currentSuggestions = (suggestionsByDest[selectedDest] ?? []).filter(r => r.status === 'suggestion')
 
   // Find the confirmed stay that matches a given hotel name (for "Remove from trip")
   function findConfirmedStay(hotelName: string): Stay | undefined {
@@ -252,11 +251,12 @@ export default function AccommodationTab({ tripId, trip, onAddFromSuggestion, on
 
                 {loadingDest !== selectedDest && currentSuggestions.length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, alignItems: 'start' }}>
-                    {currentSuggestions.map(record => (
+                    {currentSuggestions.map((record, idx) => (
                       <HotelCard
                         key={record.id}
                         hotel={record.hotel_data as HotelSuggestion}
                         status={record.status}
+                        isTopSuggestion={idx === 0}
                         onClick={() => setSelectedRecord(record)}
                         onSave={() => handleStatusChange(record, record.status === 'saved' ? 'suggestion' : 'saved')}
                         onDismiss={() => handleStatusChange(record, 'dismissed')}

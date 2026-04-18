@@ -272,6 +272,11 @@ export async function regenerateItinerary(tripId: string, instructions: string):
   return res.data
 }
 
+export async function refreshTripPhotos(tripId: string): Promise<{ status: string; cleared: number; destinations: string[] }> {
+  const res = await api.post(`/admin/trips/${tripId}/refresh-photos`)
+  return res.data
+}
+
 export async function getAdminMessages(tripId: string): Promise<Message[]> {
   const res = await api.get<Message[]>(`/admin/trips/${tripId}/messages`)
   return res.data

@@ -4,12 +4,13 @@ import type { HotelSuggestion } from '../types'
 interface HotelCardProps {
   hotel: HotelSuggestion
   status?: 'suggestion' | 'saved' | 'dismissed'
+  isTopSuggestion?: boolean
   onClick: () => void
   onSave?: () => void
   onDismiss?: () => void
 }
 
-export default function HotelCard({ hotel, status = 'suggestion', onClick, onSave, onDismiss }: HotelCardProps) {
+export default function HotelCard({ hotel, status = 'suggestion', isTopSuggestion = false, onClick, onSave, onDismiss }: HotelCardProps) {
   const hasEnrichedData = hotel.photo_url !== undefined
   const live = usePlacePhoto(
     hasEnrichedData ? '' : hotel.name,
@@ -25,7 +26,7 @@ export default function HotelCard({ hotel, status = 'suggestion', onClick, onSav
       onClick={onClick}
       className="hotel-card"
       style={{
-        border: '1.5px solid var(--color-border)',
+        border: isTopSuggestion ? '1.5px solid #d4a017' : '1.5px solid var(--color-border)',
         borderRadius: 14,
         overflow: 'hidden',
         background: 'var(--color-bg)',
@@ -34,6 +35,7 @@ export default function HotelCard({ hotel, status = 'suggestion', onClick, onSav
         flexDirection: 'column',
         height: '100%',           // fills the grid cell height — all cells in a row are equal
         transition: 'box-shadow 0.15s',
+        boxShadow: isTopSuggestion ? '0 0 0 1px rgba(212,160,23,0.15)' : undefined,
       }}
     >
       {/* Photo */}

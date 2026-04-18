@@ -206,9 +206,16 @@ export default function TripDetailPage() {
   // Selected day — shared between UnifiedTripMap and ItineraryTimeline
   const [selectedDay, setSelectedDay] = useState(0)
 
-  // Flight suggestions
+  // Flight suggestions — auto-load when tab is first opened
   const [flightSuggestions, setFlightSuggestions] = useState<FlightSuggestion[] | null>(null)
   const [flightSuggestionsLoading, setFlightSuggestionsLoading] = useState(false)
+
+  useEffect(() => {
+    if (tab === 'flights' && flightSuggestions === null && !flightSuggestionsLoading && tripId) {
+      setFlightSuggestionsLoading(true)
+      getFlightSuggestions(tripId).then(r => setFlightSuggestions(r.suggestions)).catch(() => setFlightSuggestions([])).finally(() => setFlightSuggestionsLoading(false))
+    }
+  }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Flight lookup
   const [lookupNumber, setLookupNumber] = useState('')
@@ -606,7 +613,7 @@ export default function TripDetailPage() {
                     selectedDay={selectedDay}
                     onDaySelect={setSelectedDay}
                     onBlockEdit={async (dayNum, period, blockTitle, prompt) => {
-                      if (!tripId) return
+                      if (!tripId) return null
                       const res = await editItineraryBlock(tripId, {
                         day_number: dayNum,
                         period,
@@ -615,8 +622,12 @@ export default function TripDetailPage() {
                       })
                       if (res.itinerary_updated && res.new_itinerary) {
                         setTrip(prev => prev ? { ...prev, itineraries: [...prev.itineraries, res.new_itinerary!] } : prev)
+                        const newDay = res.new_itinerary.itinerary_json.day_plans.find(d => d.day_number === dayNum)
+                        return (newDay?.[period as keyof typeof newDay] as import('../types').DayBlock) ?? null
                       }
+                      return null
                     }}
+                    onAddFromSuggestion={(hotel) => { setAddingStayFrom(hotel); setStayCheckIn(''); setStayCheckOut(''); setStayError('') }}
                   />
                 )}
               </>

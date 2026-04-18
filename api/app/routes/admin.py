@@ -15,7 +15,7 @@ import httpx
 import anthropic as anthropic_sdk
 
 from app.db import get_db
-from app.models import Trip, Client, Itinerary, Message, Flight, Stay, IntakeResponse, HotelSuggestionRecord
+from app.models import Trip, Client, Itinerary, Message, Flight, Stay, IntakeResponse, HotelSuggestionRecord, PhotoURLCache
 from app.schemas import (
     TripDetail, AdminTripListItem, TripUpdate, MessageCreate, MessageOut,
     ItineraryOut, RegenerateRequest, FlightCreate, FlightOut, StayCreate, StayOut,
@@ -232,6 +232,40 @@ def regenerate_itinerary_endpoint(
         daemon=True,
     ).start()
     return {"status": "generating"}
+
+
+@router.post("/trips/{trip_id}/refresh-photos")
+def refresh_trip_photos(
+    trip_id: uuid.UUID,
+    _admin=Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Clear cached photo URLs for all destinations in a trip so they are re-fetched on next load."""
+    trip = db.query(Trip).options(joinedload(Trip.itineraries)).filter(Trip.id == trip_id).first()
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    # Collect destination names from the latest itinerary
+    destinations: list[str] = []
+    if trip.itineraries:
+        latest = max(trip.itineraries, key=lambda it: it.version)
+        destinations = [
+            d.get("name", "").lower()
+            for d in (latest.itinerary_json.get("destinations") or [])
+            if d.get("name")
+        ]
+
+    deleted = 0
+    for dest in destinations:
+        rows = db.query(PhotoURLCache).filter(
+            PhotoURLCache.query.like(f"%:{dest}%")
+        ).all()
+        for row in rows:
+            db.delete(row)
+            deleted += 1
+
+    db.commit()
+    return {"status": "ok", "cleared": deleted, "destinations": destinations}
 
 
 @router.get("/trips/{trip_id}/messages", response_model=list[MessageOut])

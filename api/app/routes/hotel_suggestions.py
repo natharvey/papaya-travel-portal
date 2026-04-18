@@ -41,7 +41,20 @@ def _seed_from_itinerary(trip_id, destination: str, db: Session) -> None:
     raw = latest.itinerary_json.get("hotel_suggestions") or []
     dest_lower = destination.lower()
     to_seed = [h for h in raw if h.get("destination", "").lower() == dest_lower]
+
+    # Fetch existing names to avoid duplicates (guards against race conditions)
+    existing_names = {
+        r.hotel_data.get("name", "").lower()
+        for r in db.query(HotelSuggestionRecord).filter(
+            HotelSuggestionRecord.trip_id == trip_id,
+            HotelSuggestionRecord.destination == destination,
+        ).all()
+    }
+
+    added = 0
     for hotel in to_seed:
+        if hotel.get("name", "").lower() in existing_names:
+            continue
         record = HotelSuggestionRecord(
             trip_id=trip_id,
             destination=destination,
@@ -49,9 +62,11 @@ def _seed_from_itinerary(trip_id, destination: str, db: Session) -> None:
             status="suggestion",
         )
         db.add(record)
-    if to_seed:
+        existing_names.add(hotel.get("name", "").lower())
+        added += 1
+    if added:
         db.commit()
-        logger.info("Seeded %d hotel suggestions for trip %s / %s", len(to_seed), trip_id, destination)
+        logger.info("Seeded %d hotel suggestions for trip %s / %s", added, trip_id, destination)
 
 
 def _calc_fetch_count(current_non_dismissed: int) -> int:

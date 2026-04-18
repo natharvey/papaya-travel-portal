@@ -12,12 +12,13 @@ import {
   Plane, Car, Ship, Train, Utensils, Hotel, Shield, Ticket,
   Thermometer, Calendar, Heart, Info, DollarSign, Shirt, Footprints, Camera,
 } from 'lucide-react'
-import type { ItineraryJSON, DayPlan, DayBlock, Stay } from '../types'
+import type { ItineraryJSON, DayPlan, DayBlock, Stay, HotelSuggestion } from '../types'
 
 interface Props {
   data: ItineraryJSON
   stays?: Stay[]
-  onBlockEdit?: (dayNum: number, period: string, blockTitle: string, prompt: string) => Promise<void>
+  onBlockEdit?: (dayNum: number, period: string, blockTitle: string, prompt: string) => Promise<DayBlock | null>
+  onAddFromSuggestion?: (hotel: HotelSuggestion) => void
   hideOverview?: boolean
   hideSections?: boolean   // hide transport/budget/packing/risks (shown separately in Travel Notes tab)
   sectionsOnly?: boolean   // render ONLY the collapsible sections — for Travel Notes tab
@@ -125,59 +126,139 @@ function EditPanel({
 }) {
   const [prompt, setPrompt] = useState('')
   const { border } = PERIOD_CONFIG[period]
+  const canSend = prompt.trim().length > 0 && !loading
 
   return (
     <div style={{
-      background: '#FFFBF8',
+      background: 'white',
       border: `1.5px solid ${border}`,
-      borderRadius: '0 8px 8px 8px',
-      padding: '12px 14px',
+      borderTop: 'none',
+      borderRadius: '0 0 10px 10px',
+      padding: '14px 16px 16px',
       marginBottom: 10,
-      marginTop: -6,
     }}>
-      <div style={{ fontSize: 12, color: border, fontWeight: 700, marginBottom: 8 }}>
-        Ask Maya to change "{blockTitle}"
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #F07332, #E8A020)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <span style={{ fontSize: 13 }}>✦</span>
+        </div>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text)' }}>Ask Maya to change this</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 320 }}>{blockTitle}</div>
+        </div>
       </div>
+
+      {/* Textarea */}
       <textarea
         autoFocus
         value={prompt}
         onChange={e => setPrompt(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && prompt.trim()) onSend(prompt.trim()) }}
-        placeholder={`e.g. "swap this to day 5", "replace with something more relaxing", "move to the evening instead"...`}
+        onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && canSend) onSend(prompt.trim()) }}
+        placeholder={`e.g. "swap this to day 5", "something more relaxing", "move to the evening"…`}
         disabled={loading}
         rows={2}
         style={{
           width: '100%',
-          border: '1px solid var(--color-border)',
-          borderRadius: 6,
-          padding: '8px 10px',
+          border: `1.5px solid ${canSend ? border : 'var(--color-border)'}`,
+          borderRadius: 8,
+          padding: '10px 12px',
           fontSize: 13,
           fontFamily: 'inherit',
           resize: 'none',
           outline: 'none',
-          background: 'white',
+          background: '#FAFAFA',
           color: 'var(--color-text)',
           boxSizing: 'border-box',
+          transition: 'border-color 0.15s',
+          lineHeight: 1.5,
         }}
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-        <button
-          onClick={onCancel}
-          disabled={loading}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: '1px solid var(--color-border)', borderRadius: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}
-        >
-          <X size={12} /> Cancel
-        </button>
-        <button
-          onClick={() => { if (prompt.trim()) onSend(prompt.trim()) }}
-          disabled={loading || !prompt.trim()}
-          style={{ display: 'flex', alignItems: 'center', gap: 4, background: loading || !prompt.trim() ? 'var(--color-border)' : border, border: 'none', borderRadius: 6, padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: loading || !prompt.trim() ? 'default' : 'pointer', color: 'white', fontFamily: 'inherit' }}
-        >
-          {loading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={12} />}
-          {loading ? 'Updating...' : 'Send to Maya'}
-        </button>
+
+      {/* Footer row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>⌘↵ to send</span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={onCancel}
+            disabled={loading}
+            style={{ background: 'none', border: 'none', padding: '6px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', color: 'var(--color-text-muted)', fontFamily: 'inherit' }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { if (canSend) onSend(prompt.trim()) }}
+            disabled={!canSend}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: canSend ? border : 'var(--color-border)',
+              border: 'none', borderRadius: 7, padding: '7px 14px',
+              fontSize: 12, fontWeight: 700, cursor: canSend ? 'pointer' : 'default',
+              color: 'white', fontFamily: 'inherit', transition: 'background 0.15s',
+            }}
+          >
+            {loading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Send size={12} />}
+            {loading ? 'Updating…' : 'Send to Maya'}
+          </button>
+        </div>
       </div>
     </div>
+  )
+}
+
+// ─── Post-edit confirmation modal ─────────────────────────────────────────────
+
+function EditConfirmationModal({ oldBlock, newBlock, onClose }: { oldBlock: DayBlock; newBlock: DayBlock; onClose: () => void }) {
+  const changes: string[] = []
+  if (oldBlock.title !== newBlock.title)
+    changes.push(`Title: "${newBlock.title}"`)
+  if (oldBlock.est_cost_aud !== newBlock.est_cost_aud)
+    changes.push(`Cost: ${newBlock.est_cost_aud != null ? `~A$${newBlock.est_cost_aud}` : 'removed'}${oldBlock.est_cost_aud != null ? ` (was A$${oldBlock.est_cost_aud})` : ''}`)
+  if (newBlock.details && oldBlock.details !== newBlock.details) {
+    const sentences = newBlock.details.split(/\.\s+/).map(s => s.trim()).filter(s => s.length > 4)
+    sentences.slice(0, 3).forEach(s => changes.push(s.endsWith('.') ? s : `${s}.`))
+  }
+  if (newBlock.tip && oldBlock.tip !== newBlock.tip)
+    changes.push(`Tip: ${newBlock.tip}`)
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 1000 }} />
+      <div style={{
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+        width: 'min(92vw, 480px)', background: 'white', borderRadius: 16, zIndex: 1001,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.18)', padding: '20px 22px 22px',
+        fontFamily: 'inherit',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg, #F07332, #E8A020)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 13 }}>✦</span>
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-text)' }}>Maya updated the activity</span>
+          </div>
+          <button onClick={onClose} style={{ background: '#F3F4F6', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <X size={14} color="#6B7280" />
+          </button>
+        </div>
+        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {changes.map((c, i) => (
+            <li key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--color-text)', lineHeight: 1.5 }}>
+              <span style={{ color: '#10b981', fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <span>{c}</span>
+            </li>
+          ))}
+          {changes.length === 0 && (
+            <li style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Activity updated.</li>
+          )}
+        </ul>
+        <button
+          onClick={onClose}
+          style={{ marginTop: 16, width: '100%', background: '#F3F4F6', border: 'none', borderRadius: 8, padding: '9px', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--color-text)', fontFamily: 'inherit' }}
+        >
+          Done
+        </button>
+      </div>
+    </>
   )
 }
 
@@ -301,17 +382,6 @@ function TimeBlock({
             >✕</div>
           )}
 
-          {/* Caption */}
-          {photoOpen && (
-            <div style={{
-              position: 'absolute', bottom: 0, left: 0, right: 0,
-              padding: '20px 10px 8px',
-              background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
-              fontSize: 10, color: 'rgba(255,255,255,0.85)', fontWeight: 500,
-            }}>
-              {block.photo_query ?? block.title}
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -390,12 +460,13 @@ const PERIOD_KEYS: Record<Period, 'morning' | 'afternoon' | 'evening'> = {
   Morning: 'morning', Afternoon: 'afternoon', Evening: 'evening',
 }
 
-export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideOverview, hideSections, sectionsOnly, selectedDay: externalDay, onDaySelect }: Props) {
+export default function ItineraryTimeline({ data, stays = [], onBlockEdit, onAddFromSuggestion, hideOverview, hideSections, sectionsOnly, selectedDay: externalDay, onDaySelect }: Props) {
   const [internalDayNum, setInternalDayNum] = useState(0)
   const [copied, setCopied] = useState(false)
   const [view, setView] = useState<'detail' | 'overview'>('detail')
   const [editState, setEditState] = useState<EditState | null>(null)
   const [editLoading, setEditLoading] = useState(false)
+  const [editConfirmation, setEditConfirmation] = useState<{ oldBlock: DayBlock; newBlock: DayBlock } | null>(null)
 
   const selectedDayNum = externalDay ?? internalDayNum
   function setSelectedDayNum(n: number | ((prev: number) => number)) {
@@ -490,10 +561,14 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
 
   async function handleSend(prompt: string) {
     if (!editState || !onBlockEdit) return
+    const oldBlock = data.day_plans
+      ?.find(d => d.day_number === editState.dayNum)
+      ?.[editState.period as keyof DayPlan] as DayBlock | null
     setEditLoading(true)
     try {
-      await onBlockEdit(editState.dayNum, editState.period, editState.title, prompt)
+      const newBlock = await onBlockEdit(editState.dayNum, editState.period, editState.title, prompt)
       setEditState(null)
+      if (newBlock && oldBlock) setEditConfirmation({ oldBlock, newBlock })
     } finally {
       setEditLoading(false)
     }
@@ -631,6 +706,13 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
 
   return (
     <div>
+      {editConfirmation && (
+        <EditConfirmationModal
+          oldBlock={editConfirmation.oldBlock}
+          newBlock={editConfirmation.newBlock}
+          onClose={() => setEditConfirmation(null)}
+        />
+      )}
       {/* ── Overview text + destinations ── */}
       {!hideOverview && (
         <div style={{ marginBottom: '20px' }}>
@@ -830,8 +912,16 @@ export default function ItineraryTimeline({ data, stays = [], onBlockEdit, hideO
                           </div>
                         </div>
                       </div>
-                      <div style={{ marginTop: 8, fontSize: 10, color: '#b45309', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span>Not yet booked — add to trip to confirm</span>
+                      <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 10, color: '#b45309' }}>Not yet booked</span>
+                        {onAddFromSuggestion && (
+                          <button
+                            onClick={() => onAddFromSuggestion(suggestion)}
+                            style={{ fontSize: 11, fontWeight: 700, color: '#92400e', background: '#fef3c7', border: '1.5px solid #d4a017', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+                          >
+                            + Add to trip
+                          </button>
+                        )}
                       </div>
                     </div>
                   )

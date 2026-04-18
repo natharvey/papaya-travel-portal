@@ -3,7 +3,7 @@ import { MapPin } from 'lucide-react'
 import ItineraryTimeline, { buildCopyText } from './ItineraryTimeline'
 import PDFDownloadButton from './PDFDownloadButton'
 import Button from './Button'
-import type { TripDetail, Itinerary } from '../types'
+import type { TripDetail, Itinerary, HotelSuggestion } from '../types'
 
 const UnifiedTripMap = lazy(() => import('./UnifiedTripMap'))
 
@@ -14,7 +14,8 @@ interface Props {
   selectedDay: number
   onDaySelect: (day: number) => void
   /** Optional — only provided for client portal to enable per-block AI edits */
-  onBlockEdit?: (dayNum: number, period: string, blockTitle: string, prompt: string) => Promise<void>
+  onBlockEdit?: (dayNum: number, period: string, blockTitle: string, prompt: string) => Promise<import('../types').DayBlock | null>
+  onAddFromSuggestion?: (hotel: HotelSuggestion) => void
 }
 
 function CopySummaryButton({ itinerary }: { itinerary: Itinerary }) {
@@ -34,7 +35,7 @@ function CopySummaryButton({ itinerary }: { itinerary: Itinerary }) {
   return <Button variant="ghost" size="sm" onClick={handleCopy}>{copied ? '✓ Copied' : 'Copy summary'}</Button>
 }
 
-export default function TripItineraryView({ itinerary, trip, itineraryCount, selectedDay, onDaySelect, onBlockEdit }: Props) {
+export default function TripItineraryView({ itinerary, trip, itineraryCount, selectedDay, onDaySelect, onBlockEdit, onAddFromSuggestion }: Props) {
   const json = itinerary.itinerary_json
 
   return (
@@ -104,6 +105,7 @@ export default function TripItineraryView({ itinerary, trip, itineraryCount, sel
         selectedDay={selectedDay}
         onDaySelect={onDaySelect}
         onBlockEdit={onBlockEdit}
+        onAddFromSuggestion={onAddFromSuggestion}
       />
 
       {/* Confirmed bookings */}

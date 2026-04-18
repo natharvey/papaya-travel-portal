@@ -160,26 +160,12 @@ export default function TripCard({ trip, linkTo, showClient, clientName, clientE
                     alt={photoQueryList[i] ?? ''}
                     style={{
                       width: '100%', height: '100%', objectFit: 'cover',
+                      objectPosition: i > 0 ? 'center 60%' : 'center center',
                       filter: 'saturate(1.3) brightness(1.05) contrast(1.05)',
-                      // For side panels, zoom in slightly so they feel intentional, not cropped
                       transform: panelCount > 1 ? 'scale(1.08)' : undefined,
                       transition: 'transform 0.4s ease',
                     }}
                   />
-                  {/* Per-panel destination label for multi-dest cards */}
-                  {panelCount > 1 && photoQueryList[i] && (
-                    <div style={{
-                      position: 'absolute', top: 8, left: 8,
-                      fontSize: 9, fontWeight: 700, color: 'white',
-                      textTransform: 'uppercase', letterSpacing: '0.06em',
-                      textShadow: '0 1px 4px rgba(0,0,0,0.6)',
-                      background: 'rgba(0,0,0,0.25)',
-                      padding: '2px 6px', borderRadius: 4,
-                      backdropFilter: 'blur(4px)',
-                    }}>
-                      {photoQueryList[i]}
-                    </div>
-                  )}
                 </div>
               )
             })

@@ -203,6 +203,17 @@ class HotelSuggestionRecord(Base):
     trip = relationship("Trip", back_populates="hotel_suggestion_records")
 
 
+class PhotoURLCache(Base):
+    """Shared cache for verified Unsplash photo URLs, keyed by search query.
+    Covers both hero destination photos and activity photos.
+    url=None means no good photo was found for this query."""
+    __tablename__ = "photo_url_cache"
+
+    query = Column(String(500), primary_key=True, nullable=False)
+    url = Column(String(2000), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class DestinationCard(Base):
     __tablename__ = "destination_cards"
 

@@ -67,12 +67,12 @@ async function getRouteData(
   return null
 }
 
-function buildArc(from: [number, number], to: [number, number], steps = 80): [number, number][] {
+function buildArc(from: [number, number], to: [number, number], steps = 80, bias = 1): [number, number][] {
   const pts: [number, number][] = []
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
     const lng = from[0] + (to[0] - from[0]) * t
-    const lat = from[1] + (to[1] - from[1]) * t + Math.sin(Math.PI * t) * Math.abs(to[1] - from[1]) * 0.3
+    const lat = from[1] + (to[1] - from[1]) * t + bias * Math.sin(Math.PI * t) * Math.abs(to[1] - from[1]) * 0.3
     pts.push([lng, lat])
   }
   return pts
@@ -215,11 +215,13 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
   const [activeRoute, setActiveRoute] = useState<{ stay: [number, number]; activity: [number, number] } | null>(null)
   // Cache both route results so mode toggle doesn't refetch
   const routeDataCache = useRef<{ walking: RouteData | null; driving: RouteData | null } | null>(null)
-  // Latest stays accessible from inside map click handlers
+  // Latest stays + itinerary accessible from inside map click handlers
   const staysRef = useRef(stays)
+  const itineraryRef = useRef(itinerary)
 
-  // Keep staysRef in sync so click handlers always use latest stays
+  // Keep refs in sync so click handlers always use latest data
   useEffect(() => { staysRef.current = stays }, [stays])
+  useEffect(() => { itineraryRef.current = itinerary }, [itinerary])
 
   const clearDestMarkers = useCallback(() => {
     destMarkersRef.current.forEach(m => m.remove())
@@ -343,37 +345,47 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         dayLocation.current.set(dp.day_number, dp.location_base)
       })
 
-      // Compute day ranges per location
-      const locationDayRange = new Map<string, { min: number; max: number }>()
+      // Compute day lists per location (for non-contiguous range display)
+      const locationDays = new Map<string, number[]>()
       dayPlans.forEach(dp => {
         const key = dp.location_base.toLowerCase()
-        const existing = locationDayRange.get(key)
-        if (!existing) {
-          locationDayRange.set(key, { min: dp.day_number, max: dp.day_number })
-        } else {
-          existing.min = Math.min(existing.min, dp.day_number)
-          existing.max = Math.max(existing.max, dp.day_number)
-        }
+        const existing = locationDays.get(key)
+        if (!existing) locationDays.set(key, [dp.day_number])
+        else existing.push(dp.day_number)
       })
 
+      function formatDayRanges(days: number[]): string {
+        if (!days.length) return ''
+        const sorted = [...new Set(days)].sort((a, b) => a - b)
+        const ranges: string[] = []
+        let start = sorted[0], end = sorted[0]
+        for (let i = 1; i < sorted.length; i++) {
+          if (sorted[i] === end + 1) { end = sorted[i] }
+          else { ranges.push(start === end ? `${start}` : `${start}–${end}`); start = end = sorted[i] }
+        }
+        ranges.push(start === end ? `${start}` : `${start}–${end}`)
+        return ranges.join(', ')
+      }
+
       // Build stops
-      interface Stop { name: string; coords: [number, number]; color: string; dayRange: string; firstDay: number; isOrigin: boolean }
+      interface Stop { name: string; coords: [number, number]; color: string; dayRange: string; firstDay: number; maxDay: number; isOrigin: boolean }
       const stops: Stop[] = []
-      stops.push({ name: originCity, coords: originCoords, color: '#2d4a5a', dayRange: 'Home', firstDay: 0, isOrigin: true })
+      stops.push({ name: originCity, coords: originCoords, color: '#2d4a5a', dayRange: 'Home', firstDay: 0, maxDay: 0, isOrigin: true })
       locationCoords.current.set(originCity.toLowerCase(), originCoords)
 
       let dc = 1
       resolvedDests.forEach((dest, i) => {
         if (!dest.coords) { dc += dest.nights; return }
-        const range = locationDayRange.get(dest.name.toLowerCase())
-        const firstDay = range?.min ?? dc
-        const lastDay = range?.max ?? (dc + dest.nights - 1)
+        const days = locationDays.get(dest.name.toLowerCase())
+        const firstDay = days ? Math.min(...days) : dc
+        const lastDay = days ? Math.max(...days) : (dc + dest.nights - 1)
         stops.push({
           name: dest.name,
           coords: dest.coords,
           color: DEST_COLORS[i % DEST_COLORS.length],
-          dayRange: firstDay === lastDay ? `${firstDay}` : `${firstDay}–${lastDay}`,
+          dayRange: days ? formatDayRanges(days) : (firstDay === lastDay ? `${firstDay}` : `${firstDay}–${lastDay}`),
           firstDay,
+          maxDay: lastDay,
           isOrigin: false,
         })
         locationCoords.current.set(dest.name.toLowerCase(), dest.coords)
@@ -426,7 +438,7 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
               map.current?.flyTo({ center: coords, zoom: 15, duration: 700, essential: true })
             }
 
-            // Trigger route draw if there's a stay for this night
+            // Trigger route draw — confirmed stay first, fall back to suggested hotel
             const currentStay = getStayForDay(dp, staysRef.current)
             if (currentStay?.latitude && currentStay?.longitude) {
               setActiveRoute({
@@ -434,7 +446,17 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
                 activity: coords,
               })
             } else {
-              setActiveRoute(null)
+              const dest = dp.location_base?.toLowerCase()
+              const suggestion = dest
+                ? (itineraryRef.current.hotel_suggestions || []).find(
+                    s => s.destination?.toLowerCase() === dest && s.lat && s.lng
+                  )
+                : null
+              if (suggestion?.lat && suggestion?.lng) {
+                setActiveRoute({ stay: [suggestion.lng, suggestion.lat], activity: coords })
+              } else {
+                setActiveRoute(null)
+              }
             }
           })
 
@@ -540,9 +562,12 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
         })
       }
 
-      // Generic return arc (last destination → origin) when no real return leg
-      if (lastDest && !hasReturnLeg && map.current) {
-        const arcCoords = buildArc(lastDest.coords, originCoords)
+      // Generic return arc — depart from whichever destination has the highest last day
+      const returnDeparture = destStops.length > 0
+        ? destStops.reduce((best, s) => s.maxDay > best.maxDay ? s : best, destStops[0])
+        : null
+      if (returnDeparture && !hasReturnLeg && map.current) {
+        const arcCoords = buildArc(returnDeparture.coords, originCoords, 80, -1)
         map.current.addSource('route-generic-return', {
           type: 'geojson',
           data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: arcCoords } },
@@ -639,12 +664,18 @@ export default function UnifiedTripMap({ itinerary, originCity, stays, selectedD
           el.addEventListener('click', () => onDaySelect(stop.firstDay))
           el.onmouseenter = () => { destInner.style.transform = 'scale(1.06) translateY(-2px)' }
           el.onmouseleave = () => { destInner.style.transform = '' }
+
+          // Hide pill label at low zoom, show dot only
+          const pill = destInner.querySelector('div') as HTMLDivElement | null
+          const updatePillVisibility = () => {
+            if (!map.current || !pill) return
+            pill.style.display = map.current.getZoom() >= 6 ? 'flex' : 'none'
+          }
+          updatePillVisibility()
+          map.current!.on('zoom', updatePillVisibility)
         }
-        const popup = new mapboxgl.Popup({ offset: 12, closeButton: false })
-          .setHTML(`<div style="font-family:inherit;padding:4px 2px"><div style="font-weight:700;font-size:13px;color:#1a2a3a">${stop.name}</div><div style="font-size:11px;color:#6b7280;margin-top:2px">Day ${stop.dayRange}</div></div>`)
         const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat(stop.coords)
-          .setPopup(popup)
           .addTo(map.current!)
         destMarkersRef.current.push(marker)
       })

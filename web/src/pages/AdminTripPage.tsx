@@ -33,6 +33,7 @@ import {
   uploadAdminDocument,
   getAdminDocumentUrl,
   deleteAdminDocument,
+  refreshTripPhotos,
   getApiError,
   type FlightPayload,
   type StayPayload,
@@ -178,6 +179,7 @@ export default function AdminTripPage() {
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [actionError, setActionError] = useState('')
   const [sendMessageError, setSendMessageError] = useState('')
+  const [refreshingPhotos, setRefreshingPhotos] = useState(false)
 
   // Delete trip
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -331,6 +333,18 @@ export default function AdminTripPage() {
       setRegenInstructions('')
     } catch (e) {
       setGenError(getApiError(e))
+    }
+  }
+
+  async function handleRefreshPhotos() {
+    if (!tripId) return
+    setRefreshingPhotos(true)
+    try {
+      await refreshTripPhotos(tripId)
+    } catch (e) {
+      setActionError(getApiError(e))
+    } finally {
+      setRefreshingPhotos(false)
     }
   }
 
@@ -862,6 +876,16 @@ export default function AdminTripPage() {
                         {generating ? 'Generating...' : 'Regenerate'}
                       </button>
                     </div>
+                    {/* Refresh photos */}
+                    <button
+                      onClick={handleRefreshPhotos}
+                      disabled={refreshingPhotos}
+                      title="Clear cached photos so fresh ones are fetched on next page load"
+                      style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius)', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: refreshingPhotos ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-text-muted)', whiteSpace: 'nowrap' }}
+                    >
+                      {refreshingPhotos ? <LoadingSpinner size={12} label="" /> : <RefreshCw size={12} strokeWidth={2} />}
+                      {refreshingPhotos ? 'Clearing...' : 'Refresh Photos'}
+                    </button>
                   </div>
                 )}
               </div>

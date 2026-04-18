@@ -1,7 +1,7 @@
 import os
 import random
 import string
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -150,6 +150,18 @@ def create_intake(
     db: Session = Depends(get_db),
 ):
     client = get_or_create_client(db, str(payload.client_email), payload.client_name)
+
+    # Block duplicate submissions within 10 minutes for the same client
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=10)
+    recent = db.query(Trip).filter(
+        Trip.client_id == client.id,
+        Trip.updated_at >= cutoff,
+    ).first()
+    if recent:
+        raise HTTPException(
+            status_code=429,
+            detail="A trip was recently submitted for this email. Please wait a few minutes before trying again.",
+        )
 
     trip = Trip(
         client_id=client.id,
