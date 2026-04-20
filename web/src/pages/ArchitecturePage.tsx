@@ -684,10 +684,11 @@ export default function ArchitecturePage() {
         setSaved(true)
         setTimeout(() => setSaved(false), 2500)
       } else {
-        alert('Save failed — check you are still logged in as admin.')
+        const body = await res.text().catch(() => '')
+        alert(`Save failed (HTTP ${res.status}): ${body || res.statusText}`)
       }
-    } catch {
-      alert('Save failed — network error.')
+    } catch (err) {
+      alert(`Save failed — network error: ${err}`)
     } finally {
       setSaving(false)
     }
