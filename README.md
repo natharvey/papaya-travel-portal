@@ -14,7 +14,6 @@ An AI-powered travel planning portal for Australian travellers. Clients describe
 2. **Generation** — The moment the form is submitted, AI generates a personalised day-by-day itinerary in the background. The client receives a magic login link by email and is shown a "building your itinerary" screen in their portal.
 3. **Review** — When generation completes the client receives an "itinerary ready" email and the portal updates automatically. They can read through the full day-by-day plan, view the budget breakdown, packing list, transport notes, and more.
 4. **Refine** — The client can use **Ask Maya** to adjust anything — swap activities, change the pace, add day trips, shift dates. Maya edits the itinerary live. Clients can also message the human planner directly if they want personal advice.
-5. **Confirm** — Once happy, the client confirms the itinerary. Both parties receive a confirmation email.
 
 ### Admin (planner) role
 
@@ -31,14 +30,13 @@ The AI handles all itinerary generation and refinement. Admin involvement is opt
 ## Trip lifecycle
 
 ```
-GENERATING → REVIEW → CONFIRMED → ARCHIVED
+GENERATING → REVIEW → ARCHIVED
 ```
 
 | Status | Meaning |
 |--------|---------|
 | **GENERATING** | Intake submitted — AI is building the itinerary |
 | **REVIEW** | Itinerary ready — client is reviewing and refining |
-| **CONFIRMED** | Client approved the itinerary |
 | **ARCHIVED** | Trip complete or cancelled |
 
 ---
@@ -62,7 +60,7 @@ GENERATING → REVIEW → CONFIRMED → ARCHIVED
 - **Messaging** — In-portal message thread between client and planner with email notifications and unread badges
 - **Trip management** — Clients can edit their trip title or delete a trip from the portal
 - **Countdown timer** — Trip cards show days until departure
-- **CloudWatch monitoring** — Live dashboard tracking request counts, error rates, ECS CPU/memory, and RDS metrics
+- **CloudWatch monitoring** — Container logs from both services stream to CloudWatch (`/ecs/papaya`); CPU, memory, and task health metrics captured automatically
 
 ---
 
@@ -133,30 +131,7 @@ Full technical detail — agent inputs/outputs, design decisions, data schemas: 
 
 ## Infrastructure Architecture
 
-```
-                    ┌─────────────────────────────────────────────┐
-                    │         AWS (us-east-1)                     │
-                    │                                             │
-  Users ──HTTPS──▶  │  ALB (port 443, ACM certificate)           │
-                    │   │                                         │
-                    │   ├──▶ /api/* ──▶ ECS Fargate (papaya-api)  │
-                    │   │               FastAPI + SQLAlchemy       │
-                    │   │                    │                     │
-                    │   │               RDS PostgreSQL             │
-                    │   │               S3 (documents)             │
-                    │   │                                         │
-                    │   └──▶ /* ──▶ ECS Fargate (papaya-web)      │
-                    │               React + Vite (nginx)           │
-                    │                                             │
-                    │  ECR — Docker image registry                │
-                    │  CloudWatch — Logs + monitoring             │
-                    └─────────────────────────────────────────────┘
-                              │                    │
-                    Anthropic Claude 4.6       Gmail SMTP
-                    All AI features            Transactional email
-```
-
-See the live interactive version at [travel-papaya.com/architecture](https://www.travel-papaya.com/architecture).
+See the live interactive diagram at [travel-papaya.com/architecture](https://www.travel-papaya.com/architecture) — click any node for a full breakdown of what it does and why it's there.
 
 ### Backend (`/api`)
 
@@ -164,7 +139,7 @@ See the live interactive version at [travel-papaya.com/architecture](https://www
 - `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, Flight, Stay, HotelSuggestionRecord
 - `app/routes/auth.py` — Magic link login, admin login, JWT issuance
 - `app/routes/intake.py` — Intake chat endpoint + intake submission; fires AI generation as a background task
-- `app/routes/client.py` — Client portal: trip detail, itinerary, messages, confirm, Ask Maya, flight lookup, accommodation CRUD, activity photos (with vision quality gate), document uploads
+- `app/routes/client.py` — Client portal: trip detail, itinerary, messages, Ask Maya, flight lookup, accommodation CRUD, activity photos (with vision quality gate), document uploads
 - `app/routes/hotel_suggestions.py` — Hotel suggestion CRUD: auto-seed from itinerary JSON, status updates (save/dismiss), AI-driven "fetch more" with deduplication
 - `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, screenshot parsing (Claude Haiku vision), document uploads, photo cache refresh
 - `app/services/ai.py` — Multi-agent Maya pipeline: intake, analyser (tool_use), itinerary generator, concierge chat (intent classifier)
@@ -195,7 +170,7 @@ JWT_SECRET=change-me-in-production
 ADMIN_PASSWORD=admin123
 ADMIN_EMAIL=you@yourdomain.com
 CORS_ORIGINS=http://localhost:5173
-SEED_ON_STARTUP=false
+SEED_ON_STARTUP=true
 
 # AI
 ANTHROPIC_API_KEY=sk-ant-your-key-here
@@ -210,6 +185,9 @@ S3_BUCKET=your-bucket-name
 
 # Google Places API (hotel verification, photos, geocoding)
 GOOGLE_PLACES_API_KEY=your-key-here
+
+# Google Places (baked into frontend at build time for map search proxy)
+VITE_GOOGLE_PLACES_API_KEY=your-key-here
 
 # AeroDataBox (optional — enables flight number lookup)
 AERODATABOX_API_KEY=your-key-here
@@ -228,7 +206,6 @@ VITE_SENTRY_DSN=
 |---------|-----------|
 | Intake submitted | Client — welcome + magic login link |
 | Itinerary ready | Client — link to portal |
-| Client confirms | Client + Admin — confirmation |
 | New client message | Admin |
 | New admin message | Client |
 
@@ -261,7 +238,6 @@ Full interactive docs at http://localhost:8000/docs
 | GET | `/auth/magic/{token}` | None | Magic link login |
 | GET | `/client/trips` | Client JWT | List client's trips |
 | GET | `/client/trips/{id}` | Client JWT | Trip detail + itinerary |
-| POST | `/client/trips/{id}/confirm` | Client JWT | Confirm itinerary |
 | PATCH | `/client/trips/{id}/title` | Client JWT | Edit trip title |
 | DELETE | `/client/trips/{id}` | Client JWT | Delete trip |
 | POST | `/client/trips/{id}/chat` | Client JWT | Ask Maya (itinerary chat) |
@@ -366,3 +342,4 @@ cd api && pytest tests/ -v
 - [ ] Increase RDS backup retention
 - [ ] Multi-AZ RDS for high availability
 - [ ] Set `SENTRY_DSN` and `VITE_SENTRY_DSN` for error tracking
+
