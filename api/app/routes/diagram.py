@@ -13,7 +13,7 @@ security = HTTPBearer()
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
 ALGORITHM = "HS256"
 BUCKET = os.getenv("S3_BUCKET", "papaya-documents-095523580645")
-LAYOUT_KEY = "config/diagram_layout.json"
+LAYOUT_KEY = "trips/config/diagram_layout.json"
 
 logger = logging.getLogger(__name__)
 
