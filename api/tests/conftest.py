@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 os.environ["DATABASE_URL"] = "sqlite:///./test_papaya.db"
 os.environ["JWT_SECRET"] = "test-secret-key"
 os.environ["ADMIN_PASSWORD"] = "testpass"
-os.environ["OPENAI_API_KEY"] = "sk-test"
+os.environ["ANTHROPIC_API_KEY"] = "sk-ant-test"
 os.environ["SEED_ON_STARTUP"] = "false"
 
 from app.db import Base, get_db
