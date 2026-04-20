@@ -18,7 +18,7 @@ def _s3():
     return boto3.client("s3", region_name="us-east-1")
 
 
-@router.get("/api/diagram-layout")
+@router.get("/diagram-layout")
 def get_layout():
     try:
         resp = _s3().get_object(Bucket=BUCKET, Key=LAYOUT_KEY)
@@ -30,7 +30,7 @@ def get_layout():
         return {}
 
 
-@router.post("/api/diagram-layout")
+@router.post("/diagram-layout")
 async def save_layout(request: Request, _admin=Depends(require_admin)):
     try:
         body = await request.body()
