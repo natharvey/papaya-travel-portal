@@ -111,8 +111,9 @@ def _run_generation(trip_id, conversation_transcript: str, seed_data: dict = Non
                 db.commit()
                 log.info("Updated trip %s title to AI-generated: '%s'", trip_id, ai_title)
 
-        # Send "ready" email with a fresh magic link deep-linked to the trip
-        if trip:
+        # Send "ready" email only for the first generation (version 1)
+        # Guard against duplicate emails if this function somehow runs twice for the same trip
+        if trip and itinerary and itinerary.version == 1:
             client = db.query(Client).filter(Client.id == trip.client_id).first()
             if client:
                 try:
