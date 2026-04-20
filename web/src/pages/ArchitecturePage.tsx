@@ -430,7 +430,7 @@ const initialEdges = [
   // CI/CD
   { id: 'e-gh-gha',        source: 'github',  target: 'gha',        animated: true, style: E(CD_COLOR), ...L('push to main') },
   { id: 'e-gha-ecr',       source: 'gha',     target: 'ecr',        style: E(CD_COLOR), ...L('push image') },
-  { id: 'e-gha-ecs',       source: 'gha',     target: 'ecs-api',    style: E(CD_COLOR), ...L('deploy') },
+  { id: 'e-gha-ecs',       source: 'gha',     target: 'ecs-api',    style: E(CD_COLOR) },
   { id: 'e-gha-ecs-web',   source: 'gha',     target: 'ecs-web',    style: E(CD_COLOR) },
 
   // API → External services
@@ -615,6 +615,12 @@ export default function ArchitecturePage() {
     }
   }
 
+  function copyPositions() {
+    const positions = nodes.map((n: any) => `  { id: '${n.id}', x: ${Math.round(n.position.x)}, y: ${Math.round(n.position.y)} }`).join(',\n')
+    navigator.clipboard.writeText(positions)
+    alert('Positions copied to clipboard!')
+  }
+
   return (
     <Layout variant="public">
       <div style={{ background: '#0d1117', borderBottom: '1px solid #1e293b', padding: '24px 40px 18px' }}>
@@ -655,6 +661,19 @@ export default function ArchitecturePage() {
             style={{ borderRadius: '8px', border: '1px solid #1e293b', background: '#0f172a' }}
           />
         </ReactFlow>
+
+        {/* Temporary: copy node positions for locking into code */}
+        <button
+          onClick={copyPositions}
+          style={{
+            position: 'absolute', top: 12, right: 12, zIndex: 20,
+            background: '#1e293b', border: '1px solid #334155', borderRadius: 8,
+            color: '#94a3b8', fontSize: 12, fontWeight: 600, padding: '6px 12px',
+            cursor: 'pointer',
+          }}
+        >
+          Copy positions
+        </button>
 
         {/* Legend */}
         <div style={{
