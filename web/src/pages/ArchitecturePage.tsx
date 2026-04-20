@@ -373,9 +373,9 @@ const initialNodes = [
 
   // AWS nodes
   { id: 'dns',        type: 'service', position: { x: 320,  y: 90  }, data: { label: 'DNS',              sublabel: 'GoDaddy',               icon: 'Network',   color: AWS_COLOR } },
-  { id: 'alb',        type: 'service', position: { x: 600,  y: 90  }, data: { label: 'Load Balancer',     sublabel: 'ALB + ACM',             icon: 'Scale',     color: AWS_COLOR } },
   { id: 'ecs-web',    type: 'service', position: { x: 940,  y: 90  }, data: { label: 'Web Container',     sublabel: 'React + Nginx · Fargate', icon: 'Monitor', color: AWS_COLOR } },
-  { id: 'cloudwatch', type: 'service', position: { x: 600,  y: 340 }, data: { label: 'CloudWatch',        sublabel: 'Logs + Monitoring',     icon: 'Activity',  color: AWS_COLOR } },
+  { id: 'alb',        type: 'service', position: { x: 570,  y: 240 }, data: { label: 'Load Balancer',     sublabel: 'ALB + ACM',             icon: 'Scale',     color: AWS_COLOR } },
+  { id: 'cloudwatch', type: 'service', position: { x: 770,  y: 240 }, data: { label: 'CloudWatch',        sublabel: 'Logs + Monitoring',     icon: 'Activity',  color: AWS_COLOR } },
   { id: 'ecr',        type: 'service', position: { x: 320,  y: 380 }, data: { label: 'Container Registry', sublabel: 'ECR',                  icon: 'Package',   color: AWS_COLOR } },
   { id: 'ecs-api',    type: 'service', position: { x: 940,  y: 320 }, data: { label: 'API Container',     sublabel: 'FastAPI · Fargate',     icon: 'Zap',       color: AWS_COLOR } },
   { id: 's3',         type: 'service', position: { x: 320,  y: 560 }, data: { label: 'Document Storage',  sublabel: 'S3',                    icon: 'HardDrive', color: AWS_COLOR } },
@@ -394,11 +394,11 @@ const initialNodes = [
   // External services — x:1458, 150px y-spacing
   { id: 'sentry',      type: 'service', position: { x: 1458, y: 48  }, data: { label: 'Sentry',       sublabel: 'Error tracking',          icon: 'AlertCircle', color: EXT_COLOR } },
   { id: 'mapbox',      type: 'service', position: { x: 1458, y: 198 }, data: { label: 'Mapbox',        sublabel: 'Interactive maps',        icon: 'Map',         color: EXT_COLOR } },
-  { id: 'places',      type: 'service', position: { x: 1458, y: 348 }, data: { label: 'Google Places', sublabel: 'Hotel photos + geocoding', icon: 'Search',     color: EXT_COLOR } },
-  { id: 'unsplash',    type: 'service', position: { x: 1458, y: 498 }, data: { label: 'Unsplash',      sublabel: 'Activity + hero photos',  icon: 'Image',       color: EXT_COLOR } },
-  { id: 'aerodatabox', type: 'service', position: { x: 1458, y: 648 }, data: { label: 'AeroDataBox',   sublabel: 'Flight lookup',           icon: 'Plane',       color: EXT_COLOR } },
-  { id: 'gmail',       type: 'service', position: { x: 1458, y: 798 }, data: { label: 'Gmail SMTP',    sublabel: 'Transactional email',     icon: 'Mail',        color: EXT_COLOR } },
-  { id: 'anthropic',   type: 'service', position: { x: 1458, y: 948 }, data: { label: 'Anthropic',     sublabel: 'Claude Sonnet 4.6',       icon: 'Sparkles',    color: EXT_COLOR } },
+  { id: 'anthropic',   type: 'service', position: { x: 1458, y: 348 }, data: { label: 'Anthropic',     sublabel: 'Claude Sonnet 4.6',       icon: 'Sparkles',    color: EXT_COLOR } },
+  { id: 'places',      type: 'service', position: { x: 1458, y: 498 }, data: { label: 'Google Places', sublabel: 'Hotel photos + geocoding', icon: 'Search',     color: EXT_COLOR } },
+  { id: 'unsplash',    type: 'service', position: { x: 1458, y: 648 }, data: { label: 'Unsplash',      sublabel: 'Activity + hero photos',  icon: 'Image',       color: EXT_COLOR } },
+  { id: 'aerodatabox', type: 'service', position: { x: 1458, y: 798 }, data: { label: 'AeroDataBox',   sublabel: 'Flight lookup',           icon: 'Plane',       color: EXT_COLOR } },
+  { id: 'gmail',       type: 'service', position: { x: 1458, y: 948 }, data: { label: 'Gmail SMTP',    sublabel: 'Transactional email',     icon: 'Mail',        color: EXT_COLOR } },
 ]
 
 // ─── Edges ─────────────────────────────────────────────────────────────────────
