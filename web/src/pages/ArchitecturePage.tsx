@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   ReactFlow,
   Background,
@@ -16,8 +16,12 @@ import {
   Zap, HardDrive, GitFork, GitBranch, Sparkles,
   Mail, Network, Map, Search, AlertCircle, LucideIcon, X,
   MessageSquare, FileText, Cpu, MessageCircle, Image, Plane,
+  Lock, Unlock, Save, Check,
 } from 'lucide-react'
 import Layout from '../components/Layout'
+
+// VITE_API_URL is e.g. "http://localhost:8000/api" or "/api" — diagram routes live at /api/diagram-layout
+const DIAGRAM_URL = `${import.meta.env.VITE_API_URL ?? '/api'}/diagram-layout`
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 
@@ -26,6 +30,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Zap, HardDrive, GitFork, GitBranch, Sparkles,
   Mail, Network, Map, Search, AlertCircle,
   MessageSquare, FileText, Cpu, MessageCircle, Image, Plane,
+  Lock, Unlock, Save, Check,
 }
 
 // ─── Node detail data ─────────────────────────────────────────────────────────
@@ -603,27 +608,165 @@ function DetailModal({ nodeId, nodeData, onClose }: {
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
+function buildInitialNodes() {
+  // Merge saved positions (from API) over the hardcoded defaults
+  try {
+    const saved = sessionStorage.getItem('diagram-layout')
+    if (saved) {
+      const positions: Record<string, { x: number; y: number }> = JSON.parse(saved)
+      return (initialNodes as any[]).map(n =>
+        positions[n.id] ? { ...n, position: positions[n.id] } : n
+      )
+    }
+  } catch { /* ignore */ }
+  return initialNodes as any[]
+}
+
 export default function ArchitecturePage() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes as any)
+  const [nodes, setNodes, onNodesChange] = useNodesState(buildInitialNodes())
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNode, setSelectedNode] = useState<{ id: string; data: NodeData } | null>(null)
+  const [unlocked, setUnlocked] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  // Load saved positions from API on mount
+  useEffect(() => {
+    fetch(DIAGRAM_URL)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: Record<string, { x: number; y: number }> | null) => {
+        if (data && Object.keys(data).length > 0) {
+          sessionStorage.setItem('diagram-layout', JSON.stringify(data))
+          setNodes(prev => prev.map(n =>
+            data[n.id] ? { ...n, position: data[n.id] } : n
+          ))
+        }
+      })
+      .catch(() => {})
+  }, [setNodes])
 
   function handleNodeClick(_: React.MouseEvent, node: any) {
+    if (unlocked) return // don't open modal while editing
     const key = NODE_DETAIL_KEY[node.id]
     if (key) {
       setSelectedNode(selectedNode?.id === node.id ? null : { id: node.id, data: node.data as NodeData })
     }
   }
 
+  const alignNodes = useCallback((axis: 'x' | 'y') => {
+    const selected = nodes.filter(n => (n as any).selected)
+    if (selected.length < 2) return
+    const avg = selected.reduce((sum, n) => sum + (n as any).position[axis], 0) / selected.length
+    setNodes(prev => prev.map(n =>
+      (n as any).selected
+        ? { ...n, position: { ...(n as any).position, [axis]: avg } }
+        : n
+    ))
+  }, [nodes, setNodes])
+
+  const handleSave = useCallback(async () => {
+    const token = localStorage.getItem('papaya_token')
+    if (!token) {
+      alert('You need to be logged in as admin to save the layout.')
+      return
+    }
+    setSaving(true)
+    const positions: Record<string, { x: number; y: number }> = {}
+    nodes.forEach(n => { positions[n.id] = (n as any).position })
+    try {
+      const res = await fetch(DIAGRAM_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(positions),
+      })
+      if (res.ok) {
+        sessionStorage.setItem('diagram-layout', JSON.stringify(positions))
+        setSaved(true)
+        setTimeout(() => setSaved(false), 2500)
+      } else {
+        alert('Save failed — check you are still logged in as admin.')
+      }
+    } catch {
+      alert('Save failed — network error.')
+    } finally {
+      setSaving(false)
+    }
+  }, [nodes])
+
   return (
     <Layout variant="public">
-      <div style={{ background: '#0d1117', borderBottom: '1px solid #1e293b', padding: '24px 40px 18px' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#e2e8f0', marginBottom: 4, letterSpacing: '-0.3px' }}>
-          System Architecture
-        </h1>
-        <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>
-          How Papaya is built and deployed. Click any node to learn what it does and why it's there.
-        </p>
+      <div style={{ background: '#0d1117', borderBottom: '1px solid #1e293b', padding: '24px 40px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#e2e8f0', marginBottom: 4, letterSpacing: '-0.3px' }}>
+            System Architecture
+          </h1>
+          <p style={{ color: '#475569', fontSize: '13px', margin: 0 }}>
+            How Papaya is built and deployed. Click any node to learn what it does and why it's there.
+          </p>
+        </div>
+
+        {/* Edit controls */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          {unlocked && (
+            <>
+              <button
+                onClick={() => alignNodes('x')}
+                title="Align selected nodes to the same vertical centre (same X)"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 8,
+                  background: '#0f172a', border: '1px solid #334155',
+                  color: '#64748b', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 14, lineHeight: 1 }}>⇕</span> Align V
+              </button>
+              <button
+                onClick={() => alignNodes('y')}
+                title="Align selected nodes to the same horizontal centre (same Y)"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px', borderRadius: 8,
+                  background: '#0f172a', border: '1px solid #334155',
+                  color: '#64748b', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 14, lineHeight: 1 }}>⇔</span> Align H
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 8,
+                  background: saved ? '#064e3b' : '#0f2d1a',
+                  border: `1px solid ${saved ? '#059669' : '#16a34a'}`,
+                  color: saved ? '#6ee7b7' : '#4ade80',
+                  fontSize: '12px', fontWeight: 600, cursor: saving ? 'wait' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {saved ? <Check size={13} /> : <Save size={13} />}
+                {saved ? 'Saved' : saving ? 'Saving…' : 'Save layout'}
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => { setUnlocked(u => !u); setSelectedNode(null) }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '7px 14px', borderRadius: 8,
+              background: unlocked ? '#1e1a2e' : '#0f172a',
+              border: `1px solid ${unlocked ? '#7c3aed' : '#334155'}`,
+              color: unlocked ? '#a78bfa' : '#64748b',
+              fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+          >
+            {unlocked ? <Unlock size={13} /> : <Lock size={13} />}
+            {unlocked ? 'Editing' : 'Edit layout'}
+          </button>
+        </div>
       </div>
 
       <div style={{ width: '100%', height: 'calc(100vh - 120px)', position: 'relative' }}>
@@ -634,14 +777,14 @@ export default function ArchitecturePage() {
           onEdgesChange={onEdgesChange}
           onNodeClick={handleNodeClick}
           nodeTypes={nodeTypes}
-          nodesDraggable={false}
+          nodesDraggable={unlocked}
           nodesConnectable={false}
           elementsSelectable={true}
           fitView
           fitViewOptions={{ padding: 0.1 }}
           minZoom={0.3}
           maxZoom={2}
-          style={{ background: '#0d1117' }}
+          style={{ background: '#0d1117', cursor: unlocked ? 'grab' : 'default' }}
           defaultEdgeOptions={{ type: 'smoothstep' }}
         >
           <Background color="#1e293b" gap={30} size={1} />
@@ -655,6 +798,20 @@ export default function ArchitecturePage() {
             style={{ borderRadius: '8px', border: '1px solid #1e293b', background: '#0f172a' }}
           />
         </ReactFlow>
+
+        {/* Edit mode banner */}
+        {unlocked && (
+          <div style={{
+            position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
+            background: '#1e1a2e', border: '1px solid #7c3aed44',
+            borderRadius: 8, padding: '6px 16px',
+            fontSize: '11px', color: '#a78bfa', fontWeight: 600,
+            pointerEvents: 'none', zIndex: 10,
+            letterSpacing: '0.05em',
+          }}>
+            EDIT MODE — drag to reposition · shift+click to select multiple · Align V/H to snap · Save when done
+          </div>
+        )}
 
         {/* Legend */}
         <div style={{

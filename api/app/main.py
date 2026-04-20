@@ -20,6 +20,7 @@ from pathlib import Path
 from app.db import engine, Base, SessionLocal, DATABASE_URL
 from app.routes import auth, intake, client, admin
 from app.routes import hotel_suggestions
+from app.routes import diagram
 from app.services.seed import seed_destinations, seed_demo_trip, seed_sarah_trips
 from app.security import hash_password
 
@@ -144,6 +145,7 @@ app.include_router(intake.router)
 app.include_router(client.router)
 app.include_router(hotel_suggestions.router)
 app.include_router(admin.router)
+app.include_router(diagram.router)
 
 
 @app.get("/health")
