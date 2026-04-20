@@ -10,6 +10,7 @@ os.environ["JWT_SECRET"] = "test-secret-key"
 os.environ["ADMIN_PASSWORD"] = "testpass"
 os.environ["ANTHROPIC_API_KEY"] = "sk-ant-test"
 os.environ["SEED_ON_STARTUP"] = "false"
+os.environ["RATELIMIT_ENABLED"] = "0"
 
 from app.db import Base, get_db
 from app.main import app

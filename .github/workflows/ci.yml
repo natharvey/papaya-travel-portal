@@ -13,7 +13,8 @@ jobs:
       DATABASE_URL: sqlite:///./test.db
       JWT_SECRET: test-secret-key
       ADMIN_PASSWORD: testpass
-      OPENAI_API_KEY: sk-test
+      ANTHROPIC_API_KEY: sk-ant-test
+      RATELIMIT_ENABLED: "0"
       SEED_ON_STARTUP: "false"
 
     steps:
