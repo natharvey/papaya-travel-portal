@@ -363,42 +363,42 @@ const MAYA_COLOR = '#a78bfa'
 
 const initialNodes = [
   // Groups
-  { id: 'grp-aws',  type: 'group', position: { x: 290, y: 30  }, style: { width: 820, height: 570 }, data: { label: 'AWS — us-east-1', color: AWS_COLOR, icon: '' } },
-  { id: 'grp-maya', type: 'group', position: { x: 285, y: 660 }, style: { width: 875, height: 205 }, data: { label: 'Maya Agent Pipeline', color: MAYA_COLOR, icon: '' } },
-  { id: 'grp-cd',   type: 'group', position: { x: 30,  y: 455 }, style: { width: 210, height: 320 }, data: { label: 'CI / CD Pipeline', color: CD_COLOR, icon: '' } },
-  { id: 'grp-ext',  type: 'group', position: { x: 1170, y: 30 }, style: { width: 230, height: 1060 }, data: { label: 'External Services', color: EXT_COLOR, icon: '' } },
+  { id: 'grp-aws',  type: 'group', position: { x: 280, y: 30  }, style: { width: 1000, height: 720 }, data: { label: 'AWS — us-east-1', color: AWS_COLOR, icon: '' } },
+  { id: 'grp-maya', type: 'group', position: { x: 280, y: 800 }, style: { width: 1000, height: 230 }, data: { label: 'Maya Agent Pipeline', color: MAYA_COLOR, icon: '' } },
+  { id: 'grp-cd',   type: 'group', position: { x: 30,  y: 455 }, style: { width: 210,  height: 330 }, data: { label: 'CI / CD Pipeline', color: CD_COLOR, icon: '' } },
+  { id: 'grp-ext',  type: 'group', position: { x: 1350, y: 30 }, style: { width: 230,  height: 1120 }, data: { label: 'External Services', color: EXT_COLOR, icon: '' } },
 
   // User
-  { id: 'user', type: 'service', position: { x: 60, y: 180 }, data: { label: 'Browser', sublabel: 'Client / Admin', icon: 'Globe', color: USER_COLOR } },
+  { id: 'user', type: 'service', position: { x: 60, y: 230 }, data: { label: 'Browser', sublabel: 'Client / Admin', icon: 'Globe', color: USER_COLOR } },
 
-  // AWS nodes — dns/ecr/s3 shifted right for left-border padding
-  { id: 'dns',        type: 'service', position: { x: 335, y: 70  }, data: { label: 'DNS', sublabel: 'GoDaddy', icon: 'Network', color: AWS_COLOR } },
-  { id: 'alb',        type: 'service', position: { x: 510, y: 70  }, data: { label: 'Load Balancer', sublabel: 'ALB + ACM', icon: 'Scale', color: AWS_COLOR } },
-  { id: 'ecs-web',    type: 'service', position: { x: 760, y: 70  }, data: { label: 'Web Container', sublabel: 'React + Nginx · Fargate', icon: 'Monitor', color: AWS_COLOR } },
-  { id: 'cloudwatch', type: 'service', position: { x: 510, y: 230 }, data: { label: 'CloudWatch', sublabel: 'Logs + Monitoring', icon: 'Activity', color: AWS_COLOR } },
-  { id: 'ecr',        type: 'service', position: { x: 335, y: 300 }, data: { label: 'Container Registry', sublabel: 'ECR', icon: 'Package', color: AWS_COLOR } },
-  { id: 'ecs-api',    type: 'service', position: { x: 760, y: 270 }, data: { label: 'API Container', sublabel: 'FastAPI · Fargate', icon: 'Zap', color: AWS_COLOR } },
-  { id: 's3',         type: 'service', position: { x: 335, y: 430 }, data: { label: 'Document Storage', sublabel: 'S3', icon: 'HardDrive', color: AWS_COLOR } },
-  { id: 'rds',        type: 'service', position: { x: 760, y: 440 }, data: { label: 'PostgreSQL', sublabel: 'RDS', icon: 'Database', color: AWS_COLOR } },
+  // AWS nodes — generous spacing for readability
+  { id: 'dns',        type: 'service', position: { x: 320,  y: 90  }, data: { label: 'DNS', sublabel: 'GoDaddy', icon: 'Network', color: AWS_COLOR } },
+  { id: 'alb',        type: 'service', position: { x: 600,  y: 90  }, data: { label: 'Load Balancer', sublabel: 'ALB + ACM', icon: 'Scale', color: AWS_COLOR } },
+  { id: 'ecs-web',    type: 'service', position: { x: 940,  y: 90  }, data: { label: 'Web Container', sublabel: 'React + Nginx · Fargate', icon: 'Monitor', color: AWS_COLOR } },
+  { id: 'cloudwatch', type: 'service', position: { x: 600,  y: 340 }, data: { label: 'CloudWatch', sublabel: 'Logs + Monitoring', icon: 'Activity', color: AWS_COLOR } },
+  { id: 'ecr',        type: 'service', position: { x: 320,  y: 380 }, data: { label: 'Container Registry', sublabel: 'ECR', icon: 'Package', color: AWS_COLOR } },
+  { id: 'ecs-api',    type: 'service', position: { x: 940,  y: 320 }, data: { label: 'API Container', sublabel: 'FastAPI · Fargate', icon: 'Zap', color: AWS_COLOR } },
+  { id: 's3',         type: 'service', position: { x: 320,  y: 560 }, data: { label: 'Document Storage', sublabel: 'S3', icon: 'HardDrive', color: AWS_COLOR } },
+  { id: 'rds',        type: 'service', position: { x: 940,  y: 530 }, data: { label: 'PostgreSQL', sublabel: 'RDS', icon: 'Database', color: AWS_COLOR } },
 
-  // Maya agent pipeline — 230px spacing so edge labels have room to breathe
-  { id: 'intake-maya', type: 'service', position: { x: 305, y: 715 }, data: { label: 'Intake', sublabel: 'Conversational intake', icon: 'MessageSquare', color: MAYA_COLOR } },
-  { id: 'analyser',    type: 'service', position: { x: 535, y: 715 }, data: { label: 'Analyser', sublabel: 'Transcript → ClientProfile', icon: 'FileText', color: MAYA_COLOR } },
-  { id: 'generator',   type: 'service', position: { x: 765, y: 715 }, data: { label: 'Generator', sublabel: 'Itinerary + web search', icon: 'Cpu', color: MAYA_COLOR } },
-  { id: 'concierge',   type: 'service', position: { x: 995, y: 715 }, data: { label: 'Concierge', sublabel: 'Post-generation chat', icon: 'MessageCircle', color: MAYA_COLOR } },
+  // Maya agent pipeline — 250px spacing
+  { id: 'intake-maya', type: 'service', position: { x: 305,  y: 855 }, data: { label: 'Intake', sublabel: 'Conversational intake', icon: 'MessageSquare', color: MAYA_COLOR } },
+  { id: 'analyser',    type: 'service', position: { x: 555,  y: 855 }, data: { label: 'Analyser', sublabel: 'Transcript → ClientProfile', icon: 'FileText', color: MAYA_COLOR } },
+  { id: 'generator',   type: 'service', position: { x: 805,  y: 855 }, data: { label: 'Generator', sublabel: 'Itinerary + web search', icon: 'Cpu', color: MAYA_COLOR } },
+  { id: 'concierge',   type: 'service', position: { x: 1055, y: 855 }, data: { label: 'Concierge', sublabel: 'Post-generation chat', icon: 'MessageCircle', color: MAYA_COLOR } },
 
-  // CI/CD — positioned with clear padding inside group borders
+  // CI/CD
   { id: 'github', type: 'service', position: { x: 50, y: 510 }, data: { label: 'GitHub', sublabel: 'Source control', icon: 'GitFork', color: CD_COLOR } },
-  { id: 'gha',    type: 'service', position: { x: 50, y: 645 }, data: { label: 'GitHub Actions', sublabel: 'CD pipeline', icon: 'GitBranch', color: CD_COLOR } },
+  { id: 'gha',    type: 'service', position: { x: 50, y: 650 }, data: { label: 'GitHub Actions', sublabel: 'CD pipeline', icon: 'GitBranch', color: CD_COLOR } },
 
-  // External services — 150px spacing to prevent overlap
-  { id: 'anthropic',   type: 'service', position: { x: 1190, y: 60  }, data: { label: 'Anthropic', sublabel: 'Claude Sonnet 4.6', icon: 'Sparkles', color: EXT_COLOR } },
-  { id: 'mapbox',      type: 'service', position: { x: 1190, y: 210 }, data: { label: 'Mapbox', sublabel: 'Interactive maps', icon: 'Map', color: EXT_COLOR } },
-  { id: 'places',      type: 'service', position: { x: 1190, y: 360 }, data: { label: 'Google Places', sublabel: 'Hotel photos + geocoding', icon: 'Search', color: EXT_COLOR } },
-  { id: 'unsplash',    type: 'service', position: { x: 1190, y: 510 }, data: { label: 'Unsplash', sublabel: 'Activity + hero photos', icon: 'Image', color: EXT_COLOR } },
-  { id: 'aerodatabox', type: 'service', position: { x: 1190, y: 660 }, data: { label: 'AeroDataBox', sublabel: 'Flight lookup', icon: 'Plane', color: EXT_COLOR } },
-  { id: 'gmail',       type: 'service', position: { x: 1190, y: 810 }, data: { label: 'Gmail SMTP', sublabel: 'Transactional email', icon: 'Mail', color: EXT_COLOR } },
-  { id: 'sentry',      type: 'service', position: { x: 1190, y: 960 }, data: { label: 'Sentry', sublabel: 'Error tracking', icon: 'AlertCircle', color: EXT_COLOR } },
+  // External services
+  { id: 'anthropic',   type: 'service', position: { x: 1370, y: 60  }, data: { label: 'Anthropic', sublabel: 'Claude Sonnet 4.6', icon: 'Sparkles', color: EXT_COLOR } },
+  { id: 'mapbox',      type: 'service', position: { x: 1370, y: 210 }, data: { label: 'Mapbox', sublabel: 'Interactive maps', icon: 'Map', color: EXT_COLOR } },
+  { id: 'places',      type: 'service', position: { x: 1370, y: 360 }, data: { label: 'Google Places', sublabel: 'Hotel photos + geocoding', icon: 'Search', color: EXT_COLOR } },
+  { id: 'unsplash',    type: 'service', position: { x: 1370, y: 510 }, data: { label: 'Unsplash', sublabel: 'Activity + hero photos', icon: 'Image', color: EXT_COLOR } },
+  { id: 'aerodatabox', type: 'service', position: { x: 1370, y: 660 }, data: { label: 'AeroDataBox', sublabel: 'Flight lookup', icon: 'Plane', color: EXT_COLOR } },
+  { id: 'gmail',       type: 'service', position: { x: 1370, y: 810 }, data: { label: 'Gmail SMTP', sublabel: 'Transactional email', icon: 'Mail', color: EXT_COLOR } },
+  { id: 'sentry',      type: 'service', position: { x: 1370, y: 960 }, data: { label: 'Sentry', sublabel: 'Error tracking', icon: 'AlertCircle', color: EXT_COLOR } },
 ]
 
 // ─── Edges ─────────────────────────────────────────────────────────────────────
