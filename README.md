@@ -50,7 +50,9 @@ GENERATING → REVIEW → CONFIRMED → ARCHIVED
 - **Ask Maya** — Clients refine their itinerary post-generation via AI chat directly in the portal
 - **Activity map** — Per-day map view: click a day to zoom in and see geocoded activity markers (AM/PM/EVE colour-coded). Click an activity pin to zoom in further and see travel time from that night's accommodation
 - **Walk/drive routes** — Activity pins show a route line from the stay to the activity; toggle between walking and driving time with a single click
-- **Accommodation flow** — AI-suggested hotels include Google Places coords; clients add them to the trip with date selection, or manually enter their own. Added stays appear on the map and in the day timeline
+- **Accommodation tab** — AI-suggested hotels per destination, seeded from the itinerary and enriched via Google Places (real photos, ratings, addresses). Clients save, dismiss, or request more options. Added stays appear on the map and in the day timeline
+- **Top hotel highlight** — The top-ranked hotel suggestion for each destination is surfaced inline in the itinerary view with a one-click add-to-trip flow
+- **Photo caching** — Hotel photo URLs are cached against each suggestion record in the database; Google Places is only called once per hotel, never on every page load
 - **Photo quality gate** — Activity photos are verified by Claude Haiku vision before display; only photos that actually depict the activity are shown
 - **Flight lookup** — Clients enter a flight number and date to see route details, times, terminals, and a live route map
 - **Flight route map** — Visual route map showing all booked flights
@@ -159,11 +161,12 @@ See the live interactive version at [travel-papaya.com/architecture](https://www
 ### Backend (`/api`)
 
 - `app/main.py` — FastAPI app, CORS, Alembic migrations on startup, Sentry init
-- `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, Flight, Stay
+- `app/models.py` — SQLAlchemy models: Client, Trip, IntakeResponse, Itinerary, Message, Flight, Stay, HotelSuggestionRecord
 - `app/routes/auth.py` — Magic link login, admin login, JWT issuance
 - `app/routes/intake.py` — Intake chat endpoint + intake submission; fires AI generation as a background task
 - `app/routes/client.py` — Client portal: trip detail, itinerary, messages, confirm, Ask Maya, flight lookup, accommodation CRUD, activity photos (with vision quality gate), document uploads
-- `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, screenshot parsing (Claude Haiku vision), document uploads
+- `app/routes/hotel_suggestions.py` — Hotel suggestion CRUD: auto-seed from itinerary JSON, status updates (save/dismiss), AI-driven "fetch more" with deduplication
+- `app/routes/admin.py` — Admin: trip list, messages, flight/stay management, screenshot parsing (Claude Haiku vision), document uploads, photo cache refresh
 - `app/services/ai.py` — Multi-agent Maya pipeline: intake, analyser (tool_use), itinerary generator, concierge chat (intent classifier)
 - `app/services/places.py` — Google Places: hotel verification (coords + photo), activity geocoding (background thread), place lookup proxy
 - `app/services/email.py` — Gmail SMTP with branded HTML templates
@@ -188,27 +191,34 @@ See the live interactive version at [travel-papaya.com/architecture](https://www
 
 ```env
 DATABASE_URL=postgresql://papaya:papaya_secret@db:5432/papaya
-OPENAI_API_KEY=sk-your-key-here
-ANTHROPIC_API_KEY=sk-ant-your-key-here
 JWT_SECRET=change-me-in-production
 ADMIN_PASSWORD=admin123
 ADMIN_EMAIL=you@yourdomain.com
 CORS_ORIGINS=http://localhost:5173
 SEED_ON_STARTUP=false
 
+# AI
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+
 # Email (Gmail App Password)
 EMAIL_ADDRESS=you@gmail.com
 EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
 PORTAL_URL=http://localhost:5173
 
-# AWS S3
+# AWS S3 (document + screenshot storage)
 S3_BUCKET=your-bucket-name
+
+# Google Places API (hotel verification, photos, geocoding)
+GOOGLE_PLACES_API_KEY=your-key-here
 
 # AeroDataBox (optional — enables flight number lookup)
 AERODATABOX_API_KEY=your-key-here
 
 # Sentry (optional)
 SENTRY_DSN=
+
+# Frontend (baked in at build time by Vite / GitHub Actions)
+VITE_MAPBOX_TOKEN=your-mapbox-token-here
 VITE_SENTRY_DSN=
 ```
 
@@ -267,6 +277,10 @@ Full interactive docs at http://localhost:8000/docs
 | DELETE | `/client/trips/{id}/stays/{sid}` | Client JWT | Remove stay |
 | GET | `/client/activity-photo` | Client JWT | Verified activity photo (Haiku vision gate) |
 | GET | `/client/place-lookup` | Client JWT | Google Places search proxy |
+| GET | `/client/trips/{id}/hotel-suggestions` | Client JWT | List suggestions for a destination (auto-seeds from itinerary) |
+| PATCH | `/client/trips/{id}/hotel-suggestions/{sid}` | Client JWT | Update suggestion status (suggestion / saved / dismissed) |
+| POST | `/client/trips/{id}/hotel-suggestions/fetch` | Client JWT | AI-generate more suggestions, excluding known hotels |
+| GET | `/client/trips/{id}/hotel-suggestions/saved` | Client JWT | List saved suggestions across all destinations |
 | GET | `/admin/trips` | Admin JWT | All trips (filterable by status) |
 | GET | `/admin/trips/{id}` | Admin JWT | Trip detail |
 | PATCH | `/admin/trips/{id}` | Admin JWT | Update trip status or admin notes |
@@ -323,7 +337,7 @@ cd api
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export DATABASE_URL=postgresql://papaya:papaya_secret@localhost:5432/papaya
-export JWT_SECRET=dev ADMIN_PASSWORD=admin123 OPENAI_API_KEY=sk-... ANTHROPIC_API_KEY=sk-ant-...
+export JWT_SECRET=dev ADMIN_PASSWORD=admin123 ANTHROPIC_API_KEY=sk-ant-...
 uvicorn app.main:app --reload --port 8000
 
 # Web

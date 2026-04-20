@@ -1,23 +1,19 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import PDFDownloadButton from '../components/PDFDownloadButton'
 import Layout from '../components/Layout'
-import ItineraryTimeline, { buildCopyText } from '../components/ItineraryTimeline'
 import TravelNotesTab from '../components/TravelNotesTab'
 import LoadingSpinner from '../components/LoadingSpinner'
 import MayaChatPanel from '../components/MayaChatPanel'
 import AccommodationTab from '../components/AccommodationTab'
-import Button from '../components/Button'
 import Badge from '../components/Badge'
 import DatePicker from '../components/DatePicker'
 import TripItineraryView from '../components/TripItineraryView'
 import { TabBar, Tab } from '../components/TabBar'
-import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, ExternalLink, Plane, Loader2, Pencil, MapPin } from 'lucide-react'
+import { PlaneTakeoff, Calendar, Clock, Wallet, FileText, ExternalLink, Plane, Loader2, Pencil } from 'lucide-react'
 import { useDestinationPhotos } from '../hooks/useDestinationPhotos'
 const FlightMap = lazy(() => import('../components/FlightMap'))
-const UnifiedTripMap = lazy(() => import('../components/UnifiedTripMap'))
 import { getClientTrip, listClientDocuments, uploadClientDocument, getClientDocumentUrl, deleteClientDocument, getApiError, editItineraryBlock, getFlightSuggestions, updateTripTitle, deleteTrip, clientLookupFlight, addClientStay, removeClientStay, type TripDocument, type FlightSuggestion, type FlightLookupResult } from '../api/client'
-import type { TripDetail, Message, HotelSuggestion as HotelSuggestionType, Stay } from '../types'
+import type { TripDetail, Message, HotelSuggestion as HotelSuggestionType } from '../types'
 
 const STATUS_BADGE: Record<string, 'active' | 'muted' | 'warning'> = {
   ACTIVE:     'active',
@@ -28,29 +24,6 @@ const STATUS_BADGE: Record<string, 'active' | 'muted' | 'warning'> = {
 function formatDate(d: string): string {
   return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
-
-function ItineraryCopySummary({ data }: { data: import('../types').ItineraryJSON }) {
-  const [copied, setCopied] = useState(false)
-  function handleCopy() {
-    const text = buildCopyText(data)
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
-    } else {
-      const el = document.createElement('textarea')
-      el.value = text; el.style.cssText = 'position:fixed;opacity:0'
-      document.body.appendChild(el); el.focus(); el.select()
-      document.execCommand('copy'); document.body.removeChild(el)
-      setCopied(true); setTimeout(() => setCopied(false), 2000)
-    }
-  }
-  return (
-    <Button variant="ghost" size="sm" onClick={handleCopy}>
-      {copied ? '✓ Copied' : 'Copy summary'}
-    </Button>
-  )
-}
-
-
 
 function buildResearchMessages(trip: import('../types').TripDetail | null): string[] {
   const dest = trip?.title || 'your destination'
@@ -619,7 +592,7 @@ export default function TripDetailPage() {
                       }
                       return null
                     }}
-                    onAddFromSuggestion={(hotel) => { setAddingStayFrom(hotel); setStayCheckIn(''); setStayCheckOut(''); setStayError('') }}
+                    onAddFromSuggestion={(hotel) => { setAddingStayFrom(hotel); setStayCheckIn(''); setStayCheckOut(''); setStayError(''); switchTab('accommodation') }}
                   />
                 )}
               </>
